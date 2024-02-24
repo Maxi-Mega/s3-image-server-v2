@@ -44,5 +44,6 @@ linters-settings:
   gci:
     sections:
       - standard
+      - prefix(github.com/Maxi-Mega/s3-image-server-v2)
       - default
     custom-order: true
