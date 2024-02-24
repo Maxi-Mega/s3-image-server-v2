@@ -1,0 +1,62 @@
+s3:
+  pollingMode: false
+  pollingPeriod: 30s
+  exitOnS3Error: false
+  endPoint: "127.0.0.1:9000"
+  bucketName: "my-bucket"
+  accessId: "admin"
+  accessSecret: "password"
+  useSSL: false              # Not tested
+
+ui:
+  webServerPort: 9999
+  basePath: "" # Empty or starting with a slash
+  windowTitle: "S3 Image Viewer"
+  applicationTitle: "My collection"
+  logoBase64Path: ""
+  scaleInitialPercentage: 50
+  maxImagesDisplayCount: 10
+  map:
+    tileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+
+products:
+  previewFilename: "preview.jpg"
+  geonamesFilename: "geonames.json"
+  localizationFilename: "localization.json"
+  additionalProductFilesRegexp: "osmtags.json"
+  featuresExtensionRegexp: "\\.features\\.json$"
+  featuresCategoryName: "category"
+  featuresClassName: "class"
+  fullProductExtension: "tif"
+  fullProductProtocol: "protocol://"
+  fullProductSignedUrl: false
+  imageGroups:
+    - groupName: "Group 1"
+      types:
+        - name: "TYPE1"
+          displayName: "Type 1"
+          productPrefix: "my-prefix/TYPE1/"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview.jpg$"
+        - name: "TYPE2"
+          displayName: "Type 2"
+          productPrefix: "my-prefix/TYPE2/"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview.jpg$"
+    - groupName: "Group 2"
+      types:
+        - name: "TYPE3"
+          displayName: "Type 3"
+          productPrefix: "my-prefix/TYPE3/"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview.jpg$"
+
+cache:
+  cacheDir: ""         # Nothing = default
+  retentionPeriod: 10m
+
+log:
+  logLevel: "info"
+  colorLogs: false
+  JSONLogFormat: false
+  JSONLogFields:
+    class_name: "prod"
+    server: 42
+  httpTrace: false

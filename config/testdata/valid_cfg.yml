@@ -1,0 +1,21 @@
+s3:
+  endPoint: "localhost:9000"
+
+ui:
+  map:
+    tileServerURL: "localhost:3000/{z}/{x}/{y}.png"
+
+products:
+  imageGroups:
+    - groupName: "Group 1"
+      types:
+        - name: "1"
+          displayName: "One"
+        - name: "2"
+          displayName: "Two"
+
+log:
+  JSONLogFormat: true
+  JSONLogFields:
+    f1: "field"
+    f2: 7
