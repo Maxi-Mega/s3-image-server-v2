@@ -1,7 +1,8 @@
 package main
 
 import (
-	_ "embed"
+	"embed"
+	"fmt"
 	"io"
 )
 
@@ -9,6 +10,9 @@ import (
 var sampleConfig []byte
 
 func printSampleConfig(w io.Writer) error {
-	_, err := w.Write(sampleConfig)
+	_, err := fmt.Fprintln(w, sampleConfig)
 	return err //nolint:wrapcheck
 }
+
+//go:embed all:frontend
+var frontend embed.FS
