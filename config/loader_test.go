@@ -26,6 +26,7 @@ func TestLoad(t *testing.T) {
 					Endpoint:      "localhost:9000",
 				},
 				UI: UI{
+					BaseURL:                "/",
 					WindowTitle:            "S3 Image Viewer",
 					ScaleInitialPercentage: 50,
 					MaxImagesDisplayCount:  10,
@@ -54,7 +55,8 @@ func TestLoad(t *testing.T) {
 					},
 				},
 				Cache: Cache{
-					CacheDir: "/tmp/s3_image_server",
+					CacheDir:        "/tmp/s3_image_server",
+					RetentionPeriod: 7 * 24 * time.Hour,
 				},
 				Log: Log{
 					LogLevel:      "info",

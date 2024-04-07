@@ -85,7 +85,7 @@ func (cfg *Config) process() (err error) {
 		return fmt.Errorf("could not resolve cache dir: %w", err)
 	}
 
-	cfg.Cache.CacheDir = filepath.Clean(cfg.Cache.CacheDir)
+	cfg.Cache.CacheDir = filepath.Join(cfg.Cache.CacheDir, defaultCacheDirName)
 
 	if cfg.UI.BaseURL == "" {
 		cfg.UI.BaseURL = "/"

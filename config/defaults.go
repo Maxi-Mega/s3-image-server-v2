@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -29,7 +28,8 @@ func defaultConfig() Config {
 			LocalizationFilename: "localization.json",
 		},
 		Cache: Cache{
-			CacheDir: filepath.Join(os.TempDir(), defaultCacheDirName),
+			CacheDir:        os.TempDir(),
+			RetentionPeriod: 7 * 24 * time.Hour,
 		},
 		Log: Log{
 			LogLevel:      zerolog.LevelInfoValue,
