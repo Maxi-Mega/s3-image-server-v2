@@ -14,6 +14,7 @@ echo "Building front-end ..."
 
 echo "Building binary ..."
 
-go build -ldflags="-X 'main.version=$VERSION' -extldflags=-static" -tags osusergo,netgo -o "$BINARY_FILENAME" ./src
+go generate ./...
+go build -ldflags="-X 'main.version=$VERSION' -extldflags=-static" -tags osusergo,netgo -o "$BINARY_FILENAME" .
 
 echo "Successfully built the app under the name $BINARY_FILENAME"
