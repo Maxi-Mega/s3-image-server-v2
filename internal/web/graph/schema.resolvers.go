@@ -6,46 +6,71 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 )
 
+var errInvalidTimeRange = errors.New("invalid time range")
+
 // Objects is the resolver for the Objects field.
 func (r *geonamesResolver) Objects(ctx context.Context, obj *types.Geonames) ([]interface{}, error) {
-	panic(fmt.Errorf("not implemented: Objects - Objects"))
+	return toAnySlice(obj.Objects), nil
 }
 
 // AdditionalFiles is the resolver for the AdditionalFiles field.
 func (r *imageResolver) AdditionalFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error) {
-	panic(fmt.Errorf("not implemented: AdditionalFiles - AdditionalFiles"))
+	return toMapStringAny(obj.AdditionalFiles), nil
 }
 
 // TargetFiles is the resolver for the TargetFiles field.
 func (r *imageResolver) TargetFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error) {
-	panic(fmt.Errorf("not implemented: TargetFiles - TargetFiles"))
+	return toMapStringAny(obj.TargetFiles), nil
 }
 
 // FullProductFiles is the resolver for the FullProductFiles field.
 func (r *imageResolver) FullProductFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error) {
-	panic(fmt.Errorf("not implemented: FullProductFiles - FullProductFiles"))
+	return toMapStringAny(obj.FullProductFiles), nil
 }
 
 // Corner is the resolver for the Corner field.
 func (r *localizationResolver) Corner(ctx context.Context, obj *types.Localization) (interface{}, error) {
-	panic(fmt.Errorf("not implemented: Corner - Corner"))
+	return obj.Corner, nil
 }
 
 // GetAllImageSummaries is the resolver for the getAllImageSummaries field.
-func (r *queryResolver) GetAllImageSummaries(ctx context.Context, from *time.Time, end *time.Time) (types.AllImageSummaries, error) {
-	// return types.AllImageSummaries{"group": {"type": []types.ImageSummary{{Name: "image"}}}}, nil
-	return r.Cache.GetAllImages(), nil
+func (r *queryResolver) GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error) {
+	start := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Now().Add(24 * time.Hour)
+
+	if from != nil {
+		start = *from
+	}
+
+	if to != nil {
+		end = *to
+	}
+
+	if start.After(end) {
+		return nil, errInvalidTimeRange
+	}
+
+	return r.Cache.GetAllImages(start, end), nil
 }
 
 // GetImage is the resolver for the getImage field.
 func (r *queryResolver) GetImage(ctx context.Context, bucket string, name string) (*types.Image, error) {
-	return &types.Image{}, nil
+	img, err := r.Cache.GetImage(bucket, name)
+	if err != nil {
+		if errors.Is(err, types.ErrImageNotFound) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return &img, nil
 }
 
 // Geonames returns GeonamesResolver implementation.

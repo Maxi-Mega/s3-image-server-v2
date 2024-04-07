@@ -62,7 +62,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 			return nil
 		}
 	case types.ObjectAdditional:
-		if !img.additional[path.Base(event.ObjectKey)].Before(event.ObjectLastModified) {
+		if !img.additional[path.Base(event.ObjectKey)].lastUpdate.Before(event.ObjectLastModified) {
 			return nil
 		}
 
@@ -72,7 +72,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 			return nil
 		}
 	case types.ObjectTarget:
-		if !img.targets[path.Base(event.ObjectKey)].Before(event.ObjectLastModified) {
+		if !img.targets[path.Base(event.ObjectKey)].lastUpdate.Before(event.ObjectLastModified) {
 			return nil
 		}
 
@@ -102,9 +102,9 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.imgGroup = event.imgGroup.GroupName
 		img.imgType = event.imgType.Name
 		img.lastModified = event.ObjectLastModified
-		img.additional = make(map[string]time.Time)
-		img.targets = make(map[string]time.Time)
-		img.fullProducts = make(map[string]fullProduct)
+		img.additional = make(map[string]withLastUpdate)
+		img.targets = make(map[string]withLastUpdate)
+		img.fullProducts = make(map[string]withLastUpdate)
 
 		bc.setDropTimer(event.baseDir, event.Time)
 	}
@@ -151,24 +151,30 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 
 func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s3Event, img *image, fullFilePath string) error {
 	objKeyBase := path.Base(event.ObjectKey)
-	noSubDirCacheKey := bc.getCacheKey(img.name, "", event.ObjectKey)
+	cacheKey := func(subDir string) string { return bc.getCacheKey(img.name, subDir, event.ObjectKey) }
 
 	var err error
 
 	switch event.ObjectType {
 	case types.ObjectPreview:
 		img.lastModified = event.ObjectLastModified
-		img.previewCacheKey = noSubDirCacheKey
+		img.previewCacheKey = cacheKey("")
 	case types.ObjectGeonames:
-		img.geonames, err = parseGeonames(fullFilePath, event.ObjectLastModified, noSubDirCacheKey)
+		img.geonames, err = parseGeonames(fullFilePath, event.ObjectLastModified, cacheKey(""))
 	case types.ObjectLocalization:
-		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, noSubDirCacheKey)
+		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, cacheKey(""))
 	case types.ObjectAdditional:
-		img.additional[objKeyBase] = event.ObjectLastModified
+		img.additional[objKeyBase] = withLastUpdate{
+			value:      cacheKey(additionalDirName),
+			lastUpdate: event.ObjectLastModified,
+		}
 	case types.ObjectFeatures:
-		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, noSubDirCacheKey, event.ObjectKey)
+		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, cacheKey(""), event.ObjectKey)
 	case types.ObjectTarget:
-		img.targets[objKeyBase] = event.ObjectLastModified
+		img.targets[objKeyBase] = withLastUpdate{
+			value:      cacheKey(targetsDirName),
+			lastUpdate: event.ObjectLastModified,
+		}
 	case types.ObjectFullProduct:
 		if fullProduct, exists := img.fullProducts[event.ObjectKey]; exists {
 			if !fullProduct.lastUpdate.Before(event.ObjectLastModified) {
@@ -177,8 +183,8 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 		}
 
 		if signedURL, err := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey); err == nil {
-			img.fullProducts[event.ObjectKey] = fullProduct{
-				signedURL:  signedURL,
+			img.fullProducts[event.ObjectKey] = withLastUpdate{
+				value:      signedURL,
 				lastUpdate: event.ObjectLastModified,
 			}
 		}

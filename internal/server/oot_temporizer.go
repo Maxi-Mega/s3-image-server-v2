@@ -13,7 +13,7 @@ const (
 	ootMaxLifetime   = 10 * time.Minute
 )
 
-// oot represents an Other Object Type
+// oot represents an Other Object Type.
 type oot struct {
 	evt        s3Event
 	appendTime time.Time

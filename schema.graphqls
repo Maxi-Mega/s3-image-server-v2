@@ -48,6 +48,6 @@ type Image {
 }
 
 type Query {
-    getAllImageSummaries(from: Time, end: Time): AllImageSummaries!
+    getAllImageSummaries(from: Time, to: Time): AllImageSummaries!
     getImage(bucket: String!, name: String!): Image
 }

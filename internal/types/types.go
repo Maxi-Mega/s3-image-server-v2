@@ -22,12 +22,15 @@ type ImageSummary struct {
 }
 
 type Image struct {
-	ImageSummary     // inlined
-	Geonames         *Geonames
-	Localization     *Localization
-	Features         *Features
-	AdditionalFiles  map[string]string
-	TargetFiles      map[string]string
+	ImageSummary // inlined
+	Geonames     *Geonames
+	Localization *Localization
+	Features     *Features
+	// AdditionalFiles is a map[filename] -> cache key
+	AdditionalFiles map[string]string
+	// TargetFiles is a map[filename] -> cache key
+	TargetFiles map[string]string
+	// FullProductFiles is a map[filename] -> cache key
 	FullProductFiles map[string]string
 }
 
@@ -43,12 +46,12 @@ const (
 	ObjectFullProduct  = "full_product"
 )
 
-// AllImageSummaries is a map[group] -> map[type] -> images
+// AllImageSummaries is a map[group] -> map[type] -> images.
 type AllImageSummaries map[string]map[string][]ImageSummary
 
 type Cache interface {
-	GetAllImages() AllImageSummaries
-	GetImageDetails(cacheKey string) (Image, bool)
+	GetAllImages(start, end time.Time) AllImageSummaries
+	GetImage(bucket, name string) (Image, error)
 	GetCachedObject(cacheKey string) ([]byte, error)
 }
 

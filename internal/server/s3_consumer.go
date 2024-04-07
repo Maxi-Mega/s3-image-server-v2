@@ -33,11 +33,12 @@ type eventConsumer struct {
 
 func newS3Consumer(cfg config.Config, cache *cache, s3Chan chan s3.Event) *eventConsumer {
 	return &eventConsumer{
-		productsCfg: cfg.Products,
-		cache:       cache,
-		s3Chan:      s3Chan,
-		baseDirChan: make(chan string, chanBuf),
-		ootChan:     make(chan s3Event, chanBuf),
+		productsCfg:          cfg.Products,
+		cacheRetentionPeriod: cfg.Cache.RetentionPeriod,
+		cache:                cache,
+		s3Chan:               s3Chan,
+		baseDirChan:          make(chan string, chanBuf),
+		ootChan:              make(chan s3Event, chanBuf),
 	}
 }
 

@@ -83,7 +83,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		GetAllImageSummaries func(childComplexity int, from *time.Time, end *time.Time) int
+		GetAllImageSummaries func(childComplexity int, from *time.Time, to *time.Time) int
 		GetImage             func(childComplexity int, bucket string, name string) int
 	}
 }
@@ -100,7 +100,7 @@ type LocalizationResolver interface {
 	Corner(ctx context.Context, obj *types.Localization) (interface{}, error)
 }
 type QueryResolver interface {
-	GetAllImageSummaries(ctx context.Context, from *time.Time, end *time.Time) (types.AllImageSummaries, error)
+	GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error)
 	GetImage(ctx context.Context, bucket string, name string) (*types.Image, error)
 }
 
@@ -259,7 +259,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.GetAllImageSummaries(childComplexity, args["from"].(*time.Time), args["end"].(*time.Time)), true
+		return e.complexity.Query.GetAllImageSummaries(childComplexity, args["from"].(*time.Time), args["to"].(*time.Time)), true
 
 	case "Query.getImage":
 		if e.complexity.Query.GetImage == nil {
@@ -412,7 +412,7 @@ type Image {
 }
 
 type Query {
-    getAllImageSummaries(from: Time, end: Time): AllImageSummaries!
+    getAllImageSummaries(from: Time, to: Time): AllImageSummaries!
     getImage(bucket: String!, name: String!): Image
 }
 `, BuiltIn: false},
@@ -451,14 +451,14 @@ func (ec *executionContext) field_Query_getAllImageSummaries_args(ctx context.Co
 	}
 	args["from"] = arg0
 	var arg1 *time.Time
-	if tmp, ok := rawArgs["end"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("end"))
+	if tmp, ok := rawArgs["to"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("to"))
 		arg1, err = ec.unmarshalOTime2ᚖtimeᚐTime(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["end"] = arg1
+	args["to"] = arg1
 	return args, nil
 }
 
@@ -1363,7 +1363,7 @@ func (ec *executionContext) _Query_getAllImageSummaries(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().GetAllImageSummaries(rctx, fc.Args["from"].(*time.Time), fc.Args["end"].(*time.Time))
+		return ec.resolvers.Query().GetAllImageSummaries(rctx, fc.Args["from"].(*time.Time), fc.Args["to"].(*time.Time))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

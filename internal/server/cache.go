@@ -37,15 +37,15 @@ type image struct {
 	geonames            *types.Geonames
 	localization        *types.Localization
 	features            *types.Features
-	additional, targets map[string]time.Time
-	fullProducts        map[string]fullProduct
+	additional, targets map[string]withLastUpdate
+	fullProducts        map[string]withLastUpdate
 	previewCacheKey     string
 }
 
-func (img image) summary() types.ImageSummary {
+func (img image) summary(name string) types.ImageSummary {
 	return types.ImageSummary{
 		Bucket: img.bucket,
-		Name:   img.name,
+		Name:   name,
 		Group:  img.imgGroup,
 		Type:   img.imgType,
 		CachedObject: types.CachedObject{
@@ -55,13 +55,13 @@ func (img image) summary() types.ImageSummary {
 	}
 }
 
-type fullProduct struct {
-	signedURL  string
+type withLastUpdate struct {
+	value      string
 	lastUpdate time.Time
 }
 
 func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent) (*cache, error) {
-	logger.Debug("Creating cache dir at ", cfg.Cache.CacheDir)
+	logger.Debug("Using cache dir at ", cfg.Cache.CacheDir)
 
 	err := utils.CreateDir(cfg.Cache.CacheDir)
 	if err != nil {
@@ -140,19 +140,23 @@ func (c *cache) matchesEntry(bucketName string, entry string) (match bool, baseD
 	return false, ""
 }
 
-func (c *cache) GetAllImages() types.AllImageSummaries {
+func (c *cache) GetAllImages(start, end time.Time) types.AllImageSummaries {
 	allImages := make(types.AllImageSummaries)
 
 	for _, bucket := range c.buckets {
 		bucket.l.RLock()
 
-		for _, img := range bucket.images {
+		for name, img := range bucket.images {
+			if img.lastModified.Before(start) || img.lastModified.After(end) {
+				continue
+			}
+
 			grp, typ := img.imgGroup, img.imgType
 			if _, ok := allImages[grp]; !ok {
 				allImages[grp] = make(map[string][]types.ImageSummary)
 			}
 
-			allImages[grp][typ] = append(allImages[grp][typ], img.summary())
+			allImages[grp][typ] = append(allImages[grp][typ], img.summary(name))
 		}
 
 		bucket.l.RUnlock()
@@ -161,11 +165,41 @@ func (c *cache) GetAllImages() types.AllImageSummaries {
 	return allImages
 }
 
-func (c *cache) GetImageDetails(cacheKey string) (types.Image, bool) {
-	// TODO implement me
-	panic("implement me")
+func (c *cache) GetImage(bucketName, name string) (types.Image, error) {
+	bucket, ok := c.buckets[bucketName]
+	if !ok {
+		return types.Image{}, types.ErrImageNotFound
+	}
+
+	bucket.l.RLock()
+	defer bucket.l.RUnlock()
+
+	img, ok := bucket.images[name]
+	if !ok {
+		return types.Image{}, types.ErrImageNotFound
+	}
+
+	return types.Image{
+		ImageSummary:     img.summary(name),
+		Geonames:         img.geonames,
+		Localization:     img.localization,
+		Features:         img.features,
+		AdditionalFiles:  toFilenameValueMap(img.additional),
+		TargetFiles:      toFilenameValueMap(img.targets),
+		FullProductFiles: toFilenameValueMap(img.fullProducts),
+	}, nil
 }
 
 func (c *cache) GetCachedObject(cacheKey string) ([]byte, error) {
 	return os.ReadFile(filepath.Join(c.cacheDir, cacheKey)) //nolint:wrapcheck
+}
+
+func toFilenameValueMap(m map[string]withLastUpdate) map[string]string {
+	result := make(map[string]string, len(m))
+
+	for filename, metadata := range m {
+		result[filename] = metadata.value
+	}
+
+	return result
 }

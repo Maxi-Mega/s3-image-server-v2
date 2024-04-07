@@ -16,7 +16,7 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web"
 )
 
-var (
+var ( //nolint: gochecknoglobal
 	version   = "dev"
 	prod      = "false"
 	isProd, _ = strconv.ParseBool(prod)
