@@ -1,0 +1,53 @@
+# Scalar types defined by github.com/99designs/gqlgen/graphql
+scalar Time
+scalar Any
+scalar Map
+
+# Custom scalar types
+scalar AllImageSummaries
+scalar Features
+
+type CachedObject {
+    lastModified: Time!
+    cacheKey:     String!
+}
+
+type ImageSummary {
+    bucket:       String!
+    name:         String!
+    group:         String!
+    type:         String!
+    cachedObject: CachedObject!
+}
+
+type Geonames {
+    Objects: [Any!]!
+    CachedObject: CachedObject!
+}
+
+type Localization {
+    Corner: Any!
+    CachedObject: CachedObject!
+}
+
+#type Features {
+#    Class:      String!
+#    Count:      Int!
+#    Objects:    Map!
+#    LastUpdate: Time!
+#}
+
+type Image {
+    imageSummary: ImageSummary!
+    geonames:         Geonames
+    localization:     Localization
+    features:         Features
+    additionalFiles:  Map!
+    targetFiles:      Map!
+    fullProductFiles: Map!
+}
+
+type Query {
+    getAllImageSummaries(from: Time, end: Time): AllImageSummaries!
+    getImage(bucket: String!, name: String!): Image
+}
