@@ -1,1 +1,10 @@
-invalid YAML
+products:
+  imageGroups:
+    - groupName: "grp"
+      bucket: "bckt"
+      types:
+        - name: "typ"
+        - name: "typ"
+
+cache:
+  retentionPeriod: 10m

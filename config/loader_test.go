@@ -1,9 +1,12 @@
 package config
 
 import (
+	"regexp"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestLoad(t *testing.T) {
@@ -18,14 +21,22 @@ func TestLoad(t *testing.T) {
 			filePath: "valid_cfg.yml",
 			expectedConfig: Config{
 				S3: S3{
-					EndPoint: "localhost:9000",
+					PollingMode:   true,
+					PollingPeriod: 30 * time.Second,
+					Endpoint:      "localhost:9000",
 				},
 				UI: UI{
+					WindowTitle:            "S3 Image Viewer",
+					ScaleInitialPercentage: 50,
+					MaxImagesDisplayCount:  10,
 					Map: UIMap{
 						TileServerURL: "localhost:3000/{z}/{x}/{y}.png",
 					},
 				},
 				Products: Products{
+					PreviewFilename:      "preview.jpg",
+					GeonamesFilename:     "geonames.json",
+					LocalizationFilename: "localization.json",
 					ImageGroups: []ImageGroup{
 						{
 							GroupName: "Group 1",
@@ -42,7 +53,12 @@ func TestLoad(t *testing.T) {
 						},
 					},
 				},
+				Cache: Cache{
+					CacheDir: "/tmp/s3_image_server",
+				},
 				Log: Log{
+					LogLevel:      "info",
+					ColorLogs:     false,
 					JSONLogFormat: true,
 					JSONLogFields: map[string]any{
 						"f1": "field",
@@ -53,13 +69,18 @@ func TestLoad(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			filePath:       "invalid_cfg.yml",
+			filePath:       "invalid_yaml.yml",
 			expectedConfig: Config{},
 			expectedError:  "failed to parse config: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `invalid...` into config.Config",
 		},
+		{
+			filePath:       "invalid_cfg.yml",
+			expectedConfig: Config{},
+			expectedError:  `the config is invalid: image type name "typ" of group "grp" is duplicate`,
+		},
 	}
 
-	for _, tc := range cases { //nolint:paralleltest // Not a problem since Go 1.22
+	for _, tc := range cases {
 		t.Run(tc.filePath, func(t *testing.T) {
 			t.Parallel()
 
@@ -76,7 +97,7 @@ func TestLoad(t *testing.T) {
 				}
 			}
 
-			if diff := cmp.Diff(tc.expectedConfig, cfg); diff != "" {
+			if diff := cmp.Diff(tc.expectedConfig, cfg, cmpopts.IgnoreTypes(&regexp.Regexp{})); diff != "" {
 				t.Fatal("Unexpected config (-wanted +got):\n", diff)
 			}
 		})

@@ -1,21 +1,21 @@
 s3:
-  pollingMode: false
+  pollingMode: true          # Can be set to false for MinIO servers
   pollingPeriod: 30s
   exitOnS3Error: false
-  endPoint: "127.0.0.1:9000"
-  bucketName: "my-bucket"
+  endpoint: "127.0.0.1:9000"
   accessId: "admin"
   accessSecret: "password"
   useSSL: false              # Not tested
 
 ui:
   webServerPort: 9999
-  basePath: "" # Empty or starting with a slash
+  baseURL: ""
   windowTitle: "S3 Image Viewer"
   applicationTitle: "My collection"
   logoBase64Path: ""
   scaleInitialPercentage: 50
   maxImagesDisplayCount: 10
+  displayTimeOffset: 1h
   map:
     tileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
@@ -24,14 +24,18 @@ products:
   geonamesFilename: "geonames.json"
   localizationFilename: "localization.json"
   additionalProductFilesRegexp: "osmtags.json"
-  featuresExtensionRegexp: "\\.features\\.json$"
+  targetRelativeRegexp: "[^/]*/preview.jpg$"
+  featuresExtensionRegexp: ".*features\\.json$"
   featuresCategoryName: "category"
   featuresClassName: "class"
   fullProductExtension: "tif"
   fullProductProtocol: "protocol://"
-  fullProductSignedUrl: false
+  fullProductRootURL: "http://a.b.c.d:5000"
+  fullProductSignedURL: false
+  maxObjectsAge: 24h
   imageGroups:
     - groupName: "Group 1"
+      bucket: "group-1"
       types:
         - name: "TYPE1"
           displayName: "Type 1"
@@ -42,6 +46,7 @@ products:
           productPrefix: "my-prefix/TYPE2/"
           productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview.jpg$"
     - groupName: "Group 2"
+      bucket: "group-2"
       types:
         - name: "TYPE3"
           displayName: "Type 3"
@@ -50,7 +55,6 @@ products:
 
 cache:
   cacheDir: ""         # Nothing = default
-  retentionPeriod: 10m
 
 log:
   logLevel: "info"

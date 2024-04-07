@@ -1,5 +1,5 @@
 s3:
-  endPoint: "localhost:9000"
+  endpoint: "localhost:9000"
 
 ui:
   map:
@@ -15,6 +15,7 @@ products:
           displayName: "Two"
 
 log:
+  colorLogs: false
   JSONLogFormat: true
   JSONLogFields:
     f1: "field"

@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"regexp"
+	"time"
+)
 
 type (
 	Config struct {
@@ -15,39 +18,46 @@ type (
 		PollingMode   bool          `yaml:"pollingMode"`
 		PollingPeriod time.Duration `yaml:"pollingPeriod"`
 		ExitOnS3Error bool          `yaml:"exitOnS3Error"`
-		EndPoint      string        `yaml:"endPoint"`
+		Endpoint      string        `yaml:"endpoint"`
 		AccessID      string        `yaml:"accessID"`
 		AccessSecret  string        `yaml:"accessSecret"`
 		UseSSL        bool          `yaml:"useSSL"`
 	}
 
 	UI struct {
-		WebServerPort          uint16 `yaml:"webServerPort"`
-		BasePath               string `yaml:"basePath"`
-		WindowTitle            string `yaml:"windowTitle"`
-		ApplicationTitle       string `yaml:"applicationTitle"`
-		LogoBase64Path         string `yaml:"logoBase64Path"`
-		ScaleInitialPercentage uint   `yaml:"scaleInitialPercentage"`
-		MaxImagesDisplayCount  uint   `yaml:"maxImagesDisplayCount"`
-		Map                    UIMap  `yaml:"map"`
+		WebServerPort          uint16        `yaml:"webServerPort"`
+		BaseURL                string        `yaml:"baseURL"`
+		WindowTitle            string        `yaml:"windowTitle"`
+		ApplicationTitle       string        `yaml:"applicationTitle"`
+		LogoBase64Path         string        `yaml:"logoBase64Path"`
+		ScaleInitialPercentage uint          `yaml:"scaleInitialPercentage"`
+		MaxImagesDisplayCount  uint          `yaml:"maxImagesDisplayCount"`
+		DisplayTimeOffset      time.Duration `yaml:"displayTimeOffset"`
+		Map                    UIMap         `yaml:"map"`
 	}
 
 	Products struct {
-		PreviewFilename              string       `yaml:"previewFilename"`
-		Geonames                     string       `yaml:"geonames"`
-		LocalizationFilename         string       `yaml:"localizationFilename"`
-		AdditionalProductFilesRegexp string       `yaml:"additionalProductFilesRegexp"`
-		FeaturesExtentionRegexp      string       `yaml:"featuresExtentionRegexp"`
-		FeaturesCategoryName         string       `yaml:"featuresCategoryName"`
-		FeaturesClassName            string       `yaml:"featuresClassName"`
-		FullProductExtension         string       `yaml:"fullProductExtension"`
-		FullProductSignedURL         string       `yaml:"fullProductSignedURL"`
-		ImageGroups                  []ImageGroup `yaml:"imageGroups"`
+		PreviewFilename              string         `yaml:"previewFilename"`
+		GeonamesFilename             string         `yaml:"geonamesFilename"`
+		LocalizationFilename         string         `yaml:"localizationFilename"`
+		AdditionalProductFilesRegexp string         `yaml:"additionalProductFilesRegexp"`
+		AdditionalProductFilesRgx    *regexp.Regexp `yaml:"-"`
+		TargetRelativeRegexp         string         `yaml:"targetRelativeRegexp"`
+		TargetRelativeRgx            *regexp.Regexp `yaml:"-"`
+		FeaturesExtensionRegexp      string         `yaml:"featuresExtensionRegexp"`
+		FeaturesExtensionRgx         *regexp.Regexp `yaml:"-"`
+		FeaturesCategoryName         string         `yaml:"featuresCategoryName"`
+		FeaturesClassName            string         `yaml:"featuresClassName"`
+		FullProductExtension         string         `yaml:"fullProductExtension"`
+		FullProductProtocol          string         `yaml:"fullProductProtocol"`
+		FullProductRootURL           string         `yaml:"fullProductRootUrl"`
+		FullProductSignedURL         bool           `yaml:"fullProductSignedURL"`
+		MaxObjectsAge                time.Duration  `yaml:"maxObjectsAge"`
+		ImageGroups                  []ImageGroup   `yaml:"imageGroups"`
 	}
 
 	Cache struct {
-		CacheDir        string        `yaml:"cacheDir"`
-		RetentionPeriod time.Duration `yaml:"retentionPeriod"`
+		CacheDir string `yaml:"cacheDir"`
 	}
 
 	Log struct {
@@ -64,13 +74,15 @@ type (
 
 	ImageGroup struct {
 		GroupName string      `yaml:"groupName"`
+		Bucket    string      `yaml:"bucket"`
 		Types     []ImageType `yaml:"types"`
 	}
 
 	ImageType struct {
-		Name          string `yaml:"name"`
-		DisplayName   string `yaml:"displayName"`
-		ProductPrefix string `yaml:"productPrefix"`
-		ProductRegexp string `yaml:"productRegexp"`
+		Name          string         `yaml:"name"`
+		DisplayName   string         `yaml:"displayName"`
+		ProductPrefix string         `yaml:"productPrefix"`
+		ProductRegexp string         `yaml:"productRegexp"`
+		ProductRgx    *regexp.Regexp `yaml:"-"`
 	}
 )
