@@ -159,6 +159,8 @@ func (s3 s3Client) handleEvent(bucket string, objectType types.ObjectType, notif
 }
 
 func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Event) error {
+	logger.Debugf("Polling bucket %q ...", bucket)
+
 	ctx, cancel := context.WithTimeout(ctx, pollBucketTimeout)
 	defer cancel()
 

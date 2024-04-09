@@ -1,14 +1,8 @@
 package graph
 
-func toAnySlice[E any](s []E) []any {
-	result := make([]any, len(s))
+import "errors"
 
-	for i, e := range s {
-		result[i] = e
-	}
-
-	return result
-}
+var errInvalidTimeRange = errors.New("invalid time range")
 
 func toMapStringAny[V any](m map[string]V) map[string]any {
 	result := make(map[string]any, len(m))

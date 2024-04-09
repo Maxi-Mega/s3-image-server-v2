@@ -16,10 +16,10 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web"
 )
 
-var ( //nolint: gochecknoglobal
+var (
 	version   = "dev"
-	prod      = "false"
-	isProd, _ = strconv.ParseBool(prod)
+	prod      = "false"                 //nolint: gochecknoglobals
+	isProd, _ = strconv.ParseBool(prod) //nolint: gochecknoglobals
 )
 
 func main() {

@@ -7,12 +7,14 @@ type Point struct {
 	} `json:"coordinates"`
 }
 
+type LocalizationCorner struct {
+	UpperLeft  Point `json:"upper-left"`
+	UpperRight Point `json:"upper-right"`
+	LowerLeft  Point `json:"lower-left"`
+	LowerRight Point `json:"lower-right"`
+}
+
 type Localization struct {
-	Corner struct {
-		UpperLeft  Point `json:"upper-left"`
-		UpperRight Point `json:"upper-right"`
-		LowerLeft  Point `json:"lower-left"`
-		LowerRight Point `json:"lower-right"`
-	} `json:"corner"`
-	CachedObject `json:"-"`
+	Corner LocalizationCorner `json:"corner"`
+	CachedObject
 }

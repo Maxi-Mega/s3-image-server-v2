@@ -9,8 +9,8 @@ type RawFeaturesFile struct {
 }
 
 type Features struct {
-	Class        string         `json:"class"`
-	Count        int            `json:"featuresCount"`
-	Objects      map[string]int `json:"objects"`
-	CachedObject `json:"-"`
+	Class   string         `json:"class"`
+	Count   int            `json:"featuresCount"`
+	Objects map[string]int `json:"objects"`
+	CachedObject
 }

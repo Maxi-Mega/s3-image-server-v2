@@ -12,11 +12,9 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 )
 
-var errInvalidTimeRange = errors.New("invalid time range")
-
 // Objects is the resolver for the Objects field.
-func (r *geonamesResolver) Objects(ctx context.Context, obj *types.Geonames) ([]interface{}, error) {
-	return toAnySlice(obj.Objects), nil
+func (r *featuresResolver) Objects(ctx context.Context, obj *types.Features) (map[string]interface{}, error) {
+	return toMapStringAny(obj.Objects), nil
 }
 
 // AdditionalFiles is the resolver for the AdditionalFiles field.
@@ -32,11 +30,6 @@ func (r *imageResolver) TargetFiles(ctx context.Context, obj *types.Image) (map[
 // FullProductFiles is the resolver for the FullProductFiles field.
 func (r *imageResolver) FullProductFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error) {
 	return toMapStringAny(obj.FullProductFiles), nil
-}
-
-// Corner is the resolver for the Corner field.
-func (r *localizationResolver) Corner(ctx context.Context, obj *types.Localization) (interface{}, error) {
-	return obj.Corner, nil
 }
 
 // GetAllImageSummaries is the resolver for the getAllImageSummaries field.
@@ -73,19 +66,15 @@ func (r *queryResolver) GetImage(ctx context.Context, bucket string, name string
 	return &img, nil
 }
 
-// Geonames returns GeonamesResolver implementation.
-func (r *Resolver) Geonames() GeonamesResolver { return &geonamesResolver{r} }
+// Features returns FeaturesResolver implementation.
+func (r *Resolver) Features() FeaturesResolver { return &featuresResolver{r} }
 
 // Image returns ImageResolver implementation.
 func (r *Resolver) Image() ImageResolver { return &imageResolver{r} }
 
-// Localization returns LocalizationResolver implementation.
-func (r *Resolver) Localization() LocalizationResolver { return &localizationResolver{r} }
-
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
-type geonamesResolver struct{ *Resolver }
+type featuresResolver struct{ *Resolver }
 type imageResolver struct{ *Resolver }
-type localizationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

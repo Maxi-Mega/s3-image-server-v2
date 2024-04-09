@@ -5,23 +5,25 @@ import (
 	"strings"
 )
 
+type GeonamesObject struct {
+	Name   string `json:"name"`
+	States []struct {
+		Name     string `json:"name"`
+		Counties []struct {
+			Name   string `json:"name"`
+			Cities []struct {
+				Name string `json:"name"`
+			} `json:"cities"`
+			Villages []struct {
+				Name string `json:"name"`
+			} `json:"villages"`
+		} `json:"counties"`
+	} `json:"states"`
+}
+
 type Geonames struct {
-	Objects []struct {
-		Name   string `json:"name"`
-		States []struct {
-			Name     string `json:"name"`
-			Counties []struct {
-				Name   string `json:"name"`
-				Cities []struct {
-					Name string `json:"name"`
-				} `json:"cities"`
-				Villages []struct {
-					Name string `json:"name"`
-				} `json:"villages"`
-			} `json:"counties"`
-		} `json:"states"`
-	}
-	CachedObject `json:"-"`
+	Objects []GeonamesObject `json:"objects"`
+	CachedObject
 }
 
 func (geonames *Geonames) Sort() {
@@ -50,7 +52,7 @@ func (geonames *Geonames) GetTopLevel() string {
 
 		states := geonames.Objects[0].States
 		if len(states) > 0 {
-			name += " / " + states[0].Name //nolint: goconst
+			name += " / " + states[0].Name
 
 			counties := states[0].Counties
 			if len(counties) > 0 {

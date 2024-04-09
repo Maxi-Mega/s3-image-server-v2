@@ -30,16 +30,18 @@ type cache struct {
 }
 
 type image struct {
-	lastModified        time.Time
-	bucket, s3Key       string
-	name                string
-	imgGroup, imgType   string
-	geonames            *types.Geonames
-	localization        *types.Localization
-	features            *types.Features
-	additional, targets map[string]withLastUpdate
-	fullProducts        map[string]withLastUpdate
-	previewCacheKey     string
+	lastModified      time.Time
+	bucket, s3Key     string
+	name              string
+	imgGroup, imgType string
+	geonames          *types.Geonames
+	localization      *types.Localization
+	features          *types.Features
+	// map[filename] -> cache key & last update
+	additional, targets map[string]valueWithLastUpdate
+	// map[filename] -> signed URL & last update
+	fullProducts    map[string]valueWithLastUpdate
+	previewCacheKey string
 }
 
 func (img image) summary(name string) types.ImageSummary {
@@ -55,7 +57,7 @@ func (img image) summary(name string) types.ImageSummary {
 	}
 }
 
-type withLastUpdate struct {
+type valueWithLastUpdate struct {
 	value      string
 	lastUpdate time.Time
 }
@@ -194,7 +196,7 @@ func (c *cache) GetCachedObject(cacheKey string) ([]byte, error) {
 	return os.ReadFile(filepath.Join(c.cacheDir, cacheKey)) //nolint:wrapcheck
 }
 
-func toFilenameValueMap(m map[string]withLastUpdate) map[string]string {
+func toFilenameValueMap(m map[string]valueWithLastUpdate) map[string]string {
 	result := make(map[string]string, len(m))
 
 	for filename, metadata := range m {

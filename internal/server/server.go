@@ -129,7 +129,7 @@ func (srv *Server) startPollingS3(ctx context.Context) error {
 		}(bucket)
 	}
 
-	return nil // TODO
+	return nil
 }
 
 func (srv *Server) subscribeToS3(ctx context.Context) error {

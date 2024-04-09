@@ -27,14 +27,14 @@ func (srv *Server) infoHandler(c *gin.Context) {
 }
 
 func (srv *Server) cacheHandler(c *gin.Context) {
-	cacheKey := strings.Trim(c.Param("cacheKey"), "/")
+	cacheKey := strings.Trim(c.Param("cache_key"), "/")
 	if cacheKey == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, Error{errNoCacheKey})
 
 		return
 	}
 
-	if strings.Contains(cacheKey, ".") {
+	if strings.Contains(cacheKey, "..") {
 		c.AbortWithStatusJSON(http.StatusBadRequest, Error{errInvalidCacheKey})
 
 		return

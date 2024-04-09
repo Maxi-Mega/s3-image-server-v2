@@ -38,7 +38,7 @@ func (srv *Server) defineRoutes(prod bool) error {
 	// API
 	api := r.Group("/api")
 	api.GET("/info", srv.infoHandler)
-	api.GET("/cache/:cacheKey", srv.cacheHandler)
+	api.GET("/cache/*cache_key", srv.cacheHandler)
 	api.GET("/ws", srv.wsHub.serveWs)
 	api.POST("/graphql", handlerAdapter(srv.graphqlHandler))
 

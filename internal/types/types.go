@@ -14,11 +14,12 @@ type CachedObject struct {
 }
 
 type ImageSummary struct {
-	Bucket       string `json:"bucket"`
-	Name         string `json:"name"`
-	Group        string `json:"group"`
-	Type         string `json:"type"`
-	CachedObject        // inlined
+	Bucket string `json:"bucket"`
+	Name   string `json:"name"`
+	Group  string `json:"group"`
+	Type   string `json:"type"`
+	// Contains the cache key to the image preview.
+	CachedObject // inlined
 }
 
 type Image struct {

@@ -92,8 +92,8 @@ models:
   Map:
     model: github.com/99designs/gqlgen/graphql.Map
   AllImageSummaries:
-    model:
-      - github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.AllImageSummaries
-  Features:
-    model:
-      - github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.Features
+    model: github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.AllImageSummaries
+  GeonamesObject:
+    model: github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.GeonamesObject
+  LocalizationCorner:
+    model: github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.LocalizationCorner

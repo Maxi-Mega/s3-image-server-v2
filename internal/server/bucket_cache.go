@@ -102,9 +102,9 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.imgGroup = event.imgGroup.GroupName
 		img.imgType = event.imgType.Name
 		img.lastModified = event.ObjectLastModified
-		img.additional = make(map[string]withLastUpdate)
-		img.targets = make(map[string]withLastUpdate)
-		img.fullProducts = make(map[string]withLastUpdate)
+		img.additional = make(map[string]valueWithLastUpdate)
+		img.targets = make(map[string]valueWithLastUpdate)
+		img.fullProducts = make(map[string]valueWithLastUpdate)
 
 		bc.setDropTimer(event.baseDir, event.Time)
 	}
@@ -164,14 +164,14 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 	case types.ObjectLocalization:
 		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, cacheKey(""))
 	case types.ObjectAdditional:
-		img.additional[objKeyBase] = withLastUpdate{
+		img.additional[objKeyBase] = valueWithLastUpdate{
 			value:      cacheKey(additionalDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
 	case types.ObjectFeatures:
 		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, cacheKey(""), event.ObjectKey)
 	case types.ObjectTarget:
-		img.targets[objKeyBase] = withLastUpdate{
+		img.targets[objKeyBase] = valueWithLastUpdate{
 			value:      cacheKey(targetsDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
@@ -183,7 +183,7 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 		}
 
 		if signedURL, err := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey); err == nil {
-			img.fullProducts[event.ObjectKey] = withLastUpdate{
+			img.fullProducts[event.ObjectKey] = valueWithLastUpdate{
 				value:      signedURL,
 				lastUpdate: event.ObjectLastModified,
 			}

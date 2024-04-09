@@ -5,7 +5,8 @@ scalar Map
 
 # Custom scalar types
 scalar AllImageSummaries
-scalar Features
+scalar GeonamesObject
+scalar LocalizationCorner
 
 type CachedObject {
     lastModified: Time!
@@ -21,21 +22,21 @@ type ImageSummary {
 }
 
 type Geonames {
-    Objects: [Any!]!
-    CachedObject: CachedObject!
+    objects: [GeonamesObject!]!
+    cachedObject: CachedObject!
 }
 
 type Localization {
-    Corner: Any!
-    CachedObject: CachedObject!
+    corner: LocalizationCorner!
+    cachedObject: CachedObject!
 }
 
-#type Features {
-#    Class:      String!
-#    Count:      Int!
-#    Objects:    Map!
-#    LastUpdate: Time!
-#}
+type Features {
+    class:      String!
+    count:      Int!
+    objects:    Map!
+    cachedObject: CachedObject!
+}
 
 type Image {
     imageSummary: ImageSummary!

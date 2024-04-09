@@ -39,9 +39,8 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	Geonames() GeonamesResolver
+	Features() FeaturesResolver
 	Image() ImageResolver
-	Localization() LocalizationResolver
 	Query() QueryResolver
 }
 
@@ -52,6 +51,13 @@ type ComplexityRoot struct {
 	CachedObject struct {
 		CacheKey     func(childComplexity int) int
 		LastModified func(childComplexity int) int
+	}
+
+	Features struct {
+		CachedObject func(childComplexity int) int
+		Class        func(childComplexity int) int
+		Count        func(childComplexity int) int
+		Objects      func(childComplexity int) int
 	}
 
 	Geonames struct {
@@ -88,16 +94,13 @@ type ComplexityRoot struct {
 	}
 }
 
-type GeonamesResolver interface {
-	Objects(ctx context.Context, obj *types.Geonames) ([]interface{}, error)
+type FeaturesResolver interface {
+	Objects(ctx context.Context, obj *types.Features) (map[string]interface{}, error)
 }
 type ImageResolver interface {
 	AdditionalFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error)
 	TargetFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error)
 	FullProductFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error)
-}
-type LocalizationResolver interface {
-	Corner(ctx context.Context, obj *types.Localization) (interface{}, error)
 }
 type QueryResolver interface {
 	GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error)
@@ -136,6 +139,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.CachedObject.LastModified(childComplexity), true
+
+	case "Features.CachedObject":
+		if e.complexity.Features.CachedObject == nil {
+			break
+		}
+
+		return e.complexity.Features.CachedObject(childComplexity), true
+
+	case "Features.Class":
+		if e.complexity.Features.Class == nil {
+			break
+		}
+
+		return e.complexity.Features.Class(childComplexity), true
+
+	case "Features.Count":
+		if e.complexity.Features.Count == nil {
+			break
+		}
+
+		return e.complexity.Features.Count(childComplexity), true
+
+	case "Features.Objects":
+		if e.complexity.Features.Objects == nil {
+			break
+		}
+
+		return e.complexity.Features.Objects(childComplexity), true
 
 	case "Geonames.CachedObject":
 		if e.complexity.Geonames.CachedObject == nil {
@@ -369,7 +400,8 @@ scalar Map
 
 # Custom scalar types
 scalar AllImageSummaries
-scalar Features
+scalar GeonamesObject
+scalar LocalizationCorner
 
 type CachedObject {
     lastModified: Time!
@@ -385,21 +417,21 @@ type ImageSummary {
 }
 
 type Geonames {
-    Objects: [Any!]!
+    Objects: [GeonamesObject!]!
     CachedObject: CachedObject!
 }
 
 type Localization {
-    Corner: Any!
+    Corner: LocalizationCorner!
     CachedObject: CachedObject!
 }
 
-#type Features {
-#    Class:      String!
-#    Count:      Int!
-#    Objects:    Map!
-#    LastUpdate: Time!
-#}
+type Features {
+    Class:      String!
+    Count:      Int!
+    Objects:    Map!
+    CachedObject: CachedObject!
+}
 
 type Image {
     imageSummary: ImageSummary!
@@ -612,6 +644,188 @@ func (ec *executionContext) fieldContext_CachedObject_cacheKey(ctx context.Conte
 	return fc, nil
 }
 
+func (ec *executionContext) _Features_Class(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_Class(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Class, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Features_Class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Features",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Features_Count(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_Count(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Count, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Features_Count(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Features",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Features_Objects(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_Objects(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Features().Objects(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(map[string]interface{})
+	fc.Result = res
+	return ec.marshalNMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Features_Objects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Features",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Features_CachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_CachedObject(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CachedObject, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(types.CachedObject)
+	fc.Result = res
+	return ec.marshalNCachedObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐCachedObject(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Features_CachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Features",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "lastModified":
+				return ec.fieldContext_CachedObject_lastModified(ctx, field)
+			case "cacheKey":
+				return ec.fieldContext_CachedObject_cacheKey(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CachedObject", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Geonames_Objects(ctx context.Context, field graphql.CollectedField, obj *types.Geonames) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Geonames_Objects(ctx, field)
 	if err != nil {
@@ -626,7 +840,7 @@ func (ec *executionContext) _Geonames_Objects(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Geonames().Objects(rctx, obj)
+		return obj.Objects, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -638,19 +852,19 @@ func (ec *executionContext) _Geonames_Objects(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]interface{})
+	res := resTmp.([]types.GeonamesObject)
 	fc.Result = res
-	return ec.marshalNAny2ᚕinterfaceᚄ(ctx, field.Selections, res)
+	return ec.marshalNGeonamesObject2ᚕgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObjectᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Geonames_Objects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Geonames",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Any does not have child fields")
+			return nil, errors.New("field of type GeonamesObject does not have child fields")
 		},
 	}
 	return fc, nil
@@ -891,7 +1105,17 @@ func (ec *executionContext) fieldContext_Image_features(ctx context.Context, fie
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Features does not have child fields")
+			switch field.Name {
+			case "Class":
+				return ec.fieldContext_Features_Class(ctx, field)
+			case "Count":
+				return ec.fieldContext_Features_Count(ctx, field)
+			case "Objects":
+				return ec.fieldContext_Features_Objects(ctx, field)
+			case "CachedObject":
+				return ec.fieldContext_Features_CachedObject(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Features", field.Name)
 		},
 	}
 	return fc, nil
@@ -1269,7 +1493,7 @@ func (ec *executionContext) _Localization_Corner(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Localization().Corner(rctx, obj)
+		return obj.Corner, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1281,19 +1505,19 @@ func (ec *executionContext) _Localization_Corner(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(interface{})
+	res := resTmp.(types.LocalizationCorner)
 	fc.Result = res
-	return ec.marshalNAny2interface(ctx, field.Selections, res)
+	return ec.marshalNLocalizationCorner2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐLocalizationCorner(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Localization_Corner(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Localization",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Any does not have child fields")
+			return nil, errors.New("field of type LocalizationCorner does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3426,17 +3650,27 @@ func (ec *executionContext) _CachedObject(ctx context.Context, sel ast.Selection
 	return out
 }
 
-var geonamesImplementors = []string{"Geonames"}
+var featuresImplementors = []string{"Features"}
 
-func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet, obj *types.Geonames) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, geonamesImplementors)
+func (ec *executionContext) _Features(ctx context.Context, sel ast.SelectionSet, obj *types.Features) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, featuresImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	deferred := make(map[string]*graphql.FieldSet)
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Geonames")
+			out.Values[i] = graphql.MarshalString("Features")
+		case "Class":
+			out.Values[i] = ec._Features_Class(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "Count":
+			out.Values[i] = ec._Features_Count(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "Objects":
 			field := field
 
@@ -3446,7 +3680,7 @@ func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet,
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Geonames_Objects(ctx, field, obj)
+				res = ec._Features_Objects(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -3474,9 +3708,53 @@ func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet,
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "CachedObject":
-			out.Values[i] = ec._Geonames_CachedObject(ctx, field, obj)
+			out.Values[i] = ec._Features_CachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var geonamesImplementors = []string{"Geonames"}
+
+func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet, obj *types.Geonames) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, geonamesImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Geonames")
+		case "Objects":
+			out.Values[i] = ec._Geonames_Objects(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "CachedObject":
+			out.Values[i] = ec._Geonames_CachedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -3725,45 +4003,14 @@ func (ec *executionContext) _Localization(ctx context.Context, sel ast.Selection
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Localization")
 		case "Corner":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Localization_Corner(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._Localization_Corner(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
 			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "CachedObject":
 			out.Values[i] = ec._Localization_CachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+				out.Invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -4226,59 +4473,6 @@ func (ec *executionContext) marshalNAllImageSummaries2githubᚗcomᚋMaxiᚑMega
 	return res
 }
 
-func (ec *executionContext) unmarshalNAny2interface(ctx context.Context, v interface{}) (interface{}, error) {
-	res, err := graphql.UnmarshalAny(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNAny2interface(ctx context.Context, sel ast.SelectionSet, v interface{}) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	res := graphql.MarshalAny(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) unmarshalNAny2ᚕinterfaceᚄ(ctx context.Context, v interface{}) ([]interface{}, error) {
-	var vSlice []interface{}
-	if v != nil {
-		vSlice = graphql.CoerceList(v)
-	}
-	var err error
-	res := make([]interface{}, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNAny2interface(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNAny2ᚕinterfaceᚄ(ctx context.Context, sel ast.SelectionSet, v []interface{}) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalNAny2interface(ctx, sel, v[i])
-	}
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4298,8 +4492,85 @@ func (ec *executionContext) marshalNCachedObject2githubᚗcomᚋMaxiᚑMegaᚋs3
 	return ec._CachedObject(ctx, sel, &v)
 }
 
+func (ec *executionContext) unmarshalNGeonamesObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObject(ctx context.Context, v interface{}) (types.GeonamesObject, error) {
+	res, err := UnmarshalGeonamesObject(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNGeonamesObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObject(ctx context.Context, sel ast.SelectionSet, v types.GeonamesObject) graphql.Marshaler {
+	res := MarshalGeonamesObject(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNGeonamesObject2ᚕgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObjectᚄ(ctx context.Context, v interface{}) ([]types.GeonamesObject, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]types.GeonamesObject, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNGeonamesObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObject(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNGeonamesObject2ᚕgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObjectᚄ(ctx context.Context, sel ast.SelectionSet, v []types.GeonamesObject) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNGeonamesObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObject(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNImageSummary2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐImageSummary(ctx context.Context, sel ast.SelectionSet, v types.ImageSummary) graphql.Marshaler {
 	return ec._ImageSummary(ctx, sel, &v)
+}
+
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNLocalizationCorner2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐLocalizationCorner(ctx context.Context, v interface{}) (types.LocalizationCorner, error) {
+	res, err := UnmarshalLocalizationCorner(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNLocalizationCorner2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐLocalizationCorner(ctx context.Context, sel ast.SelectionSet, v types.LocalizationCorner) graphql.Marshaler {
+	res := MarshalLocalizationCorner(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNMap2map(ctx context.Context, v interface{}) (map[string]interface{}, error) {
@@ -4632,20 +4903,11 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) unmarshalOFeatures2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐFeatures(ctx context.Context, v interface{}) (*types.Features, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := UnmarshalFeatures(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalOFeatures2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐFeatures(ctx context.Context, sel ast.SelectionSet, v *types.Features) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	res := MarshalFeatures(*v)
-	return res
+	return ec._Features(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOGeonames2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonames(ctx context.Context, sel ast.SelectionSet, v *types.Geonames) graphql.Marshaler {
