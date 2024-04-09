@@ -57,8 +57,8 @@ type (
 	}
 
 	Cache struct {
-		CacheDir        string `yaml:"cacheDir"`
-		RetentionPeriod time.Duration
+		CacheDir        string        `yaml:"cacheDir"`
+		RetentionPeriod time.Duration `yaml:"retentionPeriod"`
 	}
 
 	Log struct {

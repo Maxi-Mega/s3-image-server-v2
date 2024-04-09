@@ -54,7 +54,8 @@ products:
           productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview.jpg$"
 
 cache:
-  cacheDir: ""         # Nothing = default
+  cacheDir: "/tmp"       # The actual cache directory will be created in /tmp
+  retentionPeriod: "48h"
 
 log:
   logLevel: "info"
