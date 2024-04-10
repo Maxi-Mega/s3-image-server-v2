@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -42,6 +43,53 @@ func TestCommonPrefix(t *testing.T) {
 			output := CommonPrefix(tc.input...)
 			if output != tc.expected {
 				t.Fatalf("Unexpected result for CommonPrefix(%v): got %q, want %q", tc.input, output, tc.expected)
+			}
+		})
+	}
+}
+
+func TestGetRegexMatchGroup(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		re             *regexp.Regexp
+		str            string
+		group          int
+		expectedResult string
+		expectedMatch  bool
+	}{
+		{
+			re:             regexp.MustCompile(`^(?P<parent>.*/QOF[^/]*/\d{4}/\d{2}/\d{2}/[^/]*)/preview\.jpg$`),
+			str:            "product/IMAGE/ORTHO_PS/QOF15/2021/08/21/IMG_398/preview.jpg",
+			group:          1,
+			expectedResult: "product/IMAGE/ORTHO_PS/QOF15/2021/08/21/IMG_398",
+			expectedMatch:  true,
+		},
+		{
+			re:            regexp.MustCompile(`^(?P<parent>.*/QOF[^/]*/\d{4}/\d{2}/\d{2}/[^/]*)/preview\.jpg$`),
+			str:           "product/IMAGE/ORTHO_PS/QOF15/2021/08/21/IMG_398/preview.png",
+			group:         1,
+			expectedMatch: false,
+		},
+		{
+			re:            regexp.MustCompile(`^(?P<parent>.*/QOF[^/]*/\d{4}/\d{2}/\d{2}/[^/]*)/preview\.jpg$`),
+			str:           "product/IMAGE/ORTHO_PS/QOF15/2021/08/21/IMG_398/preview.jpg",
+			group:         2,
+			expectedMatch: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.str, func(t *testing.T) {
+			t.Parallel()
+
+			result, match := GetRegexMatchGroup(tc.re, tc.str, tc.group)
+			if match != tc.expectedMatch {
+				t.Fatalf("Expected match=%v, got %v", tc.expectedMatch, match)
+			}
+
+			if result != tc.expectedResult {
+				t.Fatalf("Expected result %q, got %q", tc.expectedResult, result)
 			}
 		})
 	}
