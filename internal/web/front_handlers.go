@@ -21,7 +21,7 @@ func (srv *Server) frontHandler(c *gin.Context) {
 	switch route {
 	case "/favicon.ico":
 		srv.serveFrontendResource(c, "favicon.ico", "image/x-icon")
-	case "/":
+	case "/", "":
 		srv.serveFrontendResource(c, "index.html", "text/html")
 	default:
 		http.NotFound(c.Writer, c.Request)

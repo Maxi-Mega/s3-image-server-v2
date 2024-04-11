@@ -39,7 +39,7 @@ func New(cfg config.Monitoring) *Metrics {
 			ConstLabels: constLabels,
 		}, []string{"bucket"}),
 		CacheImagesPerBucket: promauto.NewGaugeVec(prometheus.GaugeOpts{
-			Name:        "cache_images_count",
+			Name:        "cache_images_number",
 			Help:        "The total number of cache images",
 			ConstLabels: constLabels,
 		}, []string{"bucket"}),
