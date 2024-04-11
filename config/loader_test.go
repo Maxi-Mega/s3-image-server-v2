@@ -67,6 +67,9 @@ func TestLoad(t *testing.T) {
 						"f2": 7,
 					},
 				},
+				Monitoring: Monitoring{
+					PrometheusInstanceLabel: "s3_image_server",
+				},
 			},
 			expectedError: "",
 		},

@@ -40,18 +40,18 @@ products:
         - name: "TYPE1"
           displayName: "Type 1"
           productPrefix: "my-prefix/TYPE1/"
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\.jpg$"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
         - name: "TYPE2"
           displayName: "Type 2"
           productPrefix: "my-prefix/TYPE2/"
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\.jpg$"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
     - groupName: "Group 2"
       bucket: "group-2"
       types:
         - name: "TYPE3"
           displayName: "Type 3"
           productPrefix: "my-prefix/TYPE3/"
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\.jpg$"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
 
 cache:
   cacheDir: "/tmp"       # The actual cache directory will be created in /tmp
@@ -65,3 +65,6 @@ log:
     class_name: "prod"
     server: 42
   httpTrace: false
+
+monitoring:
+  prometheusInstanceLabel: "s3_image_server"

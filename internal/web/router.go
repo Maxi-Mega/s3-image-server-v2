@@ -9,6 +9,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func (srv *Server) defineRoutes(prod bool) error {
@@ -25,22 +26,21 @@ func (srv *Server) defineRoutes(prod bool) error {
 		e = gin.Default() // Default includes logger & recovery middlewares
 	}
 
-	// TODO: prometheus middleware & endpoint
-
 	r := e.Group(srv.uiCfg.BaseURL)
 
 	r.GET("/health", func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	// Frontend
-	r.GET("/", srv.frontHandler)
-	r.StaticFS("/assets", http.FS(srv.assetsFS))
+	front := r.Use(metricsMiddleware(srv.gatherer, endpointFront))
+	front.GET("/", srv.frontHandler)
+	front.StaticFS("/assets", http.FS(srv.assetsFS))
 
 	// API
-	api := r.Group("/api")
+	api := r.Group("/api").Use(metricsMiddleware(srv.gatherer, endpointAPI))
 	api.GET("/info", srv.infoHandler)
 	api.GET("/cache/*cache_key", srv.cacheHandler)
 	api.GET("/ws", srv.wsHub.serveWs)
-	api.POST("/graphql", handlerAdapter(srv.graphqlHandler))
+	api.POST("/graphql", gin.WrapH(srv.graphqlHandler))
 
 	if !prod {
 		playgroundHandler, err := srv.makePlaygroundHandler()
@@ -51,7 +51,8 @@ func (srv *Server) defineRoutes(prod bool) error {
 		api.GET("/playground", playgroundHandler)
 	}
 
-	// TODO: stats endpoint
+	promHandler := promhttp.Handler()
+	r.GET("/metrics", gin.WrapH(promHandler))
 
 	srv.router = e
 
@@ -75,5 +76,5 @@ func (srv *Server) makePlaygroundHandler() (gin.HandlerFunc, error) {
 		return nil, fmt.Errorf("failed to join /api/query with base path: %w", err)
 	}
 
-	return handlerAdapter(playground.Handler("GraphQL playground", queryURL)), nil
+	return gin.WrapH(playground.Handler("GraphQL playground", queryURL)), nil
 }

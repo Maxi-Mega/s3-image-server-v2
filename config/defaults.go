@@ -37,5 +37,8 @@ func defaultConfig() Config {
 			JSONLogFormat: false,
 			HTTPTrace:     false,
 		},
+		Monitoring: Monitoring{
+			PrometheusInstanceLabel: "s3_image_server",
+		},
 	}
 }

@@ -17,8 +17,6 @@ func (srv *Server) frontHandler(c *gin.Context) {
 		return
 	}
 
-	logger.Info("Headers: ", c.Request.Header)
-
 	route := strings.TrimPrefix(c.Request.URL.Path, srv.uiCfg.BaseURL)
 	switch route {
 	case "/favicon.ico":

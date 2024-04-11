@@ -12,6 +12,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/server"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web"
 )
@@ -67,7 +68,9 @@ func start(cfg config.Config) {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 	defer cancel()
 
-	srv, err := server.New(cfg)
+	metricGatherer := metrics.New(cfg.Monitoring)
+
+	srv, err := server.New(cfg, metricGatherer)
 	if err != nil {
 		logger.Fatal("Can't initialize server: ", err)
 	}
@@ -77,7 +80,7 @@ func start(cfg config.Config) {
 		logger.Fatal("Can't start server: ", err)
 	}
 
-	webSrv, err := web.NewServer(cfg.UI, cache, frontend, isProd)
+	webSrv, err := web.NewServer(cfg.UI, cache, frontend, metricGatherer, isProd)
 	if err != nil {
 		logger.Fatal("Can't initialize web server: ", err)
 	}

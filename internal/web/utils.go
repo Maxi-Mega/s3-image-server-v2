@@ -3,10 +3,7 @@ package web
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
-
-	"github.com/gin-gonic/gin"
 )
 
 const maxLogoFileSize = 10 << 20 // 10MiB
@@ -35,10 +32,4 @@ func getLogoBase64(logoBase64Path string) (string, error) {
 	}
 
 	return string(logoBase64), nil
-}
-
-func handlerAdapter(handler http.Handler) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		handler.ServeHTTP(c.Writer, c.Request)
-	}
 }

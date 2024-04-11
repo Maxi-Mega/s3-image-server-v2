@@ -11,6 +11,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/utils"
@@ -275,4 +276,8 @@ func (bc *bucketCache) dropImage(imgBaseDir string) {
 		delete(bc.images, imgBaseDir)
 		delete(bc.dropTimers, imgBaseDir)
 	}
+}
+
+func (bc *bucketCache) updateMetrics(gatherer *metrics.Metrics) {
+	gatherer.CacheImagesPerBucket.WithLabelValues(bc.bucket).Set(float64(len(bc.images)))
 }

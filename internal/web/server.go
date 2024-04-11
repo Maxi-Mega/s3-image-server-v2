@@ -12,6 +12,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph"
 
@@ -21,6 +22,7 @@ import (
 
 type Server struct {
 	uiCfg          config.UI
+	gatherer       *metrics.Metrics
 	addr           string
 	cache          types.Cache
 	frontendFS     embed.FS
@@ -32,7 +34,7 @@ type Server struct {
 	wsHub          *wsHub
 }
 
-func NewServer(uiCfg config.UI, cache types.Cache, frontendFS embed.FS, prod bool) (*Server, error) {
+func NewServer(uiCfg config.UI, cache types.Cache, frontendFS embed.FS, gatherer *metrics.Metrics, prod bool) (*Server, error) {
 	mode := "debug"
 	if prod {
 		mode = "production"
@@ -61,6 +63,7 @@ func NewServer(uiCfg config.UI, cache types.Cache, frontendFS embed.FS, prod boo
 
 	srv := &Server{
 		uiCfg:          uiCfg,
+		gatherer:       gatherer,
 		addr:           fmt.Sprintf(":%d", uiCfg.WebServerPort),
 		cache:          cache,
 		frontendFS:     frontendFS,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/utils"
@@ -24,6 +25,7 @@ const (
 var errObjectAlreadyCached = errors.New("already in cache")
 
 type cache struct {
+	gatherer  *metrics.Metrics
 	cacheDir  string
 	buckets   map[string]*bucketCache
 	outEvents chan types.OutEvent
@@ -62,7 +64,7 @@ type valueWithLastUpdate struct {
 	lastUpdate time.Time
 }
 
-func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent) (*cache, error) {
+func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent, gatherer *metrics.Metrics) (*cache, error) {
 	logger.Debug("Using cache dir at ", cfg.Cache.CacheDir)
 
 	err := utils.CreateDir(cfg.Cache.CacheDir)
@@ -88,6 +90,7 @@ func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent
 	}
 
 	return &cache{
+		gatherer:  gatherer,
 		cacheDir:  cfg.Cache.CacheDir,
 		buckets:   buckets,
 		outEvents: outChan,
@@ -99,6 +102,8 @@ func (c *cache) handleEvent(ctx context.Context, event s3Event) {
 	if !ok {
 		return
 	}
+
+	c.gatherer.S3EventsCounter.WithLabelValues(event.Bucket).Inc()
 
 	bucket.l.Lock()
 	defer bucket.l.Unlock()
@@ -121,6 +126,8 @@ func (c *cache) handleEvent(ctx context.Context, event s3Event) {
 
 	if outEvent != nil {
 		c.outEvents <- *outEvent
+
+		bucket.updateMetrics(c.gatherer)
 	}
 }
 

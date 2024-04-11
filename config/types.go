@@ -7,11 +7,12 @@ import (
 
 type (
 	Config struct {
-		S3       S3       `yaml:"s3"`
-		UI       UI       `yaml:"ui"`
-		Products Products `yaml:"products"`
-		Cache    Cache    `yaml:"cache"`
-		Log      Log      `yaml:"log"`
+		S3         S3         `yaml:"s3"`
+		UI         UI         `yaml:"ui"`
+		Products   Products   `yaml:"products"`
+		Cache      Cache      `yaml:"cache"`
+		Log        Log        `yaml:"log"`
+		Monitoring Monitoring `yaml:"monitoring"`
 	}
 
 	S3 struct {
@@ -67,6 +68,10 @@ type (
 		JSONLogFormat bool           `yaml:"JSONLogFormat"`
 		JSONLogFields map[string]any `yaml:"JSONLogFields"`
 		HTTPTrace     bool           `yaml:"HTTPTrace"`
+	}
+
+	Monitoring struct {
+		PrometheusInstanceLabel string `yaml:"prometheusInstanceLabel"`
 	}
 
 	UIMap struct {
