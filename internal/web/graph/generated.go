@@ -140,42 +140,42 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.CachedObject.LastModified(childComplexity), true
 
-	case "Features.CachedObject":
+	case "Features.cachedObject":
 		if e.complexity.Features.CachedObject == nil {
 			break
 		}
 
 		return e.complexity.Features.CachedObject(childComplexity), true
 
-	case "Features.Class":
+	case "Features.class":
 		if e.complexity.Features.Class == nil {
 			break
 		}
 
 		return e.complexity.Features.Class(childComplexity), true
 
-	case "Features.Count":
+	case "Features.count":
 		if e.complexity.Features.Count == nil {
 			break
 		}
 
 		return e.complexity.Features.Count(childComplexity), true
 
-	case "Features.Objects":
+	case "Features.objects":
 		if e.complexity.Features.Objects == nil {
 			break
 		}
 
 		return e.complexity.Features.Objects(childComplexity), true
 
-	case "Geonames.CachedObject":
+	case "Geonames.cachedObject":
 		if e.complexity.Geonames.CachedObject == nil {
 			break
 		}
 
 		return e.complexity.Geonames.CachedObject(childComplexity), true
 
-	case "Geonames.Objects":
+	case "Geonames.objects":
 		if e.complexity.Geonames.Objects == nil {
 			break
 		}
@@ -266,14 +266,14 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ImageSummary.Type(childComplexity), true
 
-	case "Localization.CachedObject":
+	case "Localization.cachedObject":
 		if e.complexity.Localization.CachedObject == nil {
 			break
 		}
 
 		return e.complexity.Localization.CachedObject(childComplexity), true
 
-	case "Localization.Corner":
+	case "Localization.corner":
 		if e.complexity.Localization.Corner == nil {
 			break
 		}
@@ -417,20 +417,20 @@ type ImageSummary {
 }
 
 type Geonames {
-    Objects: [GeonamesObject!]!
-    CachedObject: CachedObject!
+    objects: [GeonamesObject!]!
+    cachedObject: CachedObject!
 }
 
 type Localization {
-    Corner: LocalizationCorner!
-    CachedObject: CachedObject!
+    corner: LocalizationCorner!
+    cachedObject: CachedObject!
 }
 
 type Features {
-    Class:      String!
-    Count:      Int!
-    Objects:    Map!
-    CachedObject: CachedObject!
+    class:      String!
+    count:      Int!
+    objects:    Map!
+    cachedObject: CachedObject!
 }
 
 type Image {
@@ -644,8 +644,8 @@ func (ec *executionContext) fieldContext_CachedObject_cacheKey(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _Features_Class(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Features_Class(ctx, field)
+func (ec *executionContext) _Features_class(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_class(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -675,7 +675,7 @@ func (ec *executionContext) _Features_Class(ctx context.Context, field graphql.C
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Features_Class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Features_class(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Features",
 		Field:      field,
@@ -688,8 +688,8 @@ func (ec *executionContext) fieldContext_Features_Class(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Features_Count(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Features_Count(ctx, field)
+func (ec *executionContext) _Features_count(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_count(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -719,7 +719,7 @@ func (ec *executionContext) _Features_Count(ctx context.Context, field graphql.C
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Features_Count(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Features_count(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Features",
 		Field:      field,
@@ -732,8 +732,8 @@ func (ec *executionContext) fieldContext_Features_Count(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Features_Objects(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Features_Objects(ctx, field)
+func (ec *executionContext) _Features_objects(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_objects(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -763,7 +763,7 @@ func (ec *executionContext) _Features_Objects(ctx context.Context, field graphql
 	return ec.marshalNMap2map(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Features_Objects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Features_objects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Features",
 		Field:      field,
@@ -776,8 +776,8 @@ func (ec *executionContext) fieldContext_Features_Objects(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Features_CachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Features_CachedObject(ctx, field)
+func (ec *executionContext) _Features_cachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Features_cachedObject(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -807,7 +807,7 @@ func (ec *executionContext) _Features_CachedObject(ctx context.Context, field gr
 	return ec.marshalNCachedObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐCachedObject(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Features_CachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Features_cachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Features",
 		Field:      field,
@@ -826,8 +826,8 @@ func (ec *executionContext) fieldContext_Features_CachedObject(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _Geonames_Objects(ctx context.Context, field graphql.CollectedField, obj *types.Geonames) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Geonames_Objects(ctx, field)
+func (ec *executionContext) _Geonames_objects(ctx context.Context, field graphql.CollectedField, obj *types.Geonames) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Geonames_objects(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -857,7 +857,7 @@ func (ec *executionContext) _Geonames_Objects(ctx context.Context, field graphql
 	return ec.marshalNGeonamesObject2ᚕgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonamesObjectᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Geonames_Objects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Geonames_objects(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Geonames",
 		Field:      field,
@@ -870,8 +870,8 @@ func (ec *executionContext) fieldContext_Geonames_Objects(ctx context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Geonames_CachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Geonames) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Geonames_CachedObject(ctx, field)
+func (ec *executionContext) _Geonames_cachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Geonames) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Geonames_cachedObject(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -901,7 +901,7 @@ func (ec *executionContext) _Geonames_CachedObject(ctx context.Context, field gr
 	return ec.marshalNCachedObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐCachedObject(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Geonames_CachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Geonames_cachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Geonames",
 		Field:      field,
@@ -1012,10 +1012,10 @@ func (ec *executionContext) fieldContext_Image_geonames(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "Objects":
-				return ec.fieldContext_Geonames_Objects(ctx, field)
-			case "CachedObject":
-				return ec.fieldContext_Geonames_CachedObject(ctx, field)
+			case "objects":
+				return ec.fieldContext_Geonames_objects(ctx, field)
+			case "cachedObject":
+				return ec.fieldContext_Geonames_cachedObject(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Geonames", field.Name)
 		},
@@ -1059,10 +1059,10 @@ func (ec *executionContext) fieldContext_Image_localization(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "Corner":
-				return ec.fieldContext_Localization_Corner(ctx, field)
-			case "CachedObject":
-				return ec.fieldContext_Localization_CachedObject(ctx, field)
+			case "corner":
+				return ec.fieldContext_Localization_corner(ctx, field)
+			case "cachedObject":
+				return ec.fieldContext_Localization_cachedObject(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Localization", field.Name)
 		},
@@ -1106,14 +1106,14 @@ func (ec *executionContext) fieldContext_Image_features(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "Class":
-				return ec.fieldContext_Features_Class(ctx, field)
-			case "Count":
-				return ec.fieldContext_Features_Count(ctx, field)
-			case "Objects":
-				return ec.fieldContext_Features_Objects(ctx, field)
-			case "CachedObject":
-				return ec.fieldContext_Features_CachedObject(ctx, field)
+			case "class":
+				return ec.fieldContext_Features_class(ctx, field)
+			case "count":
+				return ec.fieldContext_Features_count(ctx, field)
+			case "objects":
+				return ec.fieldContext_Features_objects(ctx, field)
+			case "cachedObject":
+				return ec.fieldContext_Features_cachedObject(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Features", field.Name)
 		},
@@ -1479,8 +1479,8 @@ func (ec *executionContext) fieldContext_ImageSummary_cachedObject(ctx context.C
 	return fc, nil
 }
 
-func (ec *executionContext) _Localization_Corner(ctx context.Context, field graphql.CollectedField, obj *types.Localization) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Localization_Corner(ctx, field)
+func (ec *executionContext) _Localization_corner(ctx context.Context, field graphql.CollectedField, obj *types.Localization) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Localization_corner(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1510,7 +1510,7 @@ func (ec *executionContext) _Localization_Corner(ctx context.Context, field grap
 	return ec.marshalNLocalizationCorner2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐLocalizationCorner(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Localization_Corner(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Localization_corner(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Localization",
 		Field:      field,
@@ -1523,8 +1523,8 @@ func (ec *executionContext) fieldContext_Localization_Corner(ctx context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Localization_CachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Localization) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Localization_CachedObject(ctx, field)
+func (ec *executionContext) _Localization_cachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Localization) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Localization_cachedObject(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1554,7 +1554,7 @@ func (ec *executionContext) _Localization_CachedObject(ctx context.Context, fiel
 	return ec.marshalNCachedObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐCachedObject(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Localization_CachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Localization_cachedObject(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Localization",
 		Field:      field,
@@ -3661,17 +3661,17 @@ func (ec *executionContext) _Features(ctx context.Context, sel ast.SelectionSet,
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Features")
-		case "Class":
-			out.Values[i] = ec._Features_Class(ctx, field, obj)
+		case "class":
+			out.Values[i] = ec._Features_class(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "Count":
-			out.Values[i] = ec._Features_Count(ctx, field, obj)
+		case "count":
+			out.Values[i] = ec._Features_count(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "Objects":
+		case "objects":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -3680,7 +3680,7 @@ func (ec *executionContext) _Features(ctx context.Context, sel ast.SelectionSet,
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Features_Objects(ctx, field, obj)
+				res = ec._Features_objects(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -3707,8 +3707,8 @@ func (ec *executionContext) _Features(ctx context.Context, sel ast.SelectionSet,
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "CachedObject":
-			out.Values[i] = ec._Features_CachedObject(ctx, field, obj)
+		case "cachedObject":
+			out.Values[i] = ec._Features_cachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
@@ -3746,13 +3746,13 @@ func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet,
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Geonames")
-		case "Objects":
-			out.Values[i] = ec._Geonames_Objects(ctx, field, obj)
+		case "objects":
+			out.Values[i] = ec._Geonames_objects(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "CachedObject":
-			out.Values[i] = ec._Geonames_CachedObject(ctx, field, obj)
+		case "cachedObject":
+			out.Values[i] = ec._Geonames_cachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4002,13 +4002,13 @@ func (ec *executionContext) _Localization(ctx context.Context, sel ast.Selection
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Localization")
-		case "Corner":
-			out.Values[i] = ec._Localization_Corner(ctx, field, obj)
+		case "corner":
+			out.Values[i] = ec._Localization_corner(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "CachedObject":
-			out.Values[i] = ec._Localization_CachedObject(ctx, field, obj)
+		case "cachedObject":
+			out.Values[i] = ec._Localization_cachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
