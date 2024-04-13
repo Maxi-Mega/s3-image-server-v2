@@ -1,0 +1,25 @@
+name: ESLint
+
+on:
+  push:
+    branches:
+      - "*"
+    paths:
+      - "frontend/*"
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 21
+      - run: yarn install
+        working-directory: "frontend"
+      - uses: sibiraj-s/action-eslint@v3
+        with:
+          working-directory: "frontend"
+          ignore-path: '.gitignore'
+          extensions: 'vue,js,jsx,cjs,mjs,ts,tsx,cts,mts'
+          annotations: true
