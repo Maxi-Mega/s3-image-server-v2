@@ -8,9 +8,11 @@ fi
 
 BINARY_FILENAME="S3ImageServerV2-$VERSION"
 
-echo "Building front-end ..."
+BASE_URL="/"
 
-(cd src/frontend && yarn build)
+echo "Building front-end with base URL '$BASE_URL' ..."
+
+(cd frontend && yarn build --base="$BASE_URL")
 
 echo "Building binary ..."
 

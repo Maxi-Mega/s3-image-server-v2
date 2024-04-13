@@ -19,9 +19,9 @@ func (srv *Server) frontHandler(c *gin.Context) {
 
 	route := strings.TrimPrefix(c.Request.URL.Path, srv.uiCfg.BaseURL)
 	switch route {
-	case "/favicon.ico":
+	case "favicon.ico", "/favicon.ico":
 		srv.serveFrontendResource(c, "favicon.ico", "image/x-icon")
-	case "/", "":
+	case "", "/":
 		srv.serveFrontendResource(c, "index.html", "text/html")
 	default:
 		http.NotFound(c.Writer, c.Request)

@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 const maxLogoFileSize = 10 << 20 // 10MiB
@@ -32,4 +35,16 @@ func getLogoBase64(logoBase64Path string) (string, error) {
 	}
 
 	return string(logoBase64), nil
+}
+
+func formatRoutes(routes gin.RoutesInfo) string {
+	strRoutes := make([]string, len(routes))
+
+	for i, route := range routes {
+		lastSlash := strings.LastIndex(route.Handler, "/")
+		handler := route.Handler[lastSlash+1:]
+		strRoutes[i] = fmt.Sprintf("{%s %s -> %s}", route.Method, route.Path, handler)
+	}
+
+	return strings.Join(strRoutes, " ")
 }

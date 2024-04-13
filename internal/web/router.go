@@ -33,6 +33,7 @@ func (srv *Server) defineRoutes(prod bool) error {
 	// Frontend
 	front := r.Use(metricsMiddleware(srv.gatherer, endpointFront))
 	front.GET("/", srv.frontHandler)
+	front.GET("/favicon.ico", srv.frontHandler)
 	front.StaticFS("/assets", http.FS(srv.assetsFS))
 
 	// API
@@ -53,6 +54,10 @@ func (srv *Server) defineRoutes(prod bool) error {
 
 	promHandler := promhttp.Handler()
 	r.GET("/metrics", gin.WrapH(promHandler))
+
+	if !prod {
+		logger.Trace("Registered HTTP routes: ", formatRoutes(e.Routes()))
+	}
 
 	srv.router = e
 

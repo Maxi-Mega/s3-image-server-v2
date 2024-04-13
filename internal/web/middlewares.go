@@ -24,7 +24,7 @@ func metricsMiddleware(gatherer *metrics.Metrics, endpoint endpoint) gin.Handler
 
 		duration := time.Since(start)
 		statusCode := strconv.Itoa(c.Writer.Status())
-		route := c.FullPath()
+		route := c.Request.RequestURI
 
 		gatherer.RequestDuration.WithLabelValues(string(endpoint), route, statusCode).Observe(duration.Seconds())
 		gatherer.RequestCounter.Inc()
