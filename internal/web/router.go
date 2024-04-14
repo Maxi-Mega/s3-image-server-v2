@@ -8,6 +8,7 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -23,7 +24,8 @@ func (srv *Server) defineRoutes(prod bool) error {
 	} else {
 		gin.SetMode(gin.DebugMode)
 
-		e = gin.Default() // Default includes logger & recovery middlewares
+		e = gin.Default()     // Default includes logger & recovery middlewares
+		e.Use(cors.Default()) // To avoid CORS issues when the frontend is started with its own server
 	}
 
 	r := e.Group(srv.uiCfg.BaseURL)
