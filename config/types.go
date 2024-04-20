@@ -30,7 +30,8 @@ type (
 		BaseURL                string        `yaml:"baseURL"`
 		WindowTitle            string        `yaml:"windowTitle"`
 		ApplicationTitle       string        `yaml:"applicationTitle"`
-		LogoBase64Path         string        `yaml:"logoBase64Path"`
+		FaviconPngBase64Path   string        `yaml:"faviconPngBase64Path"`
+		LogoPngBase64Path      string        `yaml:"logoPngBase64Path"`
 		ScaleInitialPercentage uint          `yaml:"scaleInitialPercentage"`
 		MaxImagesDisplayCount  uint          `yaml:"maxImagesDisplayCount"`
 		DisplayTimeOffset      time.Duration `yaml:"displayTimeOffset"`

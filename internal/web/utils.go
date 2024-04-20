@@ -9,29 +9,29 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const maxLogoFileSize = 10 << 20 // 10MiB
+const maxBase64FileSize = 10 << 20 // 10MiB
 
 var (
-	errLogoIsEmpty  = errors.New("logo file is empty")
-	errLogoTooLarge = errors.New("logo file is too large - should be less than 10MB")
+	errBase64IsEmpty  = errors.New("file is empty")
+	errBase64TooLarge = errors.New("file is too large - should be less than 10MB")
 )
 
-func getLogoBase64(logoBase64Path string) (string, error) {
-	if logoBase64Path == "" {
+func getBase64Content(base64Path string) (string, error) {
+	if base64Path == "" {
 		return "", nil
 	}
 
-	logoBase64, err := os.ReadFile(logoBase64Path)
+	logoBase64, err := os.ReadFile(base64Path)
 	if err != nil {
-		return "", fmt.Errorf("can't read logo base64 file: %w", err)
+		return "", fmt.Errorf("can't read base64 file: %w", err)
 	}
 
 	if len(logoBase64) == 0 {
-		return "", errLogoIsEmpty
+		return "", errBase64IsEmpty
 	}
 
-	if len(logoBase64) > maxLogoFileSize {
-		return "", errLogoTooLarge
+	if len(logoBase64) > maxBase64FileSize {
+		return "", errBase64TooLarge
 	}
 
 	return string(logoBase64), nil

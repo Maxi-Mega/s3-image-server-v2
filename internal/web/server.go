@@ -43,9 +43,14 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 
 	logger.Debug("Initializing web server in ", mode, " mode ...")
 
-	logoBase64, err := getLogoBase64(cfg.UI.LogoBase64Path)
+	faviconBase64, err := getBase64Content(cfg.UI.FaviconPngBase64Path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("favicon: %w", err)
+	}
+
+	logoBase64, err := getBase64Content(cfg.UI.LogoPngBase64Path)
+	if err != nil {
+		return nil, fmt.Errorf("logo: %w", err)
 	}
 
 	subFrontendFS, err := fs.Sub(frontendFS, "frontend/dist")
@@ -65,6 +70,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 	staticInfo := StaticInfo{
 		WindowTitle:            cfg.UI.WindowTitle,
 		ApplicationTitle:       cfg.UI.ApplicationTitle,
+		FaviconBase64:          faviconBase64,
 		LogoBase64:             logoBase64,
 		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage),
 		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),

@@ -12,7 +12,8 @@ ui:
   baseURL: ""
   windowTitle: "S3 Image Viewer"
   applicationTitle: "My collection"
-  logoBase64Path: ""
+  faviconPngBase64Path: ""
+  logoPngBase64Path: ""
   scaleInitialPercentage: 50
   maxImagesDisplayCount: 10
   displayTimeOffset: 1h

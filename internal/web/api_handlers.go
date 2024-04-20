@@ -25,6 +25,7 @@ type Error struct {
 type StaticInfo struct {
 	WindowTitle            string `json:"windowTitle"`
 	ApplicationTitle       string `json:"applicationTitle"`
+	FaviconBase64          string `json:"faviconBase64"`
 	LogoBase64             string `json:"logoBase64"`
 	ScaleInitialPercentage int    `json:"scaleInitialPercentage"`
 	MaxImagesDisplayCount  int    `json:"maxImagesDisplayCount"`
