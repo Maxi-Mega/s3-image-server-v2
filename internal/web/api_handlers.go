@@ -23,12 +23,20 @@ type Error struct {
 }
 
 type StaticInfo struct {
-	WindowTitle            string `json:"window_title"`
-	ApplicationTitle       string `json:"application_title"`
-	LogoBase64             string `json:"logo_base_64"`
-	ScaleInitialPercentage int    `json:"scale_initial_percentage"`
-	MaxImagesDisplayCount  int    `json:"max_images_display_count"`
-	TileServerURL          string `json:"tile_server_url"`
+	WindowTitle            string `json:"windowTitle"`
+	ApplicationTitle       string `json:"applicationTitle"`
+	LogoBase64             string `json:"logoBase64"`
+	ScaleInitialPercentage int    `json:"scaleInitialPercentage"`
+	MaxImagesDisplayCount  int    `json:"maxImagesDisplayCount"`
+	TileServerURL          string `json:"tileServerURL"`
+	ImageGroups            []struct {
+		GroupName string `json:"name"`
+		Bucket    string `json:"bucket"`
+		Types     []struct {
+			Name        string `json:"name"`
+			DisplayName string `json:"displayName"`
+		} `json:"types"`
+	} `json:"imageGroups"`
 }
 
 func (srv *Server) infoHandler(c *gin.Context) {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/gin-gonic/gin"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Server struct {
@@ -34,7 +35,7 @@ type Server struct {
 	wsHub          *wsHub
 }
 
-func NewServer(uiCfg config.UI, cache types.Cache, frontendFS embed.FS, gatherer *metrics.Metrics, prod bool) (*Server, error) {
+func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gatherer *metrics.Metrics, prod bool) (*Server, error) {
 	mode := "debug"
 	if prod {
 		mode = "production"
@@ -42,7 +43,7 @@ func NewServer(uiCfg config.UI, cache types.Cache, frontendFS embed.FS, gatherer
 
 	logger.Debug("Initializing web server in ", mode, " mode ...")
 
-	logoBase64, err := getLogoBase64(uiCfg.LogoBase64Path)
+	logoBase64, err := getLogoBase64(cfg.UI.LogoBase64Path)
 	if err != nil {
 		return nil, err
 	}
@@ -61,24 +62,31 @@ func NewServer(uiCfg config.UI, cache types.Cache, frontendFS embed.FS, gatherer
 		Cache: cache,
 	}
 
+	staticInfo := StaticInfo{
+		WindowTitle:            cfg.UI.WindowTitle,
+		ApplicationTitle:       cfg.UI.ApplicationTitle,
+		LogoBase64:             logoBase64,
+		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage),
+		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),
+		TileServerURL:          cfg.UI.Map.TileServerURL,
+	}
+
+	err = mapstructure.Decode(cfg.Products.ImageGroups, &staticInfo.ImageGroups) //nolint:musttag
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert image groups: %w", err)
+	}
+
 	srv := &Server{
-		uiCfg:          uiCfg,
+		uiCfg:          cfg.UI,
 		gatherer:       gatherer,
-		addr:           fmt.Sprintf(":%d", uiCfg.WebServerPort),
+		addr:           fmt.Sprintf(":%d", cfg.UI.WebServerPort),
 		cache:          cache,
 		frontendFS:     frontendFS,
 		subFrontendFS:  subFrontendFS,
 		assetsFS:       subAssetsFS,
 		graphqlHandler: handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: graphResolver})),
-		staticInfo: StaticInfo{
-			WindowTitle:            uiCfg.WindowTitle,
-			ApplicationTitle:       uiCfg.ApplicationTitle,
-			LogoBase64:             logoBase64,
-			ScaleInitialPercentage: int(uiCfg.ScaleInitialPercentage),
-			MaxImagesDisplayCount:  int(uiCfg.MaxImagesDisplayCount),
-			TileServerURL:          uiCfg.Map.TileServerURL,
-		},
-		wsHub: newWSHub(),
+		staticInfo:     staticInfo,
+		wsHub:          newWSHub(),
 	}
 
 	return srv, srv.defineRoutes(prod)

@@ -13,7 +13,7 @@ const maxLogoFileSize = 10 << 20 // 10MiB
 
 var (
 	errLogoIsEmpty  = errors.New("logo file is empty")
-	errLogoTooLarge = errors.New("logo file is too large")
+	errLogoTooLarge = errors.New("logo file is too large - should be less than 10MB")
 )
 
 func getLogoBase64(logoBase64Path string) (string, error) {
