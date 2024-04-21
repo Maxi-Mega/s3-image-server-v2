@@ -16,6 +16,18 @@ var (
 	errBase64TooLarge = errors.New("file is too large - should be less than 10MB")
 )
 
+type Error struct {
+	Err error `json:"error"`
+}
+
+func (err Error) MarshalJSON() ([]byte, error) {
+	if err.Err != nil {
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err.Err.Error())), nil
+	}
+
+	return []byte(`{"error":null}`), nil
+}
+
 func getBase64Content(base64Path string) (string, error) {
 	if base64Path == "" {
 		return "", nil

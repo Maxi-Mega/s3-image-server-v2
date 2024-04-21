@@ -18,10 +18,6 @@ var (
 	errUnexpected      = errors.New("an unexpected error occurred - check the server logs for more information")
 )
 
-type Error struct {
-	Err error `json:"error"`
-}
-
 type StaticInfo struct {
 	WindowTitle            string `json:"windowTitle"`
 	ApplicationTitle       string `json:"applicationTitle"`

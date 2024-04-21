@@ -117,7 +117,7 @@ func (srv *Server) Start(ctx context.Context, eventsChan chan types.OutEvent) er
 		_ = httpServer.Shutdown(shutdownCtx) //nolint:contextcheck
 	}()
 
-	logger.Info("Starting web server on http://localhost" + srv.addr)
+	logger.Info("Starting web server on http://localhost" + srv.addr + srv.uiCfg.BaseURL)
 
 	err := httpServer.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
