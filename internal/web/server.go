@@ -35,7 +35,7 @@ type Server struct {
 	wsHub          *wsHub
 }
 
-func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gatherer *metrics.Metrics, prod bool) (*Server, error) {
+func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gatherer *metrics.Metrics, prod bool, version string) (*Server, error) {
 	mode := "debug"
 	if prod {
 		mode = "production"
@@ -68,6 +68,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 	}
 
 	staticInfo := StaticInfo{
+		SoftwareVersion:        version,
 		WindowTitle:            cfg.UI.WindowTitle,
 		ApplicationTitle:       cfg.UI.ApplicationTitle,
 		FaviconBase64:          faviconBase64,
@@ -79,7 +80,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 
 	err = mapstructure.Decode(cfg.Products.ImageGroups, &staticInfo.ImageGroups) //nolint:musttag
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert image groups: %w", err)
+		return nil, fmt.Errorf("failed to convert image groups to static info: %w", err)
 	}
 
 	srv := &Server{

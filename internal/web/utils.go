@@ -22,7 +22,7 @@ type Error struct {
 
 func (err Error) MarshalJSON() ([]byte, error) {
 	if err.Err != nil {
-		return []byte(fmt.Sprintf(`{"error":"%s"}`, err.Err.Error())), nil
+		return []byte(fmt.Sprintf(`{"error":"%s"}`, err.Err.Error())), nil //nolint:nilerr
 	}
 
 	return []byte(`{"error":null}`), nil

@@ -19,6 +19,7 @@ var (
 )
 
 type StaticInfo struct {
+	SoftwareVersion        string `json:"softwareVersion"`
 	WindowTitle            string `json:"windowTitle"`
 	ApplicationTitle       string `json:"applicationTitle"`
 	FaviconBase64          string `json:"faviconBase64"`

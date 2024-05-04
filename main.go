@@ -80,7 +80,7 @@ func start(cfg config.Config) {
 		logger.Fatal("Can't start server: ", err)
 	}
 
-	webSrv, err := web.NewServer(cfg, cache, frontend, metricGatherer, isProd)
+	webSrv, err := web.NewServer(cfg, cache, frontend, metricGatherer, isProd, version)
 	if err != nil {
 		logger.Fatal("Can't initialize web server: ", err)
 	}

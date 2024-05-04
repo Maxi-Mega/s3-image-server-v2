@@ -47,9 +47,15 @@ type image struct {
 }
 
 func (img image) summary(name string) types.ImageSummary {
+	displayName := img.name
+	if img.geonames != nil {
+		displayName = img.geonames.GetTopLevel()
+	}
+
 	return types.ImageSummary{
 		Bucket: img.bucket,
-		Name:   name,
+		Key:    name,
+		Name:   displayName,
 		Group:  img.imgGroup,
 		Type:   img.imgType,
 		CachedObject: types.CachedObject{

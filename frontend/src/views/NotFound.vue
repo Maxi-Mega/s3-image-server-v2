@@ -4,7 +4,7 @@ import Error from "@/components/Error.vue";
 
 <template>
   <h1>404</h1>
-  <Error message="404 - Page not found">
+  <Error message="404 - Page not found" standalone>
     <h2 class="text-xl">
       <a
         class="text-blue-400 underline decoration-blue-500 underline-offset-2 hover:opacity-90"

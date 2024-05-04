@@ -14,5 +14,5 @@ func printSampleConfig(w io.Writer) error {
 	return err //nolint:wrapcheck
 }
 
-//go:embed all:frontend
+//go:embed all:frontend/dist
 var frontend embed.FS

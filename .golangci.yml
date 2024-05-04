@@ -14,9 +14,10 @@ linters:
     - gocognit
     - goerr113
     - gofumpt
+    - gomnd
     - ireturn
     - lll
-    - gomnd
+    - mnd
     - nlreturn
     - nonamedreturns
     - scopelint

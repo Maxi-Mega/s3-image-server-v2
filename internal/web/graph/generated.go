@@ -1311,7 +1311,7 @@ func (ec *executionContext) _ImageSummary_name(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return obj.Key, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)

@@ -1,9 +1,10 @@
 import { ApolloClient, createHttpLink, InMemoryCache } from "@apollo/client/core";
+import { resolveBackendURL } from "@/composables/url";
 
 // HTTP connection to the API
 const httpLink = createHttpLink({
   // You should use an absolute URL here
-  uri: "http://localhost:9999/api/graphql",
+  uri: resolveBackendURL("/api/graphql"),
 });
 
 // Cache implementation

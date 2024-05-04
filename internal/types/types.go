@@ -15,6 +15,7 @@ type CachedObject struct {
 
 type ImageSummary struct {
 	Bucket string `json:"bucket"`
+	Key    string `json:"key"`
 	Name   string `json:"name"`
 	Group  string `json:"group"`
 	Type   string `json:"type"`
