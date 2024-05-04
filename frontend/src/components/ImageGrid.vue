@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, type Ref, ref, watch } from "vue";
+import { computed, type Ref, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { HSOverlay } from "preline/preline";
 import { useImageStore } from "@/stores/images";
 import { useFilterStore } from "@/stores/filters";
 import { summaryKey } from "@/composables/images";

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
+import { computed, watch } from "vue";
 import { useQuery } from "@vue/apollo-composable";
 import { useStaticInfoStore } from "@/stores/static_info";
 import { useImageStore } from "@/stores/images";
