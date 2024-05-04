@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { RouterView } from "vue-router";
-import Error from "@/components/Error.vue";
+import Error from "@/components/ErrorBox.vue";
 import { fetchStaticInfo } from "@/composables/requests";
 import { useStaticInfoStore } from "@/stores/static_info";
 import { type Ref, ref } from "vue";

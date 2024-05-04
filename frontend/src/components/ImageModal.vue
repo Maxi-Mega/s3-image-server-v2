@@ -3,7 +3,7 @@ import CloseIcon from "@/components/icons/CloseIcon.vue";
 import type { ImageSummary } from "@/models/image";
 import { computed, type Ref, ref, watch } from "vue";
 import { useImageStore } from "@/stores/images";
-import Error from "@/components/Error.vue";
+import Error from "@/components/ErrorBox.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
 import { provideApolloClient, useQuery } from "@vue/apollo-composable";
 import { getImage } from "@/models/queries";

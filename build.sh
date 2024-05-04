@@ -12,7 +12,7 @@ BASE_URL="/"
 
 echo "Building front-end with base URL '$BASE_URL' ..."
 
-(cd frontend && yarn build --base="$BASE_URL")
+(cd frontend && yarn build --base="$BASE_URL" && touch dist/.gitkeep)
 
 echo "Building binary ..."
 

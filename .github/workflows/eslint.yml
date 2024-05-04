@@ -5,7 +5,7 @@ on:
     branches:
       - "*"
     paths:
-      - "frontend/*"
+      - "frontend/**"
 
 jobs:
   eslint:
