@@ -12,7 +12,6 @@ linters:
     - funlen
     - gochecknoinits
     - gocognit
-    - goerr113
     - gofumpt
     - gomnd
     - ireturn
