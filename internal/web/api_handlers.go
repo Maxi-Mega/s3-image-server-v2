@@ -67,5 +67,5 @@ func (srv *Server) cacheHandler(c *gin.Context) {
 		return
 	}
 
-	c.Data(http.StatusOK, "application/octet-stream", objectData)
+	c.Data(http.StatusOK, detectContentType(cacheKey, objectData), objectData)
 }

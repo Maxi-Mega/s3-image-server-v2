@@ -9,14 +9,19 @@ export interface ImageSummary extends CachedObject {
   name: string;
   group: string;
   type: string;
+  features: Features;
+
+  _hasBeenUpdated: boolean;
 }
 
 export interface Image {
-  imageSummary: ImageSummary;
+  imageSummary: ImageSummary & { cachedObject: CachedObject };
   geonames: Geonames;
   localization: Localization;
-  features: Features;
-  additionalFiles: Map<string, string>;
-  targetFiles: Map<string, string>;
-  fullProductFiles: Map<string, string>;
+  additionalFiles: Record<string, string>;
+  targetFiles: Array<string>;
+  fullProductFiles: Record<string, string>;
+
+  _lastModified: string;
+  _links: Array<[string, string]>; // [filename, URL]
 }

@@ -22,11 +22,6 @@ func (r *imageResolver) AdditionalFiles(ctx context.Context, obj *types.Image) (
 	return toMapStringAny(obj.AdditionalFiles), nil
 }
 
-// TargetFiles is the resolver for the TargetFiles field.
-func (r *imageResolver) TargetFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error) {
-	return toMapStringAny(obj.TargetFiles), nil
-}
-
 // FullProductFiles is the resolver for the FullProductFiles field.
 func (r *imageResolver) FullProductFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error) {
 	return toMapStringAny(obj.FullProductFiles), nil

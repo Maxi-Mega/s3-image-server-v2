@@ -57,10 +57,6 @@ func (srv *Server) defineRoutes(prod bool) error {
 	promHandler := promhttp.Handler()
 	r.GET("/metrics", gin.WrapH(promHandler))
 
-	if !prod {
-		logger.Trace("Registered HTTP routes: ", formatRoutes(e.Routes()))
-	}
-
 	srv.router = e
 
 	return nil

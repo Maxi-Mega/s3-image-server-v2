@@ -95,7 +95,7 @@ func (srv *Server) Start(ctx context.Context) (types.Cache, chan types.OutEvent,
 
 	go func() {
 		for evt := range srv.outChan {
-			logger.Info("Event: ", evt.String())
+			logger.Info("Event: ", evt.String()) // TODO: WS
 		}
 	}()
 

@@ -15,40 +15,41 @@ type CachedObject {
 
 type ImageSummary {
     bucket:       String!
+    key:          String!
     name:         String!
-    group:         String!
+    group:        String!
     type:         String!
+    features:     Features
     cachedObject: CachedObject!
 }
 
 type Geonames {
-    objects: [GeonamesObject!]!
+    objects:      [GeonamesObject!]!
     cachedObject: CachedObject!
 }
 
 type Localization {
-    corner: LocalizationCorner!
+    corner:       LocalizationCorner!
     cachedObject: CachedObject!
 }
 
 type Features {
-    class:      String!
-    count:      Int!
-    objects:    Map!
+    class:        String!
+    count:        Int!
+    objects:      Map!
     cachedObject: CachedObject!
 }
 
 type Image {
-    imageSummary: ImageSummary!
+    imageSummary:     ImageSummary!
     geonames:         Geonames
     localization:     Localization
-    features:         Features
     additionalFiles:  Map!
-    targetFiles:      Map!
+    targetFiles:      [String!]!
     fullProductFiles: Map!
 }
 
 type Query {
     getAllImageSummaries(from: Time, to: Time): AllImageSummaries!
-    getImage(bucket: String!, name: String!): Image
+    getImage(bucket: String!, name: String!):   Image
 }

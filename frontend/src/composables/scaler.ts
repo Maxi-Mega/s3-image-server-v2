@@ -4,7 +4,6 @@ export class Scaler {
   private readonly baseScale: number;
   private readonly scalerMinValue: number;
   private readonly scalerMaxValue: number;
-  // private currentImgWidth: string;
   private currentFontSize: string;
 
   public onUpdateScale: ((fontSize: string, rawValue: number) => void) | undefined;
@@ -16,7 +15,6 @@ export class Scaler {
 
     this.scalerMinValue = Number(scaler.min);
     this.scalerMaxValue = Number(scaler.max);
-    // this.currentImgWidth = "";
     this.currentFontSize = "";
 
     this.reset();
@@ -47,8 +45,7 @@ export class Scaler {
   }
 
   private evalScaler(): void {
-    // this.currentImgWidth = String(this.baseScale - this.currentValue()) + "rem";
-    this.currentFontSize = Math.round(16 - this.currentValue() / 7) + "px";
+    this.currentFontSize = Math.round(this.baseScale - this.currentValue() / 7) + "px";
   }
 
   public updateScale(): void {
@@ -57,14 +54,5 @@ export class Scaler {
     if (this.onUpdateScale) {
       this.onUpdateScale(this.currentFontSize, this.currentValue());
     }
-
-    /*document.querySelectorAll(this.imgSelector).forEach((el) => {
-      const img = el as HTMLElement;
-      img.style.maxWidth = this.currentImgWidth;
-      img.style.minWidth = this.currentImgWidth;
-    });
-    document
-      .querySelectorAll(this.fontSelector)
-      .forEach((title) => ((title as HTMLElement).style.fontSize = this.currentFontSize));*/
   }
 }

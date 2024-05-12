@@ -13,7 +13,7 @@ export interface GeonamesObject {
         name: string;
       }[];
     }[];
-  };
+  }[];
 }
 
 export interface Geonames {

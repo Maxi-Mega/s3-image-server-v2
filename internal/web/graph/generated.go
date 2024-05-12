@@ -67,7 +67,6 @@ type ComplexityRoot struct {
 
 	Image struct {
 		AdditionalFiles  func(childComplexity int) int
-		Features         func(childComplexity int) int
 		FullProductFiles func(childComplexity int) int
 		Geonames         func(childComplexity int) int
 		ImageSummary     func(childComplexity int) int
@@ -78,7 +77,9 @@ type ComplexityRoot struct {
 	ImageSummary struct {
 		Bucket       func(childComplexity int) int
 		CachedObject func(childComplexity int) int
+		Features     func(childComplexity int) int
 		Group        func(childComplexity int) int
+		Key          func(childComplexity int) int
 		Name         func(childComplexity int) int
 		Type         func(childComplexity int) int
 	}
@@ -99,7 +100,7 @@ type FeaturesResolver interface {
 }
 type ImageResolver interface {
 	AdditionalFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error)
-	TargetFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error)
+
 	FullProductFiles(ctx context.Context, obj *types.Image) (map[string]interface{}, error)
 }
 type QueryResolver interface {
@@ -189,13 +190,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Image.AdditionalFiles(childComplexity), true
 
-	case "Image.features":
-		if e.complexity.Image.Features == nil {
-			break
-		}
-
-		return e.complexity.Image.Features(childComplexity), true
-
 	case "Image.fullProductFiles":
 		if e.complexity.Image.FullProductFiles == nil {
 			break
@@ -245,12 +239,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ImageSummary.CachedObject(childComplexity), true
 
+	case "ImageSummary.features":
+		if e.complexity.ImageSummary.Features == nil {
+			break
+		}
+
+		return e.complexity.ImageSummary.Features(childComplexity), true
+
 	case "ImageSummary.group":
 		if e.complexity.ImageSummary.Group == nil {
 			break
 		}
 
 		return e.complexity.ImageSummary.Group(childComplexity), true
+
+	case "ImageSummary.key":
+		if e.complexity.ImageSummary.Key == nil {
+			break
+		}
+
+		return e.complexity.ImageSummary.Key(childComplexity), true
 
 	case "ImageSummary.name":
 		if e.complexity.ImageSummary.Name == nil {
@@ -410,42 +418,43 @@ type CachedObject {
 
 type ImageSummary {
     bucket:       String!
+    key:          String!
     name:         String!
-    group:         String!
+    group:        String!
     type:         String!
+    features:     Features
     cachedObject: CachedObject!
 }
 
 type Geonames {
-    objects: [GeonamesObject!]!
+    objects:      [GeonamesObject!]!
     cachedObject: CachedObject!
 }
 
 type Localization {
-    corner: LocalizationCorner!
+    corner:       LocalizationCorner!
     cachedObject: CachedObject!
 }
 
 type Features {
-    class:      String!
-    count:      Int!
-    objects:    Map!
+    class:        String!
+    count:        Int!
+    objects:      Map!
     cachedObject: CachedObject!
 }
 
 type Image {
-    imageSummary: ImageSummary!
+    imageSummary:     ImageSummary!
     geonames:         Geonames
     localization:     Localization
-    features:         Features
     additionalFiles:  Map!
-    targetFiles:      Map!
+    targetFiles:      [String!]!
     fullProductFiles: Map!
 }
 
 type Query {
     getAllImageSummaries(from: Time, to: Time): AllImageSummaries!
-    getImage(bucket: String!, name: String!): Image
+    getImage(bucket: String!, name: String!):   Image
 }
 `, BuiltIn: false},
 }
@@ -961,12 +970,16 @@ func (ec *executionContext) fieldContext_Image_imageSummary(ctx context.Context,
 			switch field.Name {
 			case "bucket":
 				return ec.fieldContext_ImageSummary_bucket(ctx, field)
+			case "key":
+				return ec.fieldContext_ImageSummary_key(ctx, field)
 			case "name":
 				return ec.fieldContext_ImageSummary_name(ctx, field)
 			case "group":
 				return ec.fieldContext_ImageSummary_group(ctx, field)
 			case "type":
 				return ec.fieldContext_ImageSummary_type(ctx, field)
+			case "features":
+				return ec.fieldContext_ImageSummary_features(ctx, field)
 			case "cachedObject":
 				return ec.fieldContext_ImageSummary_cachedObject(ctx, field)
 			}
@@ -1070,57 +1083,6 @@ func (ec *executionContext) fieldContext_Image_localization(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Image_features(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Image_features(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Features, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*types.Features)
-	fc.Result = res
-	return ec.marshalOFeatures2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐFeatures(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Image_features(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Image",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "class":
-				return ec.fieldContext_Features_class(ctx, field)
-			case "count":
-				return ec.fieldContext_Features_count(ctx, field)
-			case "objects":
-				return ec.fieldContext_Features_objects(ctx, field)
-			case "cachedObject":
-				return ec.fieldContext_Features_cachedObject(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Features", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Image_additionalFiles(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Image_additionalFiles(ctx, field)
 	if err != nil {
@@ -1179,7 +1141,7 @@ func (ec *executionContext) _Image_targetFiles(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Image().TargetFiles(rctx, obj)
+		return obj.TargetFiles, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1191,19 +1153,19 @@ func (ec *executionContext) _Image_targetFiles(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(map[string]interface{})
+	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNMap2map(ctx, field.Selections, res)
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Image_targetFiles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Image",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1297,6 +1259,50 @@ func (ec *executionContext) fieldContext_ImageSummary_bucket(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _ImageSummary_key(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ImageSummary_key(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Key, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ImageSummary_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _ImageSummary_name(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_ImageSummary_name(ctx, field)
 	if err != nil {
@@ -1311,7 +1317,7 @@ func (ec *executionContext) _ImageSummary_name(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Key, nil
+		return obj.Name, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1424,6 +1430,57 @@ func (ec *executionContext) fieldContext_ImageSummary_type(ctx context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageSummary_features(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ImageSummary_features(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Features, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*types.Features)
+	fc.Result = res
+	return ec.marshalOFeatures2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐFeatures(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ImageSummary_features(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "class":
+				return ec.fieldContext_Features_class(ctx, field)
+			case "count":
+				return ec.fieldContext_Features_count(ctx, field)
+			case "objects":
+				return ec.fieldContext_Features_objects(ctx, field)
+			case "cachedObject":
+				return ec.fieldContext_Features_cachedObject(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Features", field.Name)
 		},
 	}
 	return fc, nil
@@ -1670,8 +1727,6 @@ func (ec *executionContext) fieldContext_Query_getImage(ctx context.Context, fie
 				return ec.fieldContext_Image_geonames(ctx, field)
 			case "localization":
 				return ec.fieldContext_Image_localization(ctx, field)
-			case "features":
-				return ec.fieldContext_Image_features(ctx, field)
 			case "additionalFiles":
 				return ec.fieldContext_Image_additionalFiles(ctx, field)
 			case "targetFiles":
@@ -3799,8 +3854,6 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Image_geonames(ctx, field, obj)
 		case "localization":
 			out.Values[i] = ec._Image_localization(ctx, field, obj)
-		case "features":
-			out.Values[i] = ec._Image_features(ctx, field, obj)
 		case "additionalFiles":
 			field := field
 
@@ -3838,41 +3891,10 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "targetFiles":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Image_targetFiles(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
+			out.Values[i] = ec._Image_targetFiles(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
 			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "fullProductFiles":
 			field := field
 
@@ -3948,6 +3970,11 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "key":
+			out.Values[i] = ec._ImageSummary_key(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "name":
 			out.Values[i] = ec._ImageSummary_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -3963,6 +3990,8 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "features":
+			out.Values[i] = ec._ImageSummary_features(ctx, field, obj)
 		case "cachedObject":
 			out.Values[i] = ec._ImageSummary_cachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4607,6 +4636,38 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {

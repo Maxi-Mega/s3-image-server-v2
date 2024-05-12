@@ -22,6 +22,12 @@ type s3Event struct {
 	imgType  config.ImageType
 }
 
+func (evt s3Event) baseDirRelativePath() string {
+	relativePath := strings.TrimPrefix(evt.ObjectKey, evt.baseDir)
+
+	return utils.FormatDirName(relativePath)
+}
+
 type eventConsumer struct {
 	productsCfg          config.Products
 	cacheRetentionPeriod time.Duration
@@ -92,9 +98,9 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 	}
 
 	if event.ObjectType == types.ObjectPreview {
-		basePath, ok := utils.GetRegexMatchGroup(consumer.productsCfg.TargetRelativeRgx, event.ObjectKey, 1)
+		basePath, ok := utils.GetRegexNameGroup(imgType.ProductRgx, event.ObjectKey, "parent")
 		if !ok {
-			logger.Tracef("Preview %s/%q doesn't match the targetRelativeRegexp", event.Bucket, event.ObjectKey)
+			logger.Tracef("Preview %s/%q doesn't match the productRegexp of type %s/%s", event.Bucket, event.ObjectKey, imgGroup.GroupName, imgType.Name)
 
 			return
 		}
@@ -129,7 +135,9 @@ func (consumer *eventConsumer) getObjectType(objectKey string, imgType config.Im
 
 	switch path.Base(objectKey) {
 	case cfg.PreviewFilename:
-		return types.ObjectPreview, true
+		if imgType.ProductRgx.MatchString(objectKey) {
+			return types.ObjectPreview, true
+		}
 	case cfg.GeonamesFilename:
 		return types.ObjectGeonames, true
 	case cfg.LocalizationFilename:

@@ -73,7 +73,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 			return nil
 		}
 	case types.ObjectTarget:
-		if !img.targets[path.Base(event.ObjectKey)].lastUpdate.Before(event.ObjectLastModified) {
+		if !img.targets[event.ObjectKey].lastUpdate.Before(event.ObjectLastModified) {
 			return nil
 		}
 
@@ -110,7 +110,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		bc.setDropTimer(event.baseDir, event.Time)
 	}
 
-	fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, path.Base(event.ObjectKey))
+	fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, event.baseDirRelativePath())
 	if stat, exists, err := utils.FileStat(fullFilePath); err != nil {
 		logger.Errorf("Failed to check for file existence: %v", err)
 
@@ -145,34 +145,40 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		EventType:  types.EventCreated,
 		ObjectType: event.ObjectType,
 		ImageName:  img.name,
-		CacheKey:   bc.getCacheKey(img.name, subDir, event.ObjectKey),
+		CacheKey:   bc.getCacheKey(img.name, subDir, event.baseDirRelativePath()),
 		ObjectTime: event.ObjectLastModified,
 	}
 }
 
 func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s3Event, img *image, fullFilePath string) error {
-	objKeyBase := path.Base(event.ObjectKey)
-	cacheKey := func(subDir string) string { return bc.getCacheKey(img.name, subDir, event.ObjectKey) }
+	cacheKey := func(subDir ...string) string {
+		subdir := ""
+		if len(subDir) > 0 {
+			subdir = subDir[0]
+		}
+
+		return bc.getCacheKey(img.name, subdir, event.baseDirRelativePath())
+	}
 
 	var err error
 
 	switch event.ObjectType {
 	case types.ObjectPreview:
 		img.lastModified = event.ObjectLastModified
-		img.previewCacheKey = cacheKey("")
+		img.previewCacheKey = cacheKey()
 	case types.ObjectGeonames:
-		img.geonames, err = parseGeonames(fullFilePath, event.ObjectLastModified, cacheKey(""))
+		img.geonames, err = parseGeonames(fullFilePath, event.ObjectLastModified, cacheKey())
 	case types.ObjectLocalization:
-		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, cacheKey(""))
+		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, cacheKey())
 	case types.ObjectAdditional:
-		img.additional[objKeyBase] = valueWithLastUpdate{
+		img.additional[event.ObjectKey] = valueWithLastUpdate{
 			value:      cacheKey(additionalDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
 	case types.ObjectFeatures:
-		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, cacheKey(""), event.ObjectKey)
+		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, cacheKey(), event.ObjectKey)
 	case types.ObjectTarget:
-		img.targets[objKeyBase] = valueWithLastUpdate{
+		img.targets[event.ObjectKey] = valueWithLastUpdate{
 			value:      cacheKey(targetsDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
@@ -195,8 +201,6 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 }
 
 func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img image) *types.OutEvent {
-	objKeyBase := path.Base(event.ObjectKey)
-
 	var (
 		subDir     string
 		deleteFile = true
@@ -218,23 +222,23 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 	case types.ObjectLocalization:
 		img.localization = nil
 	case types.ObjectAdditional:
-		delete(img.additional, objKeyBase)
+		delete(img.additional, event.ObjectKey)
 
 		subDir = additionalDirName
 	case types.ObjectFeatures:
 		img.features = nil
 	case types.ObjectTarget:
-		delete(img.targets, objKeyBase)
+		delete(img.targets, event.ObjectKey)
 
 		subDir = targetsDirName
 	case types.ObjectFullProduct:
 		delete(img.fullProducts, event.ObjectKey)
 
-		deleteFile = false
+		deleteFile = false // not a file
 	}
 
 	if deleteFile {
-		fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, objKeyBase)
+		fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, event.baseDirRelativePath())
 		if err := os.Remove(fullFilePath); err != nil && !os.IsNotExist(err) {
 			logger.Errorf("Failed to delete %q: %v", fullFilePath, err)
 		}
@@ -250,8 +254,8 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 	}
 }
 
-func (bc *bucketCache) getCacheKey(imgName, subDir, objectKey string) string {
-	return filepath.Clean(filepath.Join(bc.bucket, imgName, subDir, path.Base(objectKey)))
+func (bc *bucketCache) getCacheKey(imgName, subDir, filename string) string {
+	return filepath.Clean(filepath.Join(bc.bucket, imgName, subDir, filename))
 }
 
 func (bc *bucketCache) setDropTimer(baseDir string, cacheAddTime time.Time) {

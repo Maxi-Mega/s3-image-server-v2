@@ -24,11 +24,12 @@ const filterStore = useFilterStore();
   <RangeInput
     v-if="staticInfo.staticInfo.scaleInitialPercentage"
     id="global-scale-range-slider"
+    name="Scale images"
     :min="10"
     :max="30"
     :step="1"
     :initial-scale-percentage="staticInfo.staticInfo.scaleInitialPercentage"
-    :base-scale="40"
+    :base-scale="16"
     @change="filterStore.setGlobalSizes"
   />
   <p class="min-w-fit text-base text-gray-200">{{ staticInfo.staticInfo.softwareVersion }}</p>

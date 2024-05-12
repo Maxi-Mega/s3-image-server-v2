@@ -26,14 +26,51 @@ watch(
 const gridColumnsCount = computed(() => Math.round(globalScaleValue.value / 3));
 
 const selectedImage: Ref<ImageSummary | null> = ref(null);
+const modalPaginationHints: Ref<[boolean, boolean]> = ref([false, false]);
 
 function openModal(img: ImageSummary) {
+  const currentIndex = filteredSummaries.value.indexOf(img as ImageSummary);
+  if (currentIndex < 0) {
+    console.warn("Can't find current modalized image.");
+    return;
+  }
+
   selectedImage.value = img;
+  modalPaginationHints.value = [
+    currentIndex > 0,
+    currentIndex < filteredSummaries.value.length - 1,
+  ];
+}
+
+function modalNavigate(target: "prev" | "next") {
+  if (!selectedImage.value) {
+    return;
+  }
+
+  const currentIndex = filteredSummaries.value.indexOf(selectedImage.value as ImageSummary);
+  if (currentIndex < 0) {
+    console.warn("Can't find current modalized image.");
+    return;
+  }
+
+  const navigatedIndex = currentIndex + (target === "prev" ? -1 : 1);
+  if (navigatedIndex < 0 || navigatedIndex >= filteredSummaries.value.length) {
+    return;
+  }
+
+  openModal(filteredSummaries.value[navigatedIndex]);
 }
 </script>
 
 <template>
   <div key="image-grid" class="container h-full min-h-screen w-full max-w-full p-6">
+    <!-- Modal -->
+    <ImageModal
+      id="image-modal"
+      :img="selectedImage"
+      :pagination-hints="modalPaginationHints"
+      @navigate="modalNavigate"
+    />
     <!-- All (filtered) sumamries -->
     <!-- sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 -->
     <div
@@ -47,7 +84,5 @@ function openModal(img: ImageSummary) {
         @openModal="openModal"
       />
     </div>
-    <!-- Modal -->
-    <ImageModal id="image-modal" :img="selectedImage" />
   </div>
 </template>

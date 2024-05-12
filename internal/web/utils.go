@@ -3,10 +3,10 @@ package web
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 const maxBase64FileSize = 10 << 20 // 10MiB
@@ -49,14 +49,11 @@ func getBase64Content(base64Path string) (string, error) {
 	return string(logoBase64), nil
 }
 
-func formatRoutes(routes gin.RoutesInfo) string {
-	strRoutes := make([]string, len(routes))
-
-	for i, route := range routes {
-		lastSlash := strings.LastIndex(route.Handler, "/")
-		handler := route.Handler[lastSlash+1:]
-		strRoutes[i] = fmt.Sprintf("{%s %s -> %s}", route.Method, route.Path, handler)
+func detectContentType(filename string, data []byte) string {
+	switch strings.ToLower(filepath.Ext(filename)) {
+	case ".json":
+		return "application/json"
+	default:
+		return http.DetectContentType(data)
 	}
-
-	return strings.Join(strRoutes, " ")
 }

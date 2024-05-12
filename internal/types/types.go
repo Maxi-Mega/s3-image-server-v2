@@ -14,11 +14,12 @@ type CachedObject struct {
 }
 
 type ImageSummary struct {
-	Bucket string `json:"bucket"`
-	Key    string `json:"key"`
-	Name   string `json:"name"`
-	Group  string `json:"group"`
-	Type   string `json:"type"`
+	Bucket   string    `json:"bucket"`
+	Key      string    `json:"key"`
+	Name     string    `json:"name"`
+	Group    string    `json:"group"`
+	Type     string    `json:"type"`
+	Features *Features `json:"features"`
 	// Contains the cache key to the image preview.
 	CachedObject // inlined
 }
@@ -27,11 +28,10 @@ type Image struct {
 	ImageSummary // inlined
 	Geonames     *Geonames
 	Localization *Localization
-	Features     *Features
 	// AdditionalFiles is a map[filename] -> cache key
 	AdditionalFiles map[string]string
-	// TargetFiles is a map[filename] -> cache key
-	TargetFiles map[string]string
+	// TargetFiles is a slice of cache keys
+	TargetFiles []string
 	// FullProductFiles is a map[filename] -> cache key
 	FullProductFiles map[string]string
 }

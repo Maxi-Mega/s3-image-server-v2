@@ -51,8 +51,8 @@ function handleToggle(ev: any, group: string, type?: string): void {
     <input
       :id="`hs-checked-checkbox-${group.name}`"
       type="checkbox"
-      class="img-group mt-0.5 shrink-0 rounded border-gray-200 text-blue-600 focus:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
-      checked="true"
+      class="img-group mt-0.5 shrink-0 rounded border-neutral-700 bg-neutral-800 text-blue-600 checked:border-blue-500 checked:bg-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800 disabled:pointer-events-none disabled:opacity-50"
+      :checked="true"
       :image-group="group.name"
       @click="handleToggle($event, group.name)"
     />
@@ -76,8 +76,8 @@ function handleToggle(ev: any, group: string, type?: string): void {
         <input
           :id="`hs-checked-checkbox-${group.name}-${type.name}`"
           type="checkbox"
-          class="img-type mt-0.5 shrink-0 rounded border-gray-200 text-blue-600 focus:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:focus:ring-offset-gray-800"
-          checked="true"
+          class="img-type mt-0.5 shrink-0 rounded border-neutral-700 bg-neutral-800 text-blue-600 checked:border-blue-500 checked:bg-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800 disabled:pointer-events-none disabled:opacity-50"
+          :checked="true"
           :image-group="group.name"
           :image-type="type.name"
           @click="handleToggle($event, group.name, type.name)"

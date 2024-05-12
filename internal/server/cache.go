@@ -40,7 +40,9 @@ type image struct {
 	localization      *types.Localization
 	features          *types.Features
 	// map[filename] -> cache key & last update
-	additional, targets map[string]valueWithLastUpdate
+	additional map[string]valueWithLastUpdate
+	// map[s3 key] -> cache key & last update
+	targets map[string]valueWithLastUpdate
 	// map[filename] -> signed URL & last update
 	fullProducts    map[string]valueWithLastUpdate
 	previewCacheKey string
@@ -53,11 +55,12 @@ func (img image) summary(name string) types.ImageSummary {
 	}
 
 	return types.ImageSummary{
-		Bucket: img.bucket,
-		Key:    name,
-		Name:   displayName,
-		Group:  img.imgGroup,
-		Type:   img.imgType,
+		Bucket:   img.bucket,
+		Key:      name,
+		Name:     displayName,
+		Group:    img.imgGroup,
+		Type:     img.imgType,
+		Features: img.features,
 		CachedObject: types.CachedObject{
 			LastModified: img.lastModified,
 			CacheKey:     img.previewCacheKey,
@@ -194,13 +197,18 @@ func (c *cache) GetImage(bucketName, name string) (types.Image, error) {
 		return types.Image{}, types.ErrImageNotFound
 	}
 
+	targetFiles := make([]string, 0, len(img.targets))
+
+	for _, target := range img.targets {
+		targetFiles = append(targetFiles, target.value)
+	}
+
 	return types.Image{
 		ImageSummary:     img.summary(name),
 		Geonames:         img.geonames,
 		Localization:     img.localization,
-		Features:         img.features,
 		AdditionalFiles:  toFilenameValueMap(img.additional),
-		TargetFiles:      toFilenameValueMap(img.targets),
+		TargetFiles:      targetFiles,
 		FullProductFiles: toFilenameValueMap(img.fullProducts),
 	}, nil
 }

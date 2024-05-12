@@ -16,13 +16,8 @@ export const useImageStore = defineStore("images", {
   },
   actions: {
     populateSummaries(summaries: ImageSummary[]): void {
-      this.allSummaries = summaries.sort(compareSummaries).flatMap((e) => [e, e, e, e, e]);
+      this.allSummaries = summaries.sort(compareSummaries);
       this.filteredCount = this.allSummaries.length;
-    },
-    findImage(bucket: string, key: string): Image | undefined {
-      return this.allImages.find(
-        (img) => img.imageSummary.bucket === bucket && img.imageSummary.key === key
-      );
     },
   },
 });

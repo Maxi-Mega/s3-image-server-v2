@@ -15,9 +15,19 @@ export const getImage = (bucket: string, name: string): DocumentNode => {
   ) {
     imageSummary {
       bucket
+      key
       name
       group
       type
+      features {
+        class
+        count
+        objects
+        cachedObject {
+          lastModified
+          cacheKey
+        }
+      }
       cachedObject {
         lastModified
         cacheKey
@@ -32,15 +42,6 @@ export const getImage = (bucket: string, name: string): DocumentNode => {
     }
     localization {
       corner
-      cachedObject {
-        lastModified
-        cacheKey
-      }
-    }
-    features {
-      class
-      objects
-      class
       cachedObject {
         lastModified
         cacheKey

@@ -8,10 +8,10 @@ export interface Point {
 }
 
 export interface LocalizationCorner {
-  upperLeft: Point;
-  upperRight: Point;
-  lowerLeft: Point;
-  lowerRight: Point;
+  "upper-left": Point;
+  "upper-right": Point;
+  "lower-left": Point;
+  "lower-right": Point;
 }
 
 export interface Localization {

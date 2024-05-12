@@ -3,14 +3,14 @@ import { computed, watch } from "vue";
 import { useQuery } from "@vue/apollo-composable";
 import { useStaticInfoStore } from "@/stores/static_info";
 import { useImageStore } from "@/stores/images";
+import { useFilterStore } from "@/stores/filters";
+import { processSummaries } from "@/composables/images";
 import { ALL_IMAGE_SUMMARIES } from "@/models/queries";
+import type { ImageGroup } from "@/models/static_info";
 import GroupDropdown from "@/components/GroupDropdown.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
 import ImageGrid from "@/components/ImageGrid.vue";
-import { processSummaries } from "@/composables/images";
 import FiltersBar from "@/components/FiltersBar.vue";
-import { useFilterStore } from "@/stores/filters";
-import type { ImageGroup } from "@/models/static_info";
 
 const staticInfo = useStaticInfoStore();
 const imageStore = useImageStore();
@@ -55,7 +55,7 @@ watch(result, (value) => {
         </h1>
         <span v-else class="mx-5 px-5"></span>
         <div
-          class="flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0 sm:ps-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-track]:bg-gray-100 dark:[&::-webkit-scrollbar-track]:bg-slate-700 [&::-webkit-scrollbar]:h-2"
+          class="flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0 sm:ps-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-track]:bg-slate-700 [&::-webkit-scrollbar]:h-2"
         >
           <GroupDropdown v-for="group in groupsAndTypes" :key="group.name" :group="group" />
         </div>
@@ -67,7 +67,7 @@ watch(result, (value) => {
       </div>
     </nav>
   </header>
-  <main class="min-h-screen w-full">
+  <main class="min-h-screen w-full bg-fixed">
     <Transition name="loading">
       <LoaderSpinner v-if="loading" key="loading-true" :standalone="true">Loading...</LoaderSpinner>
       <ImageGrid v-else key="loading-false" />
