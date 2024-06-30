@@ -12,7 +12,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/server"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web"
 )
@@ -45,7 +45,13 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	case *justPrintVersion:
-		fmt.Println("S3 Image Server V2", version) //nolint:forbidigo
+		build := "development"
+
+		if isProd {
+			build = "production"
+		}
+
+		fmt.Printf("S3 Image Server V2 %s, %s build\n", version, build) //nolint:forbidigo
 		os.Exit(0)
 	case *configPath == "":
 		log.Fatalln("No configuration file path provided. Use -c <path> to specify one.")
@@ -68,7 +74,7 @@ func start(cfg config.Config) {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 	defer cancel()
 
-	metricGatherer := metrics.New(cfg.Monitoring)
+	metricGatherer := observability.New(cfg.Monitoring)
 
 	srv, err := server.New(cfg, metricGatherer)
 	if err != nil {

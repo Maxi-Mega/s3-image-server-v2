@@ -4,7 +4,7 @@ import { ref } from "vue";
 export const useFilterStore = defineStore("filters", {
   state: () => {
     return {
-      checkedTypes: ref({} as Record<string, string[]>),
+      checkedTypes: ref<Record<string, string[]>>({}),
       searchQuery: "",
       globalFontSize: "13px", // TODO:
       globalScaleValue: 20, // calculate values based on initialScalePercentage
@@ -13,7 +13,8 @@ export const useFilterStore = defineStore("filters", {
   actions: {
     reset() {
       this.searchQuery = "";
-      this.checkedTypes = {};
+      // @ts-ignore // without .value, the reference to the ref is lost
+      this.checkedTypes.value = {};
     },
     setCheckedTypes(group: string, types: string[]) {
       this.checkedTypes[group] = types;

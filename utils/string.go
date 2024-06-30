@@ -48,18 +48,34 @@ func GetRegexMatchGroup(re *regexp.Regexp, str string, group int) (string, bool)
 }
 
 func GetRegexNameGroup(re *regexp.Regexp, str, groupName string) (string, bool) {
-	matches := re.FindStringSubmatch(str)
-	if matches == nil {
+	matches, match := GetAllRegexNameGroups(re, str)
+	if !match {
 		return "", false
 	}
 
-	for i, name := range re.SubexpNames() {
-		if name == groupName {
-			return matches[i], true
-		}
+	value, found := matches[groupName]
+
+	return value, found
+}
+
+func GetAllRegexNameGroups(re *regexp.Regexp, str string) (map[string]string, bool) {
+	matches := re.FindStringSubmatch(str)
+	if matches == nil {
+		return nil, false
 	}
 
-	return "", false
+	groups := make(map[string]string, len(matches))
+
+	for i, name := range re.SubexpNames() {
+		// We skip the first group, which is "" -> the whole string
+		if i == 0 {
+			continue
+		}
+
+		groups[name] = matches[i]
+	}
+
+	return groups, true
 }
 
 func FormatDuration(d time.Duration) string {

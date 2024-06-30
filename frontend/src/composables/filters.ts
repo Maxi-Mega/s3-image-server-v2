@@ -1,4 +1,5 @@
 import type { ImageSummary } from "@/models/image";
+import { compareSummaries } from "@/composables/images";
 
 export function applyFilters(
   summaries: Array<ImageSummary>,
@@ -16,5 +17,5 @@ export function applyFilters(
     );
   }
 
-  return filtered;
+  return filtered.sort(compareSummaries);
 }

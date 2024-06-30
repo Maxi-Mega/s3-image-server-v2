@@ -64,6 +64,8 @@ func (hub *wsHub) goRun(ctx context.Context, eventChan <-chan types.OutEvent) {
 					close(client.send)
 				}
 			case evt := <-eventChan:
+				logger.Trace("Sending WS event: ", evt.String())
+
 				eventMsg := evt.JSON()
 
 				for client := range hub.clients {
@@ -120,6 +122,7 @@ func (c *wsClient) writer() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
+		logger.Trace("Closing WS connection from ", c.conn.RemoteAddr())
 
 		_ = c.conn.Close()
 	}()
@@ -149,7 +152,7 @@ func (c *wsClient) writer() {
 				_, _ = w.Write(<-c.send)
 			}
 
-			if err := w.Close(); err != nil {
+			if err = w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
@@ -158,7 +161,7 @@ func (c *wsClient) writer() {
 				return
 			}
 
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}

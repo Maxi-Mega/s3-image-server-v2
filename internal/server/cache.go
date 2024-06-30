@@ -11,7 +11,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/utils"
@@ -22,10 +22,13 @@ const (
 	targetsDirName    = "__targets__"
 )
 
-var errObjectAlreadyCached = errors.New("already in cache")
+var (
+	errObjectAlreadyCached = errors.New("already in cache")
+	errNoEventNeeded       = errors.New("no event needed")
+)
 
 type cache struct {
-	gatherer  *metrics.Metrics
+	gatherer  *observability.Metrics
 	cacheDir  string
 	buckets   map[string]*bucketCache
 	outEvents chan types.OutEvent
@@ -48,10 +51,20 @@ type image struct {
 	previewCacheKey string
 }
 
+// summary returns the [ImageSummary] of this [image],
+// the name parameter corresponds to the image base dir.
 func (img image) summary(name string) types.ImageSummary {
-	displayName := img.name
+	var displayName string
+
 	if img.geonames != nil {
 		displayName = img.geonames.GetTopLevel()
+	} else {
+		displayName = img.name
+
+		lastSlash := strings.LastIndex(name, "/")
+		if lastSlash > -1 {
+			displayName = name[lastSlash+1:]
+		}
 	}
 
 	return types.ImageSummary{
@@ -73,7 +86,7 @@ type valueWithLastUpdate struct {
 	lastUpdate time.Time
 }
 
-func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent, gatherer *metrics.Metrics) (*cache, error) {
+func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent, gatherer *observability.Metrics) (*cache, error) {
 	logger.Debug("Using cache dir at ", cfg.Cache.CacheDir)
 
 	err := utils.CreateDir(cfg.Cache.CacheDir)
@@ -150,7 +163,7 @@ func (c *cache) matchesEntry(bucketName string, entry string) (match bool, baseD
 	defer bucket.l.RUnlock()
 
 	for imgBaseDir := range bucket.images {
-		if strings.HasPrefix(entry, imgBaseDir) {
+		if strings.HasPrefix(entry, imgBaseDir+"/") {
 			return true, imgBaseDir
 		}
 	}
@@ -215,6 +228,24 @@ func (c *cache) GetImage(bucketName, name string) (types.Image, error) {
 
 func (c *cache) GetCachedObject(cacheKey string) ([]byte, error) {
 	return os.ReadFile(filepath.Join(c.cacheDir, cacheKey)) //nolint:wrapcheck
+}
+
+func (c *cache) DumpImages() map[string][]string {
+	imagesPerBucket := make(map[string][]string, len(c.buckets))
+
+	for _, bucket := range c.buckets {
+		bucket.l.RLock()
+
+		imagesPerBucket[bucket.bucket] = make([]string, 0, len(bucket.images))
+
+		for imgBaseDir := range bucket.images {
+			imagesPerBucket[bucket.bucket] = append(imagesPerBucket[bucket.bucket], imgBaseDir)
+		}
+
+		bucket.l.RUnlock()
+	}
+
+	return imagesPerBucket
 }
 
 func toFilenameValueMap(m map[string]valueWithLastUpdate) map[string]string {

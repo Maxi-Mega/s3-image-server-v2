@@ -27,6 +27,7 @@ linters:
     - varnamelen
     # Deprecated linters
     - deadcode
+    - execinquery
     - ifshort
     - interfacer
     - golint

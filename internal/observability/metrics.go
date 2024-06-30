@@ -1,4 +1,4 @@
-package metrics
+package observability
 
 import (
 	"github.com/Maxi-Mega/s3-image-server-v2/config"

@@ -3,17 +3,17 @@ s3:
   pollingPeriod: 30s
   exitOnS3Error: false
   endpoint: "127.0.0.1:9000"
-  accessId: "admin"
+  accessID: "admin"
   accessSecret: "password"
   useSSL: false              # Not tested
 
 ui:
   webServerPort: 9999
-  baseURL: ""
+  baseURL: ""                       # The path the server will listen on (empty means /)
   windowTitle: "S3 Image Viewer"
   applicationTitle: "My collection"
-  faviconPngBase64Path: ""
-  logoPngBase64Path: ""
+  faviconPngBase64: ""
+  logoPngBase64: ""
   scaleInitialPercentage: 50
   maxImagesDisplayCount: 10
   displayTimeOffset: 1h
@@ -21,7 +21,7 @@ ui:
     tileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 products:
-  previewFilename: "preview.jpg"
+  defaultPreviewSuffix: "/preview.jpg"
   geonamesFilename: "geonames.json"
   localizationFilename: "localization.json"
   additionalProductFilesRegexp: "osmtags.json"
@@ -41,13 +41,23 @@ products:
         - name: "TYPE1"
           displayName: "Type 1"
           productPrefix: "my-prefix/TYPE1/"
+          # The productRegexp is used to choose a name for each image (the parent named group).
+          # The productPrefix will be trimed from the object key before testing it against this regexp.
           productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
         - name: "TYPE2"
           displayName: "Type 2"
           productPrefix: "my-prefix/TYPE2/"
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
+          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/[^/]*_preview\\.jpg$"
+          previewSuffix: "_preview.jpg"
     - groupName: "Group 2"
       bucket: "group-2"
+      fullProductURLParams:
+        - name: key
+          type: constant
+          value: 777
+        - name: dir
+          type: regexp
+      fullProductURLParamsRegexp: "^my-prefix/TYPE3/.*/DIR_(?P<dir>\\w+)/[^/]*/file\\.tif$"
       types:
         - name: "TYPE3"
           displayName: "Type 3"

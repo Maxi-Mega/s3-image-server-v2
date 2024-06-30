@@ -6,6 +6,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Maxi-Mega/s3-image-server-v2/config"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 )
 
 const (
@@ -21,17 +24,19 @@ type oot struct {
 
 type objectTemporizer struct {
 	baseDirChan       chan string
-	ootChan           chan s3Event
+	temporizationChan chan s3Event
 	cache             *cache
+	productsCfg       config.Products
 	unassignedObjects map[string][]oot
 	objectsLock       sync.Mutex
 }
 
-func newObjectTemporizer(baseDirChan chan string, ootChan chan s3Event, cache *cache) *objectTemporizer {
+func newObjectTemporizer(baseDirChan chan string, ootChan chan s3Event, cache *cache, productsCfg config.Products) *objectTemporizer {
 	return &objectTemporizer{
 		baseDirChan:       baseDirChan,
-		ootChan:           ootChan,
+		temporizationChan: ootChan,
 		cache:             cache,
+		productsCfg:       productsCfg,
 		unassignedObjects: make(map[string][]oot),
 	}
 }
@@ -43,7 +48,7 @@ func (op *objectTemporizer) goTemporize(ctx context.Context) {
 
 		for ctx.Err() == nil {
 			select {
-			case event, ok := <-op.ootChan:
+			case event, ok := <-op.temporizationChan:
 				if !ok {
 					return
 				}
@@ -74,8 +79,10 @@ func (op *objectTemporizer) handleEvent(ctx context.Context, event s3Event) {
 	objDir := path.Dir(event.ObjectKey)
 
 	if match, baseDir := op.cache.matchesEntry(event.Bucket, objDir); match {
-		event.baseDir = baseDir
-		go op.cache.handleEvent(ctx, event)
+		evt, ok := op.computeEvent(event, baseDir)
+		if ok {
+			go op.cache.handleEvent(ctx, evt)
+		}
 	} else {
 		op.unassignedObjects[objDir] = append(op.unassignedObjects[objDir], oot{event, time.Now()})
 	}
@@ -83,7 +90,7 @@ func (op *objectTemporizer) handleEvent(ctx context.Context, event s3Event) {
 
 func (op *objectTemporizer) handleBaseDir(ctx context.Context, baseDir string) {
 	for dir, oots := range op.unassignedObjects {
-		if strings.HasPrefix(dir, baseDir) {
+		if dir == baseDir || strings.HasPrefix(dir, baseDir+"/") {
 			go op.signalObjects(ctx, baseDir, oots)
 			delete(op.unassignedObjects, dir)
 		}
@@ -92,11 +99,32 @@ func (op *objectTemporizer) handleBaseDir(ctx context.Context, baseDir string) {
 
 func (op *objectTemporizer) signalObjects(ctx context.Context, baseDir string, oots []oot) {
 	for _, oot := range oots {
-		evt := oot.evt
-		evt.baseDir = baseDir
+		evt, ok := op.computeEvent(oot.evt, baseDir)
+		if !ok {
+			continue
+		}
 
 		op.cache.handleEvent(ctx, evt)
 	}
+}
+
+func (op *objectTemporizer) computeEvent(ootEvt s3Event, baseDir string) (s3Event, bool) {
+	if ootEvt.ObjectType == types.ObjectNotYetAssigned {
+		if !strings.HasPrefix(ootEvt.ObjectKey, baseDir) {
+			return s3Event{}, false
+		}
+
+		objKeyWithoutBaseDir := strings.TrimPrefix(ootEvt.ObjectKey, baseDir)
+		if op.productsCfg.TargetRelativeRgx.MatchString(objKeyWithoutBaseDir) {
+			ootEvt.ObjectType = types.ObjectTarget
+		} else {
+			return s3Event{}, false
+		}
+	}
+
+	ootEvt.baseDir = baseDir
+
+	return ootEvt, true
 }
 
 func (op *objectTemporizer) purge(now time.Time) {

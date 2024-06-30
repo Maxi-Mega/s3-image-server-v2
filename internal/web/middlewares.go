@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,11 +16,15 @@ const (
 	endpointAPI   = "api"
 )
 
-func metricsMiddleware(gatherer *metrics.Metrics, endpoint endpoint) gin.HandlerFunc {
+func metricsMiddleware(gatherer *observability.Metrics, endpoint endpoint) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
 		c.Next()
+
+		if c.Request.URL.Path == "/metrics" {
+			return
+		}
 
 		duration := time.Since(start)
 		statusCode := strconv.Itoa(c.Writer.Status())

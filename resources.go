@@ -10,7 +10,7 @@ import (
 var sampleConfig []byte
 
 func printSampleConfig(w io.Writer) error {
-	_, err := fmt.Fprintln(w, sampleConfig)
+	_, err := fmt.Fprintln(w, string(sampleConfig))
 	return err //nolint:wrapcheck
 }
 

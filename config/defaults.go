@@ -23,7 +23,7 @@ func defaultConfig() Config {
 			},
 		},
 		Products: Products{
-			PreviewFilename:      "preview.jpg",
+			DefaultPreviewSuffix: "preview.jpg",
 			GeonamesFilename:     "geonames.json",
 			LocalizationFilename: "localization.json",
 		},

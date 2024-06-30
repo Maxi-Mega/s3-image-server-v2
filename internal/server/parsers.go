@@ -97,6 +97,10 @@ func parseGeonames(filePath string, objDate time.Time, cacheKey string) (*types.
 		return nil, fmt.Errorf("failed to unmarshal from json the content of the geonames file %q: %w", filePath, err)
 	}
 
+	if len(geonames.Objects) == 0 {
+		return nil, errNoEventNeeded // The geonames file does exist, but doesn't contain any information.
+	}
+
 	geonames.LastModified = objDate
 	geonames.CacheKey = cacheKey
 

@@ -58,7 +58,7 @@ function handleToggle(ev: any, group: string, type?: string): void {
     />
     <button
       :title="`bucket '${group.bucket}'`"
-      class="hs-dropdown-toggle ml-1 flex w-full items-center text-xl font-medium text-gray-200 hover:text-gray-100 focus:text-gray-100"
+      class="hs-dropdown-toggle ml-1 flex w-full items-center text-lg font-medium text-gray-200 hover:text-gray-100 focus:text-gray-100"
       type="button"
     >
       {{ group.name }}
@@ -84,7 +84,7 @@ function handleToggle(ev: any, group: string, type?: string): void {
         />
         <label
           :for="`hs-checked-checkbox-${group.name}-${type.name}`"
-          class="ms-3 text-lg text-gray-400"
+          class="ms-3 text-base text-gray-400"
         >
           {{ type.displayName }}
         </label>

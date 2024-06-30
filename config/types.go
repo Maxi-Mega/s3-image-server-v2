@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+type FullProductURLParamType string
+
+const (
+	FullProductURLParamConstant = "constant"
+	FullProductURLParamRegexp   = "regexp"
+)
+
 type (
 	Config struct {
 		S3         S3         `yaml:"s3"`
@@ -30,8 +37,8 @@ type (
 		BaseURL                string        `yaml:"baseURL"`
 		WindowTitle            string        `yaml:"windowTitle"`
 		ApplicationTitle       string        `yaml:"applicationTitle"`
-		FaviconPngBase64Path   string        `yaml:"faviconPngBase64Path"`
-		LogoPngBase64Path      string        `yaml:"logoPngBase64Path"`
+		FaviconPngBase64       string        `yaml:"faviconPngBase64"`
+		LogoPngBase64          string        `yaml:"logoPngBase64"`
 		ScaleInitialPercentage uint          `yaml:"scaleInitialPercentage"`
 		MaxImagesDisplayCount  uint          `yaml:"maxImagesDisplayCount"`
 		DisplayTimeOffset      time.Duration `yaml:"displayTimeOffset"`
@@ -39,7 +46,7 @@ type (
 	}
 
 	Products struct {
-		PreviewFilename              string         `yaml:"previewFilename"`
+		DefaultPreviewSuffix         string         `yaml:"defaultPreviewSuffix"`
 		GeonamesFilename             string         `yaml:"geonamesFilename"`
 		LocalizationFilename         string         `yaml:"localizationFilename"`
 		AdditionalProductFilesRegexp string         `yaml:"additionalProductFilesRegexp"`
@@ -52,7 +59,7 @@ type (
 		FeaturesClassName            string         `yaml:"featuresClassName"`
 		FullProductExtension         string         `yaml:"fullProductExtension"`
 		FullProductProtocol          string         `yaml:"fullProductProtocol"`
-		FullProductRootURL           string         `yaml:"fullProductRootUrl"`
+		FullProductRootURL           string         `yaml:"fullProductRootURL"`
 		FullProductSignedURL         bool           `yaml:"fullProductSignedURL"`
 		MaxObjectsAge                time.Duration  `yaml:"maxObjectsAge"`
 		ImageGroups                  []ImageGroup   `yaml:"imageGroups"`
@@ -80,9 +87,19 @@ type (
 	}
 
 	ImageGroup struct {
-		GroupName string      `yaml:"groupName"`
-		Bucket    string      `yaml:"bucket"`
-		Types     []ImageType `yaml:"types"`
+		GroupName                  string                `yaml:"groupName"`
+		Bucket                     string                `yaml:"bucket"`
+		FullPoductURLParams        []FullProductURLParam `yaml:"fullProductURLParams"`
+		FullProductURLParamsRegexp string                `yaml:"fullProductURLParamsRegexp"`
+		FullProductURLParamsRgx    *regexp.Regexp        `yaml:"-"`
+		Types                      []ImageType           `yaml:"types"`
+	}
+
+	FullProductURLParam struct {
+		Name         string                  `yaml:"name"`
+		Type         FullProductURLParamType `yaml:"type"`
+		Value        string                  `yaml:"value"`
+		ValueMapping map[string]string       `yaml:"valueMapping"`
 	}
 
 	ImageType struct {
@@ -91,5 +108,6 @@ type (
 		ProductPrefix string         `yaml:"productPrefix"`
 		ProductRegexp string         `yaml:"productRegexp"`
 		ProductRgx    *regexp.Regexp `yaml:"-"`
+		PreviewSuffix string         `yaml:"previewSuffix"`
 	}
 )

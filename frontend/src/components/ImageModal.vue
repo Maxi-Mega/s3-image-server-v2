@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import CloseIcon from "@/components/icons/CloseIcon.vue";
 import type { Image, ImageSummary } from "@/models/image";
-import { type Ref, ref, toRefs, watch } from "vue";
+import { nextTick, type Ref, ref, toRefs, watch } from "vue";
 import Error from "@/components/ErrorBox.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
 import { provideApolloClient, useQuery } from "@vue/apollo-composable";
-import { getImage } from "@/models/queries";
-import { ApolloError, type WatchQueryFetchPolicy } from "@apollo/client";
+import { getImageQuery } from "@/composables/queries";
+import { ApolloError } from "@apollo/client";
 import { apolloClient } from "@/apollo";
 import { base, formatGeonames, processImage, wbr } from "@/composables/images";
 import { resolveBackendURL } from "@/composables/url";
@@ -15,10 +15,12 @@ import RangeInput from "@/components/RangeInput.vue";
 import LeftIcon from "@/components/icons/LeftIcon.vue";
 import RightIcon from "@/components/icons/RightIcon.vue";
 import GeoMap from "@/components/GeoMap.vue";
+import { useImageStore } from "@/stores/images";
+import type { Localization } from "@/models/localization";
 
 const props = defineProps<{
   id: string;
-  img: ImageSummary | null;
+  img: ImageSummary | undefined;
   paginationHints: [boolean, boolean];
 }>();
 
@@ -26,13 +28,18 @@ const emit = defineEmits<{
   (e: "navigate", target: "prev" | "next"): void;
 }>();
 
+const imageStore = useImageStore();
+
 const { img } = toRefs(props);
 
 const image: Ref<Image | null> = ref(null);
 const loading = ref(true);
 const error: Ref<ApolloError | null> = ref(null);
 
-const showTargetsScaler = ref(true);
+const hasTargets = ref(false);
+const hasMap = ref(false);
+
+const showingTargets = ref(true);
 const targetsFontSize = ref("13px");
 const targetsWidth = ref(12);
 
@@ -47,12 +54,19 @@ watch(img, async (value) => {
 
   const bucket = summary.bucket;
   const key = summary.key;
-  // TODO: take eventual image updates into account when defining a fetch policy
-  const fetchPolicy: WatchQueryFetchPolicy =
-    summary._hasBeenUpdated || error.value ? "network-only" : "cache-first";
+  const imageFromCache = imageStore.findImage(bucket, key);
+  if (imageFromCache && !summary._hasBeenUpdated) {
+    console.log("No fetch required");
+    image.value = imageFromCache;
+    hasTargets.value = image.value.targetFiles.length > 0;
+    hasMap.value = image.value.localization != null;
+    loading.value = false;
+    updateTabs();
+    return;
+  }
 
-  const { onResult, onError } = provideApolloClient(apolloClient)(() =>
-    useQuery(getImage(bucket, key), null, { fetchPolicy: fetchPolicy })
+  const { onResult, onError } = provideApolloClient(apolloClient)(
+    () => useQuery(getImageQuery(bucket, key), null, { fetchPolicy: "network-only" }) // TODO: use GraphQL variables instead of string interpolation
   );
 
   onResult((result) => {
@@ -60,20 +74,10 @@ watch(img, async (value) => {
     error.value = result.error || null;
 
     if (result.data) {
-      image.value = processImage(result.data);
-      setTimeout(() => {
-        window.HSStaticMethods.autoInit("tabs");
-
-        const targetsTab = document.getElementById("modal-targets-item");
-        const mapTab = document.getElementById("modal-map-item");
-        if (!targetsTab || !mapTab) {
-          console.warn("Can't find targets/map tabs");
-          return;
-        }
-
-        HSTabs.on("change", targetsTab, toggleTargetsMap);
-        HSTabs.on("change", mapTab, toggleTargetsMap);
-      }, 100);
+      image.value = imageStore.updateImage(processImage(result.data));
+      hasTargets.value = image.value.targetFiles.length > 0;
+      hasMap.value = image.value.localization != null;
+      updateTabs();
     }
   });
   onError((err) => {
@@ -81,6 +85,32 @@ watch(img, async (value) => {
     error.value = err;
   });
 });
+
+function updateTabs() {
+  if (hasTargets.value) {
+    showingTargets.value = true;
+  }
+
+  if (hasTargets.value || hasMap.value) {
+    nextTick(() => {
+      window.HSStaticMethods.autoInit("tabs");
+
+      const targetsTab = document.getElementById("modal-targets-item");
+      const mapTab = document.getElementById("modal-map-item");
+      if (!targetsTab || !mapTab) {
+        console.warn("Can't find targets/map tabs");
+        return;
+      }
+
+      HSTabs.on("change", targetsTab, toggleTargetsMap);
+      HSTabs.on("change", mapTab, toggleTargetsMap);
+
+      if (!hasTargets.value && hasMap.value) {
+        HSTabs.open(mapTab);
+      }
+    });
+  }
+}
 
 function navigate(target: "prev" | "next") {
   emit("navigate", target);
@@ -91,10 +121,10 @@ function toggleTargetsMap(o: { current: string }) {
 
   switch (current) {
     case "targets":
-      showTargetsScaler.value = true;
+      showingTargets.value = true;
       break;
     case "map":
-      showTargetsScaler.value = false;
+      showingTargets.value = false;
       break;
     default:
       console.warn("Unknown toggle", o.current);
@@ -114,6 +144,7 @@ function targetName(target: string): string {
 </script>
 
 <template>
+  <span :id="`${id}-trigger`" class="hidden" data-hs-overlay="#image-modal"></span>
   <div
     :id="id"
     class="hs-overlay pointer-events-none fixed start-0 top-0 z-[80] hidden size-full overflow-y-auto overflow-x-hidden"
@@ -122,31 +153,29 @@ function targetName(target: string): string {
       class="m-3 mt-0 h-[calc(100%-3.5rem)] w-[calc(100%-3.5rem)] opacity-0 transition-all ease-out hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 sm:mx-auto"
     >
       <div
-        class="pointer-events-auto flex h-full flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-sm shadow-neutral-700/70"
+        class="pointer-events-auto flex h-full flex-col overflow-hidden rounded-xl border border-neutral-700 bg-gray-200 shadow-sm shadow-neutral-700/70"
       >
         <div
           class="flex items-stretch justify-between gap-x-4 border-b border-neutral-700 px-4 py-3"
         >
           <div v-if="image" class="grid w-full grid-cols-4 gap-x-2 text-white">
             <div
-              class="brdr-blue col-span-3 grid grid-cols-12 gap-x-4 gap-y-1 rounded-md border-2 p-2 text-sm"
+              class="bg-blue col-span-3 grid grid-cols-12 gap-x-4 gap-y-1 rounded-md p-2 text-sm"
             >
               <span>Name: </span>
               <span class="col-span-11 font-bold">{{ base(image.imageSummary.key) }}</span>
               <span>Type: </span>
-              <span class="col-span-2 font-bold">{{ image.imageSummary.type }}</span>
-              <span class="col-span-2">Generation date: </span>
-              <span class="col-span-5 font-bold">{{ image._lastModified }}</span>
-              <span v-if="image.imageSummary.features"
+              <span class="col-span-3 font-bold">{{ image.imageSummary.type }}</span>
+              <span class="col-span-2 text-end">Generation date: </span>
+              <span class="col-span-4 font-bold">{{ image._lastModified }}</span>
+              <span v-if="image.imageSummary.features" class="text-end"
                 >{{ image.imageSummary.features.class }}:
               </span>
               <span v-if="image.imageSummary.features" class="font-bold">{{
                 image.imageSummary.features.count
               }}</span>
             </div>
-            <div
-              class="brdr-blue col-span-1 flex grow items-center justify-center rounded-md border-2 p-2"
-            >
+            <div class="bg-blue col-span-1 flex grow items-center justify-center rounded-md p-2">
               {{ formatGeonames(image.geonames) }}
             </div>
           </div>
@@ -154,7 +183,7 @@ function targetName(target: string): string {
           <div class="flex flex-col items-center justify-between">
             <button
               type="button"
-              class="flex size-7 items-center justify-center rounded-full border border-transparent text-sm font-semibold text-white hover:bg-neutral-700 disabled:pointer-events-none disabled:opacity-50"
+              class="flex size-7 items-center justify-center rounded-full border border-transparent text-sm font-semibold text-gray-700 hover:bg-gray-400 disabled:pointer-events-none disabled:opacity-50"
               :data-hs-overlay="'#' + id"
             >
               <span class="sr-only">Close</span>
@@ -164,7 +193,7 @@ function targetName(target: string): string {
               <button
                 type="button"
                 :disabled="!paginationHints[0]"
-                class="inline-flex min-h-[32px] min-w-8 items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-white transition duration-100 hover:bg-gray-100 hover:bg-white/10 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
+                class="inline-flex min-h-[32px] min-w-8 items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
                 @click="navigate('prev')"
               >
                 <LeftIcon />
@@ -173,7 +202,7 @@ function targetName(target: string): string {
               <button
                 type="button"
                 :disabled="!paginationHints[1]"
-                class="inline-flex min-h-[32px] min-w-8 items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-white transition duration-100 hover:bg-gray-100 hover:bg-white/10 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
+                class="inline-flex min-h-[32px] min-w-8 items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
                 @click="navigate('next')"
               >
                 <span aria-hidden="true" class="sr-only">Next</span>
@@ -191,18 +220,19 @@ function targetName(target: string): string {
             <a
               :href="resolveBackendURL('/api/cache/' + image.imageSummary.cachedObject.cacheKey)"
               target="_blank"
-              class="brdr-blue col-span-2 h-fit w-full rounded-md border-2"
+              class="col-span-2 flex h-fit max-h-full w-full justify-center rounded-md"
             >
               <img
                 :src="resolveBackendURL('/api/cache/' + image.imageSummary.cachedObject.cacheKey)"
                 :alt="image.imageSummary.cachedObject.cacheKey"
-                class="rounded-md"
+                class="max-h-[80svh] rounded-md"
               />
             </a>
-            <div class="col-span-3 flex flex-col gap-4">
+            <div :key="image.imageSummary.key" class="col-span-3 flex flex-col gap-4">
               <div class="row-span-1 grid max-h-full grid-cols-5 gap-4">
                 <div
-                  class="brdr-blue col-span-4 h-20 overflow-auto rounded-md border-2 text-sm text-white"
+                  v-if="image._links.length > 0"
+                  class="bg-blue col-span-4 h-20 overflow-auto rounded-md text-sm text-white"
                 >
                   <ul class="pl-1">
                     <li v-for="[name, link] in image._links" :key="link" class="py-0.5">
@@ -212,12 +242,16 @@ function targetName(target: string): string {
                     </li>
                   </ul>
                 </div>
-                <div class="col-span-1 flex flex-col items-center justify-between gap-2">
-                  <div class="flex h-fit rounded-lg bg-neutral-700 p-1 transition hover:opacity-90">
+                <div
+                  v-show="hasTargets || hasMap"
+                  class="col-span-1 flex flex-col items-center justify-between gap-2"
+                >
+                  <div class="flex h-fit rounded-lg bg-gray-300 p-1 transition hover:opacity-90">
                     <nav class="flex justify-center space-x-1" aria-label="Tabs" role="tablist">
                       <button
                         type="button"
-                        class="active inline-flex items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-neutral-200 transition disabled:pointer-events-none disabled:opacity-50 hs-tab-active:bg-neutral-800 hs-tab-active:text-white"
+                        :disabled="!hasTargets"
+                        class="active inline-flex items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-gray-700 transition disabled:pointer-events-none disabled:opacity-50 hs-tab-active:bg-[var(--dark-blue)] hs-tab-active:text-gray-200"
                         id="modal-targets-item"
                         data-hs-tab="#modal-targets"
                         aria-controls="modal-targets"
@@ -227,8 +261,8 @@ function targetName(target: string): string {
                       </button>
                       <button
                         type="button"
-                        :disabled="!image.localization"
-                        class="inline-flex items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-neutral-200 transition disabled:pointer-events-none disabled:opacity-50 hs-tab-active:bg-neutral-800 hs-tab-active:text-white"
+                        :disabled="!hasMap"
+                        class="inline-flex items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-gray-700 transition disabled:pointer-events-none disabled:opacity-50 hs-tab-active:bg-[var(--dark-blue)] hs-tab-active:text-gray-200"
                         id="modal-map-item"
                         data-hs-tab="#modal-map"
                         aria-controls="modal-map"
@@ -239,7 +273,13 @@ function targetName(target: string): string {
                     </nav>
                   </div>
                   <div class="m-auto max-w-[calc(75%)]">
-                    <div v-show="showTargetsScaler">
+                    <div
+                      v-show="showingTargets"
+                      class="flex flex-col items-center justify-center gap-y-2"
+                    >
+                      <span class="text-sm text-gray-700"
+                        >Count: {{ image.targetFiles.length }}</span
+                      >
                       <RangeInput
                         id="targets-scale-range-slider"
                         name="Scale targets"
@@ -255,45 +295,46 @@ function targetName(target: string): string {
                   </div>
                 </div>
               </div>
-              <div class="brdr-blue row-span-3 h-full rounded-md border-2">
-                <div class="h-full p-1">
-                  <div id="modal-targets" role="tabpanel" aria-labelledby="modal-targets-item">
-                    <div class="flex flex-row flex-wrap justify-around gap-2">
-                      <div
-                        v-for="target in image.targetFiles"
-                        :key="target"
-                        :style="`width: ${targetsWidth}rem`"
+              <div v-show="hasTargets || hasMap" class="row-span-3 h-full rounded-md mb-3">
+                <div
+                  id="modal-targets"
+                  role="tabpanel"
+                  aria-labelledby="modal-targets-item"
+                  class="active bg-blue"
+                >
+                  <div class="flex flex-row flex-wrap justify-around gap-2 py-2">
+                    <div
+                      v-for="target in image.targetFiles"
+                      :key="target"
+                      :style="`width: ${targetsWidth}rem`"
+                    >
+                      <a
+                        :href="resolveBackendURL('/api/cache/' + target)"
+                        target="_blank"
+                        class="rounded *:hover:underline"
                       >
-                        <a
-                          :href="resolveBackendURL('/api/cache/' + target)"
-                          target="_blank"
-                          class="rounded *:hover:underline"
-                        >
-                          <img
-                            :src="resolveBackendURL('/api/cache/' + target)"
-                            :alt="target"
-                            class="h-auto rounded object-cover"
-                          />
-                          <p
-                            v-html="targetName(target)"
-                            class="mb-1 break-all text-center text-gray-300 transition duration-100"
-                            :style="`font-size: ${targetsFontSize}`"
-                          ></p>
-                        </a>
-                      </div>
-                      <p v-if="image.targetFiles.length === 0" class="text-sm text-white">
-                        No targets available
-                      </p>
+                        <img
+                          :src="resolveBackendURL('/api/cache/' + target)"
+                          :alt="target"
+                          class="h-auto rounded object-cover"
+                        />
+                        <p
+                          v-html="targetName(target)"
+                          class="mb-1 break-all text-center text-gray-300 transition duration-100"
+                          :style="`font-size: ${targetsFontSize}`"
+                        ></p>
+                      </a>
                     </div>
+                    <p v-if="!hasTargets" class="text-sm text-white">No targets available</p>
                   </div>
-                  <div
-                    id="modal-map"
-                    class="hidden h-full"
-                    role="tabpanel"
-                    aria-labelledby="modal-map-item"
-                  >
-                    <GeoMap v-if="image.localization" :localization="image.localization" />
-                  </div>
+                </div>
+                <div
+                  id="modal-map"
+                  class="hidden h-full"
+                  role="tabpanel"
+                  aria-labelledby="modal-map-item"
+                >
+                  <GeoMap v-if="hasMap" :localization="image.localization as Localization" />
                 </div>
               </div>
             </div>
@@ -305,7 +346,7 @@ function targetName(target: string): string {
 </template>
 
 <style scoped>
-.brdr-blue {
-  border-color: var(--aqua-blue);
+.bg-blue {
+  background-color: var(--dark-blue);
 }
 </style>

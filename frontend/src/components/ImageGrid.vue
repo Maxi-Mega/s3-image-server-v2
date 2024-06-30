@@ -1,55 +1,74 @@
 <script setup lang="ts">
-import { computed, type Ref, ref, watch } from "vue";
+import { computed, nextTick, onMounted, type Ref, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { useImageStore } from "@/stores/images";
+import { findSummaryIndex, useImageStore } from "@/stores/images";
 import { useFilterStore } from "@/stores/filters";
-import { summaryKey } from "@/composables/images";
+import { compareSummaries, limitDisplayedImages, summaryKey } from "@/composables/images";
 import { applyFilters } from "@/composables/filters";
 import type { ImageSummary } from "@/models/image";
 import ImageCard from "@/components/ImageCard.vue";
 import ImageModal from "@/components/ImageModal.vue";
+import { useStaticInfoStore } from "@/stores/static_info";
 
+const staticInfoStore = useStaticInfoStore();
 const imageStore = useImageStore();
 const filterStore = useFilterStore();
-const filteredSummaries = ref(imageStore.allSummaries);
 
+const filteredSummaries = ref<ImageSummary[]>([]);
 const { searchQuery, globalScaleValue } = storeToRefs(filterStore);
+
+onMounted(() => {
+  filteredSummaries.value = limitDisplayedImages(
+    imageStore.allSummaries.sort(compareSummaries),
+    staticInfoStore.staticInfo
+  );
+  imageStore.filteredCount = filteredSummaries.value.length;
+});
 
 watch(
   [filterStore.checkedTypes, searchQuery, imageStore.allSummaries],
   ([types, search, allSummaries]) => {
-    console.info("Updating filtered summaries", types, search, allSummaries);
-    filteredSummaries.value = applyFilters(allSummaries, types, search);
+    filteredSummaries.value = limitDisplayedImages(
+      applyFilters(allSummaries, types, search),
+      staticInfoStore.staticInfo
+    );
+    imageStore.filteredCount = filteredSummaries.value.length;
   }
 );
 
 const gridColumnsCount = computed(() => Math.round(globalScaleValue.value / 3));
 
-const selectedImage: Ref<ImageSummary | null> = ref(null);
+const selectedImage: Ref<ImageSummary | undefined> = ref();
 const modalPaginationHints: Ref<[boolean, boolean]> = ref([false, false]);
 
-function openModal(img: ImageSummary) {
-  const currentIndex = filteredSummaries.value.indexOf(img as ImageSummary);
-  if (currentIndex < 0) {
-    console.warn("Can't find current modalized image.");
+function openModal(img: ImageSummary, reset = true) {
+  if (reset) {
+    selectedImage.value = undefined;
+  }
+
+  const imgIndex = findSummaryIndex(img.bucket, img.key, filteredSummaries.value);
+  if (imgIndex < 0) {
+    console.warn("Can't find image to modalize.");
     return;
   }
 
-  selectedImage.value = img;
-  modalPaginationHints.value = [
-    currentIndex > 0,
-    currentIndex < filteredSummaries.value.length - 1,
-  ];
+  // Let the time for the modal to realize that the selected image is possibly undefined
+  nextTick(() => {
+    selectedImage.value = img;
+    modalPaginationHints.value = [imgIndex > 0, imgIndex < filteredSummaries.value.length - 1];
+  });
 }
 
 function modalNavigate(target: "prev" | "next") {
-  if (!selectedImage.value) {
+  const img = selectedImage.value;
+  if (!img) {
     return;
   }
 
-  const currentIndex = filteredSummaries.value.indexOf(selectedImage.value as ImageSummary);
+  const currentIndex = findSummaryIndex(img.bucket, img.key, filteredSummaries.value);
   if (currentIndex < 0) {
     console.warn("Can't find current modalized image.");
+    // selectedImage.value = undefined;
     return;
   }
 
@@ -58,7 +77,7 @@ function modalNavigate(target: "prev" | "next") {
     return;
   }
 
-  openModal(filteredSummaries.value[navigatedIndex]);
+  openModal(filteredSummaries.value[navigatedIndex], false);
 }
 </script>
 
@@ -72,7 +91,6 @@ function modalNavigate(target: "prev" | "next") {
       @navigate="modalNavigate"
     />
     <!-- All (filtered) sumamries -->
-    <!-- sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 -->
     <div
       class="mt-12 grid gap-x-4 gap-y-8 md:gap-x-6"
       :style="`grid-template-columns: repeat(${gridColumnsCount}, minmax(0, 1fr))`"

@@ -39,8 +39,13 @@ type Client interface {
 
 type s3Client struct {
 	productsCfg           config.Products
-	commonPrefixPerBucket map[string]string
+	specificInfoPerBucket map[string]bucketSpecificInfo
 	client                *minio.Client
+}
+
+type bucketSpecificInfo struct {
+	commonPrefix              string
+	notDefaultPreviewSuffixes []string
 }
 
 func NewClient(cfg config.Config) (Client, error) {
@@ -53,22 +58,30 @@ func NewClient(cfg config.Config) (Client, error) {
 	}
 
 	prefixesPerBucket := make(map[string][]string, len(cfg.Products.ImageGroups))
+	previewSuffixesPerBucket := make(map[string][]string)
 
 	for _, imgGroup := range cfg.Products.ImageGroups {
 		for _, imgType := range imgGroup.Types {
 			prefixesPerBucket[imgGroup.Bucket] = append(prefixesPerBucket[imgGroup.Bucket], imgType.ProductPrefix)
+
+			if imgType.PreviewSuffix != "" {
+				previewSuffixesPerBucket[imgGroup.Bucket] = append(previewSuffixesPerBucket[imgGroup.Bucket], imgType.PreviewSuffix)
+			}
 		}
 	}
 
-	commonPrefixPerBucket := make(map[string]string, len(prefixesPerBucket))
+	commonPrefixPerBucket := make(map[string]bucketSpecificInfo, len(prefixesPerBucket))
 
 	for bucket, prefixes := range prefixesPerBucket {
-		commonPrefixPerBucket[bucket] = utils.CommonPrefix(prefixes...)
+		commonPrefixPerBucket[bucket] = bucketSpecificInfo{
+			commonPrefix:              utils.CommonPrefix(prefixes...),
+			notDefaultPreviewSuffixes: previewSuffixesPerBucket[bucket],
+		}
 	}
 
 	return s3Client{
 		productsCfg:           cfg.Products,
-		commonPrefixPerBucket: commonPrefixPerBucket,
+		specificInfoPerBucket: commonPrefixPerBucket,
 		client:                client,
 	}, nil
 }
@@ -93,16 +106,16 @@ func (s3 s3Client) SubscribeToBucket(ctx context.Context, bucket string, s3Chan 
 		fullProductEvents  = []string{"s3:ObjectCreated:*"}
 	)
 
-	commonPrefix := s3.commonPrefixPerBucket[bucket]
+	specificInfo := s3.specificInfoPerBucket[bucket]
 
-	previewNotifs := s3.client.ListenBucketNotification(ctx, bucket, commonPrefix, s3.productsCfg.PreviewFilename, previewEvents)
-	geonameNotifs := s3.client.ListenBucketNotification(ctx, bucket, commonPrefix, s3.productsCfg.GeonamesFilename, geonameEvents)
-	localizationNotifs := s3.client.ListenBucketNotification(ctx, bucket, commonPrefix, s3.productsCfg.LocalizationFilename, localizationEvents)
-	fullProductNotifs := s3.client.ListenBucketNotification(ctx, bucket, commonPrefix, s3.productsCfg.FullProductExtension, fullProductEvents)
+	previewNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.DefaultPreviewSuffix, previewEvents)
+	geonameNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.GeonamesFilename, geonameEvents)
+	localizationNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.LocalizationFilename, localizationEvents)
+	fullProductNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.FullProductExtension, fullProductEvents)
 
 	time.Sleep(10 * time.Millisecond) // Let the time for errors to occur
 
-	err := ensureNoError(previewNotifs, geonameNotifs, fullProductNotifs)
+	err := ensureNoError(previewNotifs, geonameNotifs, localizationNotifs, fullProductNotifs)
 	if err != nil {
 		return fmt.Errorf("failed to subscribe to notifications of bucket %q: %w", bucket, err)
 	}
@@ -143,6 +156,10 @@ func (s3 s3Client) handleEvent(bucket string, objectType types.ObjectType, notif
 	logger.Debugf("Handling S3 event from bucket %q on %s object", bucket, objectType)
 
 	for _, e := range notif.Records {
+		if !s3.matchesPreviewFilename(bucket, e.S3.Object.Key) {
+			continue
+		}
+
 		eventTime := parseEventTime(e.EventTime)
 		event := Event{
 			Time:               eventTime,
@@ -164,7 +181,7 @@ func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Even
 	ctx, cancel := context.WithTimeout(ctx, pollBucketTimeout)
 	defer cancel()
 
-	commonPrefix := s3.commonPrefixPerBucket[bucket]
+	commonPrefix := s3.specificInfoPerBucket[bucket].commonPrefix
 	currentTime := time.Now()
 
 	objects := s3.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: commonPrefix, Recursive: true})
@@ -201,6 +218,28 @@ func (s3 s3Client) GenerateSignedURL(ctx context.Context, bucket, objectKey stri
 	withoutSchemeAndHost := strings.TrimPrefix(signedURL.String(), signedURL.Scheme+"://"+signedURL.Host)
 
 	return s3.productsCfg.FullProductProtocol + url.QueryEscape(s3.productsCfg.FullProductRootURL+withoutSchemeAndHost), nil
+}
+
+// matchesPreviewFilename ensure that the given object's key matches the expected preview filename.
+// It may be whether the defaultPreviewFilename or the image type's specific previewFilename,
+// since a more granular filter will be done later.
+func (s3 s3Client) matchesPreviewFilename(bucket, objectKey string) bool {
+	specificInfo, bucketExists := s3.specificInfoPerBucket[bucket]
+	if !bucketExists {
+		return false
+	}
+
+	if s3.productsCfg.DefaultPreviewSuffix != "" && strings.HasSuffix(objectKey, s3.productsCfg.DefaultPreviewSuffix) {
+		return true
+	}
+
+	for _, previewSuffix := range specificInfo.notDefaultPreviewSuffixes {
+		if strings.HasSuffix(objectKey, previewSuffix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // ensureNoError tries to read from each given channel

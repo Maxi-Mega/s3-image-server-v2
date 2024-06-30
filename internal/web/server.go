@@ -12,7 +12,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph"
 
@@ -23,7 +23,7 @@ import (
 
 type Server struct {
 	uiCfg          config.UI
-	gatherer       *metrics.Metrics
+	gatherer       *observability.Metrics
 	addr           string
 	cache          types.Cache
 	frontendFS     embed.FS
@@ -35,23 +35,13 @@ type Server struct {
 	wsHub          *wsHub
 }
 
-func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gatherer *metrics.Metrics, prod bool, version string) (*Server, error) {
+func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gatherer *observability.Metrics, prod bool, version string) (*Server, error) {
 	mode := "debug"
 	if prod {
 		mode = "production"
 	}
 
 	logger.Debug("Initializing web server in ", mode, " mode ...")
-
-	faviconBase64, err := getBase64Content(cfg.UI.FaviconPngBase64Path)
-	if err != nil {
-		return nil, fmt.Errorf("favicon: %w", err)
-	}
-
-	logoBase64, err := getBase64Content(cfg.UI.LogoPngBase64Path)
-	if err != nil {
-		return nil, fmt.Errorf("logo: %w", err)
-	}
 
 	subFrontendFS, err := fs.Sub(frontendFS, "frontend/dist")
 	if err != nil {
@@ -71,8 +61,8 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		SoftwareVersion:        version,
 		WindowTitle:            cfg.UI.WindowTitle,
 		ApplicationTitle:       cfg.UI.ApplicationTitle,
-		FaviconBase64:          faviconBase64,
-		LogoBase64:             logoBase64,
+		FaviconBase64:          cfg.UI.FaviconPngBase64,
+		LogoBase64:             cfg.UI.LogoPngBase64,
 		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage),
 		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),
 		TileServerURL:          cfg.UI.Map.TileServerURL,
@@ -101,6 +91,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 
 func (srv *Server) Start(ctx context.Context, eventsChan chan types.OutEvent) error {
 	srv.wsHub.goRun(ctx, eventsChan)
+	eventsChan <- types.OutEvent{EventType: types.EventReset}
 
 	httpServer := &http.Server{
 		Addr:              srv.addr,

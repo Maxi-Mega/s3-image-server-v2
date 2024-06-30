@@ -1,12 +1,15 @@
 <script lang="ts" setup>
-import { computed, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, watch } from "vue";
 import { useQuery } from "@vue/apollo-composable";
+import { useWebSocket } from "@vueuse/core";
 import { useStaticInfoStore } from "@/stores/static_info";
 import { useImageStore } from "@/stores/images";
 import { useFilterStore } from "@/stores/filters";
-import { processSummaries } from "@/composables/images";
-import { ALL_IMAGE_SUMMARIES } from "@/models/queries";
 import type { ImageGroup } from "@/models/static_info";
+import { processSummaries } from "@/composables/images";
+import { ALL_IMAGE_SUMMARIES } from "@/composables/queries";
+import { wsURL } from "@/composables/url";
+import { parseEventData } from "@/composables/events";
 import GroupDropdown from "@/components/GroupDropdown.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
 import ImageGrid from "@/components/ImageGrid.vue";
@@ -19,7 +22,21 @@ const filterStore = useFilterStore();
 const groupsAndTypes = computed(() => staticInfo.staticInfo?.imageGroups || ([] as ImageGroup[]));
 const { result, loading } = useQuery(ALL_IMAGE_SUMMARIES);
 
-watch(groupsAndTypes, (value: ImageGroup[]) => {
+const { open, close } = useWebSocket(wsURL, {
+  // heartbeat: true,
+  autoReconnect: {
+    retries: 5,
+    delay: 2000,
+    onFailed: handleWSConnectionFailure,
+  },
+  immediate: false,
+  // autoClose: false,
+  onMessage: handleWSEvent,
+  onError: handleWSError,
+  onConnected: () => console.info("WS connected"),
+});
+
+watch(groupsAndTypes, async (value: ImageGroup[]) => {
   filterStore.reset();
 
   // Activate all types by default
@@ -36,11 +53,39 @@ watch(result, (value) => {
     imageStore.populateSummaries(processSummaries(value.getAllImageSummaries));
   }
 });
+
+function handleWSConnectionFailure() {
+  console.warn("Can't open WS connection");
+  // TODO: emit error ?
+}
+
+function handleWSEvent(ws: WebSocket, event: MessageEvent) {
+  try {
+    imageStore.handleEvent(parseEventData(event.data));
+  } catch (e) {
+    console.warn("Error while handling WS event:", e);
+    // TODO: emit error ?
+  }
+}
+
+function handleWSError(ws: WebSocket, event: Event) {
+  console.warn("WS error:", event);
+}
+
+onMounted(() => {
+  open(); // WS connection
+});
+
+onBeforeUnmount(() => {
+  close(); // WS connection
+});
+
+window.onbeforeunload = () => close();
 </script>
 
 <template>
   <header
-    class="fixed z-10 flex w-full flex-wrap bg-slate-500 py-3 text-sm sm:flex-nowrap sm:justify-start"
+    class="fixed z-10 flex w-full flex-wrap bg-[var(--dark-blue)] py-3 text-sm sm:flex-nowrap sm:justify-start"
   >
     <nav aria-label="Global" class="mx-5 w-full px-4 sm:flex sm:items-center sm:justify-between">
       <div class="flex items-center justify-between gap-10">
@@ -50,12 +95,12 @@ watch(result, (value) => {
           alt="App logo"
           class="max-w-32"
         />
-        <h1 v-if="staticInfo.staticInfo.applicationTitle" class="text-xl font-bold text-gray-100">
+        <h1 v-if="staticInfo.staticInfo.applicationTitle" class="text-2xl font-bold text-gray-100">
           {{ staticInfo.staticInfo.applicationTitle }}
         </h1>
         <span v-else class="mx-5 px-5"></span>
         <div
-          class="flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0 sm:ps-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-500 [&::-webkit-scrollbar-track]:bg-slate-700 [&::-webkit-scrollbar]:h-2"
+          class="flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0 sm:ps-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-slate-700 [&::-webkit-scrollbar]:h-2"
         >
           <GroupDropdown v-for="group in groupsAndTypes" :key="group.name" :group="group" />
         </div>
@@ -76,12 +121,8 @@ watch(result, (value) => {
 </template>
 
 <style scoped>
-header {
-  background-color: var(--dark-blue);
-}
-
 main {
-  background-image: linear-gradient(170deg, var(--dark-blue) 50%, var(--aqua-blue));
+  background-image: linear-gradient(170deg, var(--dark-blue) 40%, #7986a1); /* #e5e7eb */
 }
 
 .loading-enter-active,

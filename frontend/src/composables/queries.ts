@@ -7,7 +7,7 @@ export const ALL_IMAGE_SUMMARIES = gql`
   }
 `;
 
-export const getImage = (bucket: string, name: string): DocumentNode => {
+export const getImageQuery = (bucket: string, name: string): DocumentNode => {
   return gql(`{
   getImage(
     bucket: "${bucket}"

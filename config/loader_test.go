@@ -35,7 +35,7 @@ func TestLoad(t *testing.T) {
 					},
 				},
 				Products: Products{
-					PreviewFilename:      "preview.jpg",
+					DefaultPreviewSuffix: "preview.jpg",
 					GeonamesFilename:     "geonames.json",
 					LocalizationFilename: "localization.json",
 					ImageGroups: []ImageGroup{
@@ -47,8 +47,9 @@ func TestLoad(t *testing.T) {
 									DisplayName: "One",
 								},
 								{
-									Name:        "2",
-									DisplayName: "Two",
+									Name:          "2",
+									DisplayName:   "Two",
+									PreviewSuffix: "other",
 								},
 							},
 						},

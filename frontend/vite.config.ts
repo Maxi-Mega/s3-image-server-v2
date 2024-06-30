@@ -20,6 +20,7 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: "http://localhost:9999",
+        ws: true,
       },
     },
   },

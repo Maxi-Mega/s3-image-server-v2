@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import "preline/preline";
 import "./assets/main.css";
 

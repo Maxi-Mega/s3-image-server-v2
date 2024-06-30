@@ -46,6 +46,10 @@ func (srv *Server) defineRoutes(prod bool) error {
 	api.POST("/graphql", gin.WrapH(srv.graphqlHandler))
 
 	if !prod {
+		api.GET("/dump-images", func(c *gin.Context) {
+			c.JSON(200, srv.cache.DumpImages())
+		})
+
 		playgroundHandler, err := srv.makePlaygroundHandler()
 		if err != nil {
 			return err

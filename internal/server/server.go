@@ -9,7 +9,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/metrics"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 )
@@ -21,7 +21,7 @@ var (
 
 type Server struct {
 	cfg      config.Config
-	gatherer *metrics.Metrics
+	gatherer *observability.Metrics
 	buckets  []string
 
 	s3Client s3.Client
@@ -30,7 +30,7 @@ type Server struct {
 	cache    *cache
 }
 
-func New(cfg config.Config, gatherer *metrics.Metrics) (*Server, error) {
+func New(cfg config.Config, gatherer *observability.Metrics) (*Server, error) {
 	s3Client, err := s3.NewClient(cfg)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
@@ -92,12 +92,6 @@ func (srv *Server) Start(ctx context.Context) (types.Cache, chan types.OutEvent,
 
 		err = srv.subscribeToS3(ctx)
 	}
-
-	go func() {
-		for evt := range srv.outChan {
-			logger.Info("Event: ", evt.String()) // TODO: WS
-		}
-	}()
 
 	return srv.cache, srv.outChan, err
 }

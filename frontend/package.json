@@ -15,11 +15,14 @@
   "dependencies": {
     "@apollo/client": "^3.9.11",
     "@vue/apollo-composable": "^4.0.2",
+    "@vueuse/core": "^10.9.0",
+    "class-transformer": "^0.5.1",
     "graphql": "^16.8.1",
     "graphql-tag": "^2.12.6",
     "ol": "^9.1.0",
     "pinia": "^2.1.7",
     "preline": "^2.1.0",
+    "reflect-metadata": "^0.2.2",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },

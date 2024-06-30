@@ -34,7 +34,7 @@ type eventConsumer struct {
 	cache                *cache
 	s3Chan               chan s3.Event
 	baseDirChan          chan string
-	ootChan              chan s3Event
+	temporizationChan    chan s3Event
 }
 
 func newS3Consumer(cfg config.Config, cache *cache, s3Chan chan s3.Event) *eventConsumer {
@@ -44,7 +44,7 @@ func newS3Consumer(cfg config.Config, cache *cache, s3Chan chan s3.Event) *event
 		cache:                cache,
 		s3Chan:               s3Chan,
 		baseDirChan:          make(chan string, chanBuf),
-		ootChan:              make(chan s3Event, chanBuf),
+		temporizationChan:    make(chan s3Event, chanBuf),
 	}
 }
 
@@ -64,7 +64,7 @@ func (consumer *eventConsumer) goConsumeEvents(ctx context.Context) {
 		}
 	}()
 
-	newObjectTemporizer(consumer.baseDirChan, consumer.ootChan, consumer.cache).goTemporize(ctx)
+	newObjectTemporizer(consumer.baseDirChan, consumer.temporizationChan, consumer.cache, consumer.productsCfg).goTemporize(ctx)
 }
 
 func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event) {
@@ -85,10 +85,7 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 	}
 
 	if event.ObjectType == "" { // event comes from polling
-		event.ObjectType, found = consumer.getObjectType(event.ObjectKey, imgType)
-		if !found {
-			return
-		}
+		event.ObjectType = consumer.getObjectType(event.ObjectKey, imgType)
 	}
 
 	evt := s3Event{
@@ -98,19 +95,22 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 	}
 
 	if event.ObjectType == types.ObjectPreview {
-		basePath, ok := utils.GetRegexNameGroup(imgType.ProductRgx, event.ObjectKey, "parent")
+		objKeyWithoutPrefix := strings.TrimPrefix(event.ObjectKey, imgType.ProductPrefix)
+
+		basePath, ok := utils.GetRegexNameGroup(imgType.ProductRgx, objKeyWithoutPrefix, "parent")
 		if !ok {
 			logger.Tracef("Preview %s/%q doesn't match the productRegexp of type %s/%s", event.Bucket, event.ObjectKey, imgGroup.GroupName, imgType.Name)
 
 			return
 		}
 
+		basePath = imgType.ProductPrefix + strings.TrimSuffix(basePath, "/")
 		evt.baseDir = basePath
 
 		consumer.cache.handleEvent(ctx, evt)
 		consumer.baseDirChan <- basePath
 	} else {
-		consumer.ootChan <- evt
+		consumer.temporizationChan <- evt
 	}
 }
 
@@ -130,30 +130,34 @@ func (consumer *eventConsumer) getImageGroupType(bucket, objectKey string) (imgG
 	return config.ImageGroup{}, config.ImageType{}, false
 }
 
-func (consumer *eventConsumer) getObjectType(objectKey string, imgType config.ImageType) (objectType types.ObjectType, found bool) {
+func (consumer *eventConsumer) getObjectType(objectKey string, imgType config.ImageType) types.ObjectType {
 	cfg := consumer.productsCfg
 
-	switch path.Base(objectKey) {
-	case cfg.PreviewFilename:
-		if imgType.ProductRgx.MatchString(objectKey) {
-			return types.ObjectPreview, true
+	if imgType.PreviewSuffix != "" {
+		if strings.HasSuffix(objectKey, imgType.PreviewSuffix) && imgType.ProductRgx.MatchString(strings.TrimPrefix(objectKey, imgType.ProductPrefix)) {
+			return types.ObjectPreview
 		}
+	} else {
+		if strings.HasSuffix(objectKey, cfg.DefaultPreviewSuffix) && imgType.ProductRgx.MatchString(strings.TrimPrefix(objectKey, imgType.ProductPrefix)) {
+			return types.ObjectPreview
+		}
+	}
+
+	switch path.Base(objectKey) {
 	case cfg.GeonamesFilename:
-		return types.ObjectGeonames, true
+		return types.ObjectGeonames
 	case cfg.LocalizationFilename:
-		return types.ObjectLocalization, true
+		return types.ObjectLocalization
 	}
 
 	switch {
 	case cfg.AdditionalProductFilesRgx.MatchString(objectKey):
-		return types.ObjectAdditional, true
+		return types.ObjectAdditional
 	case cfg.FeaturesExtensionRgx.MatchString(objectKey):
-		return types.ObjectFeatures, true
-	case strings.HasPrefix(objectKey, imgType.ProductPrefix) && cfg.TargetRelativeRgx.MatchString(objectKey):
-		return types.ObjectTarget, true
+		return types.ObjectFeatures
 	case strings.HasSuffix(objectKey, cfg.FullProductExtension) && cfg.FullProductSignedURL:
-		return types.ObjectFullProduct, true
+		return types.ObjectFullProduct
+	default:
+		return types.ObjectNotYetAssigned
 	}
-
-	return "", false
 }

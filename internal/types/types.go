@@ -21,11 +21,11 @@ type ImageSummary struct {
 	Type     string    `json:"type"`
 	Features *Features `json:"features"`
 	// Contains the cache key to the image preview.
-	CachedObject // inlined
+	CachedObject CachedObject `json:"cachedObject"`
 }
 
 type Image struct {
-	ImageSummary // inlined
+	ImageSummary ImageSummary
 	Geonames     *Geonames
 	Localization *Localization
 	// AdditionalFiles is a map[filename] -> cache key
@@ -46,6 +46,9 @@ const (
 	ObjectFeatures     = "features"
 	ObjectTarget       = "target"
 	ObjectFullProduct  = "full_product"
+	// ObjectNotYetAssigned represents a special case where
+	// we don't have enough information yet to classify the object.
+	ObjectNotYetAssigned = "not_yet_assigned"
 )
 
 // AllImageSummaries is a map[group] -> map[type] -> images.
@@ -55,27 +58,35 @@ type Cache interface {
 	GetAllImages(start, end time.Time) AllImageSummaries
 	GetImage(bucket, name string) (Image, error)
 	GetCachedObject(cacheKey string) ([]byte, error)
+	DumpImages() map[string][]string
 }
 
 type EventType string
 
 const (
+	EventReset   = "Reset"
 	EventCreated = "ObjectCreated"
 	EventRemoved = "ObjectRemoved"
 )
 
 type OutEvent struct {
-	EventType  EventType  `json:"eventType"`
-	ObjectType ObjectType `json:"objectType"`
-	ImageName  string     `json:"imageName"`
-	CacheKey   string     `json:"cacheKey"`
-	ObjectTime time.Time  `json:"objectTime"`
+	EventType   EventType  `json:"eventType"`
+	ObjectType  ObjectType `json:"objectType"`
+	ImageBucket string     `json:"imageBucket"`
+	ImageKey    string     `json:"imageKey"`
+	ObjectTime  time.Time  `json:"objectTime"`
+	// Only filled for EventCreated
+	Object any `json:"object,omitempty"`
 	// Eventual error
 	Error string `json:"error,omitempty"`
 }
 
 func (evt OutEvent) String() string {
-	str := fmt.Sprintf("[%s] %s (%s): %q (%s)", evt.EventType, evt.ObjectTime, evt.ObjectType, evt.ImageName, evt.CacheKey)
+	if evt.EventType == EventReset {
+		return "[Reset]"
+	}
+
+	str := fmt.Sprintf("[%s] %s (%s): %q", evt.EventType, evt.ObjectTime, evt.ObjectType, evt.ImageKey)
 
 	if evt.Error != "" {
 		str += fmt.Sprintf(" /!\\ error: %v /!\\", evt.Error)

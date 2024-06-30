@@ -84,7 +84,7 @@ onMounted(() => {
         source: carto,
       }),
       new MousePosition({
-        coordinateFormat: (coords: (number[] | undefined)) => coords ? toStringHDMS(coords, 2) : "",
+        coordinateFormat: (coords: number[] | undefined) => (coords ? toStringHDMS(coords, 2) : ""),
         projection: "EPSG:4326", // GCS WGS 84
         target: cartoCoods,
         className: "w-auto pointer-events-auto bg-white bg-opacity-75 p-1",

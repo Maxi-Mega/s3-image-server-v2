@@ -1,13 +1,15 @@
-import type { Image, ImageSummary } from "@/models/image";
+import { Image, ImageSummary } from "@/models/image";
 import type { Geonames } from "@/models/geonames";
 import type { CachedObject } from "@/models/common";
 import { resolveBackendURL } from "@/composables/url";
+import { plainToInstance } from "class-transformer";
+import type { StaticInfo } from "@/models/static_info";
 
 export type GqlAllSummaries = Record<string, Record<string, ImageSummary[]>>;
 export type GqlImage = Record<"getImage", Image>;
 
 export function compareSummaries(a: ImageSummary, b: ImageSummary): number {
-  return b.lastModified.getTime() - a.lastModified.getTime();
+  return b._lastModified.getTime() - a._lastModified.getTime();
 }
 
 export function processSummaries(summaries: GqlAllSummaries): ImageSummary[] {
@@ -15,20 +17,30 @@ export function processSummaries(summaries: GqlAllSummaries): ImageSummary[] {
 
   for (const group in summaries) {
     for (const type in summaries[group]) {
-      flattened.push(...summaries[group][type]);
+      flattened.push(...summaries[group][type].map((s) => plainToInstance(ImageSummary, s)));
     }
   }
 
   return flattened.map((s) => {
-    const lastModified = new Date(s.lastModified);
-    return { ...s, lastModified };
+    s.cachedObject.lastModified = new Date(s.cachedObject.lastModified);
+    return { ...s, _hasBeenUpdated: false, _lastModified: s.cachedObject.lastModified };
   });
 }
 
-let keyCount = 0; // TODO: remove when summaries are no longer duplicated
-
 export function summaryKey(summary: ImageSummary): string {
-  return `${summary.bucket} ${summary.group} ${summary.type} ${summary.name} (${keyCount++})`;
+  return `${summary.bucket}_${summary.key}`;
+}
+
+const defaultMaxImagesDisplayCount = 20;
+
+export function limitDisplayedImages(
+  summaries: ImageSummary[],
+  staticInfo: StaticInfo
+): ImageSummary[] {
+  return summaries.slice(
+    0,
+    Math.min(summaries.length, staticInfo.maxImagesDisplayCount ?? defaultMaxImagesDisplayCount)
+  );
 }
 
 export const wbr = (name: string): string => name.replace(/_/g, "<wbr>_");
@@ -45,30 +57,33 @@ function fromCachedObj(cachedObject: CachedObject): [string, string] {
 function makeLinks(img: Image): Array<[string, string]> {
   const links = [] as Array<[string, string]>;
 
-  if (img.geonames) links.push(fromCachedObj(img.geonames.cachedObject));
-  if (img.localization) links.push(fromCachedObj(img.localization.cachedObject));
-  if (img.imageSummary.features) links.push(fromCachedObj(img.imageSummary.features.cachedObject));
-
-  for (const key in img.additionalFiles) {
-    links.push([base(key), resolveBackendURL("/api/cache/" + img.additionalFiles[key])]);
-  }
-
   for (const key in img.fullProductFiles) {
     // The URL of full product files already has its own host
     links.push([base(key), img.fullProductFiles[key]]);
   }
 
+  for (const key in img.additionalFiles) {
+    links.push([base(key), resolveBackendURL("/api/cache/" + img.additionalFiles[key])]);
+  }
+
+  if (img.geonames) links.push(fromCachedObj(img.geonames.cachedObject));
+  if (img.localization) links.push(fromCachedObj(img.localization.cachedObject));
+  if (img.imageSummary.features) links.push(fromCachedObj(img.imageSummary.features.cachedObject));
+
   return links;
 }
 
+export function formatDate(d: Date): string {
+  return d.toISOString().replace("T", " ");
+}
+
 export function processImage(image: GqlImage): Image {
-  const img = image.getImage;
-  const _lastModified = new Date(img.imageSummary.cachedObject.lastModified)
-    .toISOString()
-    .replace("T", " ");
+  const img = plainToInstance(Image, image.getImage);
+  const imageSummary = { ...img.imageSummary, _hasBeenUpdated: false };
+  imageSummary.cachedObject.lastModified = new Date(imageSummary.cachedObject.lastModified);
+  const _lastModified = formatDate(imageSummary.cachedObject.lastModified);
   const _links = makeLinks(img);
-  const targetFiles = img.targetFiles.flatMap((e) => [e, e, e, e, e]); // TODO: remove
-  return { ...img, _lastModified, _links, targetFiles };
+  return { ...img, imageSummary, _lastModified, _links };
 }
 
 export function formatGeonames(geonames: Geonames | null): string {

@@ -5,4 +5,4 @@ extensions:
       url: http://localhost:9999/api/graphql
       headers:
         user-agent: JS GraphQL
-      introspect: false
+      introspect: true

@@ -79,17 +79,66 @@ func TestGetRegexMatchGroup(t *testing.T) {
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.str, func(t *testing.T) {
+	for i, tc := range cases {
+		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
 			t.Parallel()
 
 			result, match := GetRegexMatchGroup(tc.re, tc.str, tc.group)
 			if match != tc.expectedMatch {
-				t.Fatalf("Expected match=%v, got %v", tc.expectedMatch, match)
+				t.Fatalf("Expected match=%t, got %t", tc.expectedMatch, match)
 			}
 
 			if result != tc.expectedResult {
 				t.Fatalf("Expected result %q, got %q", tc.expectedResult, result)
+			}
+		})
+	}
+}
+
+func TestGetRegexpNamedGroup(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		re             *regexp.Regexp
+		str            string
+		group          string
+		expectedResult string
+		expectedMatch  bool
+	}{
+		{
+			re:             regexp.MustCompile(`^my-prefix/TYPE3/.*/DIR_(?P<dir>\w+)/[^/]*/file\.tif$`),
+			str:            "my-prefix/TYPE3/any/DIR_414b/other/file.tif",
+			group:          "dir",
+			expectedResult: "414b",
+			expectedMatch:  true,
+		},
+		{
+			re:             regexp.MustCompile(`something`),
+			str:            "not matching",
+			group:          "none",
+			expectedResult: "",
+			expectedMatch:  false,
+		},
+		{
+			re:             regexp.MustCompile(`(?P<bad>group)`),
+			str:            "a group",
+			group:          "else",
+			expectedResult: "",
+			expectedMatch:  false,
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+			t.Parallel()
+
+			result, match := GetRegexNameGroup(tc.re, tc.str, tc.group)
+			if match != tc.expectedMatch {
+				t.Fatalf("Expected match=%t, got %t", tc.expectedMatch, match)
+			}
+
+			if result != tc.expectedResult {
+				t.Fatalf("Expected result: %q, got %q", tc.expectedResult, result)
 			}
 		})
 	}

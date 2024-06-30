@@ -16,6 +16,8 @@ var (
 	errInvalidConfig          = errors.New("the config is invalid")
 	errNoImageGroupsSpecified = errors.New("no image groups specified")
 	errDuplicate              = errors.New("duplicate")
+	errCantProvideValue       = errors.New("can't provide a value")
+	errInvalidType            = errors.New("invalid type")
 )
 
 func Load(configPath string) (Config, error) {
@@ -107,6 +109,38 @@ func (cfg *Config) process() (err error) {
 	}
 
 	for g, imgGroup := range cfg.Products.ImageGroups {
+		namedGroups := make(map[string]bool)
+
+		if imgGroup.FullProductURLParamsRegexp != "" {
+			cfg.Products.ImageGroups[g].FullProductURLParamsRgx, err = regexp.Compile(imgGroup.FullProductURLParamsRegexp)
+			if err != nil {
+				return fmt.Errorf("can't parse products.imageGroups[%q].fullProductURLParamsRegexp: %w", imgGroup.GroupName, err)
+			}
+
+			for _, group := range cfg.Products.ImageGroups[g].FullProductURLParamsRgx.SubexpNames() {
+				if group != "" {
+					namedGroups[group] = true
+				}
+			}
+		}
+
+		for _, param := range imgGroup.FullPoductURLParams {
+			switch param.Type {
+			case FullProductURLParamConstant:
+				// pass
+			case FullProductURLParamRegexp:
+				if param.Value != "" {
+					return fmt.Errorf("%w for regexp-typed full product URL param %q of group %q", errCantProvideValue, param.Name, imgGroup.GroupName)
+				}
+
+				if !namedGroups[param.Name] {
+					return fmt.Errorf("fullProductURLParamsRegexp of group %q is missing the named group %q", imgGroup.GroupName, param.Name)
+				}
+			default:
+				return fmt.Errorf("%w %q for param %q of group %q", errInvalidType, param.Type, param.Name, imgGroup.GroupName)
+			}
+		}
+
 		for t, imgType := range imgGroup.Types {
 			cfg.Products.ImageGroups[g].Types[t].ProductRgx, err = regexp.Compile(imgType.ProductRegexp)
 			if err != nil {
