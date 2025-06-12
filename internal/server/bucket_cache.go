@@ -58,6 +58,13 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		if img.geonames != nil && !img.geonames.LastModified.Before(event.ObjectLastModified) {
 			return nil
 		}
+
+		// Geonames file may sometime be empty, so we prevent further processing to avoid getting an error like "end of JSON input".
+		if event.Size == 0 {
+			logger.Warnf("Geonames file %q is empty; ignoring it", event.ObjectKey)
+
+			return nil
+		}
 	case types.ObjectLocalization:
 		if img.localization != nil && !img.localization.LastModified.Before(event.ObjectLastModified) {
 			return nil
@@ -103,9 +110,9 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.imgGroup = event.imgGroup.GroupName
 		img.imgType = event.imgType.Name
 		img.lastModified = event.ObjectLastModified
-		img.additional = make(map[string]valueWithLastUpdate)
-		img.targets = make(map[string]valueWithLastUpdate)
-		img.fullProducts = make(map[string]valueWithLastUpdate)
+		img.additional = make(map[string]valueWithLastUpdate[string])
+		img.targets = make(map[string]valueWithLastUpdate[string])
+		img.fullProducts = make(map[string]valueWithLastUpdate[signedURL])
 
 		bc.setDropTimer(event.baseDir, event.Time)
 	}
@@ -138,7 +145,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		case errors.Is(err, errNoEventNeeded):
 			// pass
 		default:
-			logger.Warnf("Something gone wrong with object %s/%q: %v", event.Bucket, event.ObjectKey, err)
+			logger.Warnf("Something went wrong with object %s/%q: %v", event.Bucket, event.ObjectKey, err)
 		}
 
 		return nil
@@ -184,7 +191,7 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, cacheKey())
 		eventObj = img.localization
 	case types.ObjectAdditional:
-		img.additional[event.ObjectKey] = valueWithLastUpdate{
+		img.additional[event.ObjectKey] = valueWithLastUpdate[string]{
 			value:      cacheKey(additionalDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
@@ -193,21 +200,25 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, cacheKey(), event.ObjectKey)
 		eventObj = img.features
 	case types.ObjectTarget:
-		img.targets[event.ObjectKey] = valueWithLastUpdate{
+		img.targets[event.ObjectKey] = valueWithLastUpdate[string]{
 			value:      cacheKey(targetsDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
 		eventObj = img.targets[event.ObjectKey]
 	case types.ObjectFullProduct:
 		if fullProduct, exists := img.fullProducts[event.ObjectKey]; exists {
-			if !fullProduct.lastUpdate.Before(event.ObjectLastModified) {
+			// Checking if we have the latest version of the object, and if the signed URL is still valid.
+			if !fullProduct.lastUpdate.Before(event.ObjectLastModified) && fullProduct.value.isValid() {
 				return nil, errObjectAlreadyCached
 			}
 		}
 
-		if signedURL, err := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey); err == nil {
-			img.fullProducts[event.ObjectKey] = valueWithLastUpdate{
-				value:      injectFullProductURLParams(event.imgGroup, event.ObjectKey, signedURL),
+		if signURL, err := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey); err == nil {
+			img.fullProducts[event.ObjectKey] = valueWithLastUpdate[signedURL]{
+				value: signedURL{
+					value:          injectFullProductURLParams(event.imgGroup, event.ObjectKey, signURL),
+					generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual gen TS
+				},
 				lastUpdate: event.ObjectLastModified,
 			}
 			eventObj = img.fullProducts[event.ObjectKey]

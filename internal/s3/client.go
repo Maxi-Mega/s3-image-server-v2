@@ -22,7 +22,7 @@ const (
 	healthCheckTimeout    = 5 * time.Second
 	pollBucketTimeout     = 2 * time.Minute
 	downloadObjectTimeout = 30 * time.Second
-	signedURLLifetime     = 7 * 24 * time.Hour
+	SignedURLLifetime     = 7 * 24 * time.Hour
 )
 
 var (
@@ -146,35 +146,6 @@ func (s3 s3Client) SubscribeToBucket(ctx context.Context, bucket string, s3Chan 
 	return nil
 }
 
-func (s3 s3Client) handleEvent(bucket string, objectType types.ObjectType, notif notification.Info, eventChan chan Event) {
-	if notif.Err != nil {
-		logger.Errorf("Received error from bucket %q: %v", bucket, notif.Err)
-
-		return
-	}
-
-	logger.Debugf("Handling S3 event from bucket %q on %s object", bucket, objectType)
-
-	for _, e := range notif.Records {
-		if !s3.matchesPreviewFilename(bucket, e.S3.Object.Key) {
-			continue
-		}
-
-		eventTime := parseEventTime(e.EventTime)
-		event := Event{
-			Time:               eventTime,
-			Bucket:             e.S3.Bucket.Name,
-			EventType:          parseEventType(e.EventName),
-			ObjectType:         objectType,
-			Size:               e.S3.Object.Size,
-			ObjectKey:          e.S3.Object.Key,
-			ObjectLastModified: eventTime,
-		}
-
-		eventChan <- event
-	}
-}
-
 func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Event) error {
 	logger.Debugf("Polling bucket %q ...", bucket)
 
@@ -210,7 +181,7 @@ func (s3 s3Client) DownloadObject(ctx context.Context, bucket, objectKey, destPa
 }
 
 func (s3 s3Client) GenerateSignedURL(ctx context.Context, bucket, objectKey string) (string, error) {
-	signedURL, err := s3.client.PresignedGetObject(ctx, bucket, objectKey, signedURLLifetime, url.Values{})
+	signedURL, err := s3.client.PresignedGetObject(ctx, bucket, objectKey, SignedURLLifetime, url.Values{})
 	if err != nil {
 		return "", fmt.Errorf("failed to generate presigned URL for object %q in bucket %q: %w", objectKey, bucket, err)
 	}
@@ -218,6 +189,35 @@ func (s3 s3Client) GenerateSignedURL(ctx context.Context, bucket, objectKey stri
 	withoutSchemeAndHost := strings.TrimPrefix(signedURL.String(), signedURL.Scheme+"://"+signedURL.Host)
 
 	return s3.productsCfg.FullProductProtocol + url.QueryEscape(s3.productsCfg.FullProductRootURL+withoutSchemeAndHost), nil
+}
+
+func (s3 s3Client) handleEvent(bucket string, objectType types.ObjectType, notif notification.Info, eventChan chan Event) {
+	if notif.Err != nil {
+		logger.Errorf("Received error from bucket %q: %v", bucket, notif.Err)
+
+		return
+	}
+
+	logger.Debugf("Handling S3 event from bucket %q on %s object", bucket, objectType)
+
+	for _, e := range notif.Records {
+		if !s3.matchesPreviewFilename(bucket, e.S3.Object.Key) {
+			continue
+		}
+
+		eventTime := parseEventTime(e.EventTime)
+		event := Event{
+			Time:               eventTime,
+			Bucket:             e.S3.Bucket.Name,
+			EventType:          parseEventType(e.EventName),
+			ObjectType:         objectType,
+			Size:               e.S3.Object.Size,
+			ObjectKey:          e.S3.Object.Key,
+			ObjectLastModified: eventTime,
+		}
+
+		eventChan <- event
+	}
 }
 
 // matchesPreviewFilename ensure that the given object's key matches the expected preview filename.

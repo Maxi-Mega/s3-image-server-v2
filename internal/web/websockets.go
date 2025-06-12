@@ -145,7 +145,7 @@ func (c *wsClient) writer() {
 
 			_, _ = w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
+			// Add queued messages to the current websocket message.
 			n := len(c.send)
 			for range n {
 				_, _ = w.Write(newline)

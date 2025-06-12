@@ -17,8 +17,9 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gin-gonic/gin"
-	"github.com/mitchellh/mapstructure"
+	"github.com/go-viper/mapstructure/v2"
 )
 
 type Server struct {
@@ -63,8 +64,8 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		ApplicationTitle:       cfg.UI.ApplicationTitle,
 		FaviconBase64:          cfg.UI.FaviconPngBase64,
 		LogoBase64:             cfg.UI.LogoPngBase64,
-		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage),
-		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),
+		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage), //nolint: gosec
+		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),  //nolint: gosec
 		TileServerURL:          cfg.UI.Map.TileServerURL,
 	}
 
@@ -72,6 +73,9 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert image groups to static info: %w", err)
 	}
+
+	graphqlHandler := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: graphResolver}))
+	graphqlHandler.AddTransport(transport.POST{})
 
 	srv := &Server{
 		uiCfg:          cfg.UI,
@@ -81,7 +85,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		frontendFS:     frontendFS,
 		subFrontendFS:  subFrontendFS,
 		assetsFS:       subAssetsFS,
-		graphqlHandler: handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: graphResolver})),
+		graphqlHandler: graphqlHandler,
 		staticInfo:     staticInfo,
 		wsHub:          newWSHub(),
 	}

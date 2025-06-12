@@ -28,7 +28,7 @@ func Init(cfg config.Log) error {
 		logCtx := zerolog.New(os.Stdout).With().Timestamp()
 
 		for field, value := range cfg.JSONLogFields {
-			logCtx = logCtx.Interface(field, value)
+			logCtx = logCtx.Any(field, value)
 		}
 
 		logger = logCtx.Logger()
@@ -52,7 +52,7 @@ func Trace(a ...any) {
 }
 
 func Tracef(format string, a ...any) {
-	logger.Trace().Msg(fmt.Sprintf(format, a...))
+	logger.Trace().Msgf(format, a...)
 }
 
 func Debug(a ...any) {
@@ -60,7 +60,7 @@ func Debug(a ...any) {
 }
 
 func Debugf(format string, a ...any) {
-	logger.Debug().Msg(fmt.Sprintf(format, a...))
+	logger.Debug().Msgf(format, a...)
 }
 
 func Info(a ...any) {
@@ -68,7 +68,7 @@ func Info(a ...any) {
 }
 
 func Infof(format string, a ...any) {
-	logger.Info().Msg(fmt.Sprintf(format, a...))
+	logger.Info().Msgf(format, a...)
 }
 
 func Warn(a ...any) {
@@ -76,7 +76,7 @@ func Warn(a ...any) {
 }
 
 func Warnf(format string, a ...any) {
-	logger.Warn().Msg(fmt.Sprintf(format, a...))
+	logger.Warn().Msgf(format, a...)
 }
 
 func Error(a ...any) {
@@ -84,7 +84,7 @@ func Error(a ...any) {
 }
 
 func Errorf(format string, a ...any) {
-	logger.Error().Msg(fmt.Sprintf(format, a...))
+	logger.Error().Msgf(format, a...)
 }
 
 func Fatal(a ...any) {
@@ -92,5 +92,5 @@ func Fatal(a ...any) {
 }
 
 func Fatalf(format string, a ...any) {
-	logger.Fatal().Msg(fmt.Sprintf(format, a...))
+	logger.Fatal().Msgf(format, a...)
 }

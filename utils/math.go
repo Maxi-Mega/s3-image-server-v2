@@ -4,13 +4,13 @@ import "cmp"
 
 // Min returns the minimum number among all the given values.
 func Min[T cmp.Ordered](x T, y ...T) T {
-	min := x
+	minValue := x
 
 	for _, n := range y {
-		if n < min {
-			min = n
+		if n < minValue {
+			minValue = n
 		}
 	}
 
-	return min
+	return minValue
 }

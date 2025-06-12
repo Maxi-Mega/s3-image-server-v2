@@ -43,11 +43,11 @@ type image struct {
 	localization      *types.Localization
 	features          *types.Features
 	// map[filename] -> cache key & last update
-	additional map[string]valueWithLastUpdate
+	additional map[string]valueWithLastUpdate[string]
 	// map[s3 key] -> cache key & last update
-	targets map[string]valueWithLastUpdate
+	targets map[string]valueWithLastUpdate[string]
 	// map[filename] -> signed URL & last update
-	fullProducts    map[string]valueWithLastUpdate
+	fullProducts    map[string]valueWithLastUpdate[signedURL]
 	previewCacheKey string
 }
 
@@ -59,12 +59,14 @@ func (img image) summary(name string) types.ImageSummary {
 	if img.geonames != nil {
 		displayName = img.geonames.GetTopLevel()
 	} else {
-		displayName = img.name
+		/*displayName = img.name
 
 		lastSlash := strings.LastIndex(name, "/")
 		if lastSlash > -1 {
 			displayName = name[lastSlash+1:]
-		}
+		}*/
+
+		displayName = "No geonames found"
 	}
 
 	return types.ImageSummary{
@@ -81,9 +83,26 @@ func (img image) summary(name string) types.ImageSummary {
 	}
 }
 
-type valueWithLastUpdate struct {
-	value      string
+type valueWithLastUpdate[T any] struct {
+	value      T
 	lastUpdate time.Time
+}
+
+func (v valueWithLastUpdate[T]) String() string {
+	return fmt.Sprint(v.value)
+}
+
+type signedURL struct {
+	value          string
+	generationDate time.Time
+}
+
+func (su signedURL) String() string {
+	return su.value
+}
+
+func (su signedURL) isValid() bool {
+	return time.Since(su.generationDate) < s3.SignedURLLifetime
 }
 
 func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent, gatherer *observability.Metrics) (*cache, error) {
@@ -117,58 +136,6 @@ func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent
 		buckets:   buckets,
 		outEvents: outChan,
 	}, nil
-}
-
-func (c *cache) handleEvent(ctx context.Context, event s3Event) {
-	bucket, ok := c.buckets[event.Bucket]
-	if !ok {
-		return
-	}
-
-	c.gatherer.S3EventsCounter.WithLabelValues(event.Bucket).Inc()
-
-	bucket.l.Lock()
-	defer bucket.l.Unlock()
-
-	img, ok := bucket.images[event.baseDir]
-	if !ok && event.EventType == types.EventRemoved {
-		return
-	}
-
-	var outEvent *types.OutEvent
-
-	switch {
-	case event.EventType == types.EventCreated:
-		outEvent = bucket.handleCreateEvent(ctx, event, img)
-	case event.EventType == types.EventRemoved:
-		outEvent = bucket.handleRemoveEvent(ctx, event, img)
-	default:
-		logger.Warnf("Unknown s3 event %q was handed to cache", event.EventType)
-	}
-
-	if outEvent != nil {
-		c.outEvents <- *outEvent
-
-		bucket.updateMetrics(c.gatherer)
-	}
-}
-
-func (c *cache) matchesEntry(bucketName string, entry string) (match bool, baseDir string) {
-	bucket, ok := c.buckets[bucketName]
-	if !ok {
-		return false, ""
-	}
-
-	bucket.l.RLock()
-	defer bucket.l.RUnlock()
-
-	for imgBaseDir := range bucket.images {
-		if strings.HasPrefix(entry, imgBaseDir+"/") {
-			return true, imgBaseDir
-		}
-	}
-
-	return false, ""
 }
 
 func (c *cache) GetAllImages(start, end time.Time) types.AllImageSummaries {
@@ -248,11 +215,63 @@ func (c *cache) DumpImages() map[string][]string {
 	return imagesPerBucket
 }
 
-func toFilenameValueMap(m map[string]valueWithLastUpdate) map[string]string {
+func (c *cache) handleEvent(ctx context.Context, event s3Event) {
+	bucket, ok := c.buckets[event.Bucket]
+	if !ok {
+		return
+	}
+
+	c.gatherer.S3EventsCounter.WithLabelValues(event.Bucket).Inc()
+
+	bucket.l.Lock()
+	defer bucket.l.Unlock()
+
+	img, ok := bucket.images[event.baseDir]
+	if !ok && event.EventType == types.EventRemoved {
+		return
+	}
+
+	var outEvent *types.OutEvent
+
+	switch event.EventType {
+	case types.EventCreated:
+		outEvent = bucket.handleCreateEvent(ctx, event, img)
+	case types.EventRemoved:
+		outEvent = bucket.handleRemoveEvent(ctx, event, img)
+	default:
+		logger.Warnf("Unknown s3 event %q was handed to cache", event.EventType)
+	}
+
+	if outEvent != nil {
+		c.outEvents <- *outEvent
+
+		bucket.updateMetrics(c.gatherer)
+	}
+}
+
+func (c *cache) matchesEntry(bucketName string, entry string) (match bool, baseDir string) {
+	bucket, ok := c.buckets[bucketName]
+	if !ok {
+		return false, ""
+	}
+
+	bucket.l.RLock()
+	defer bucket.l.RUnlock()
+
+	for imgBaseDir := range bucket.images {
+		if strings.HasPrefix(entry, imgBaseDir+"/") {
+			return true, imgBaseDir
+		}
+	}
+
+	return false, ""
+}
+
+func toFilenameValueMap[T any](m map[string]valueWithLastUpdate[T]) map[string]string {
 	result := make(map[string]string, len(m))
 
 	for filename, metadata := range m {
-		result[filename] = metadata.value
+		result[filename] = metadata.String()
 	}
 
 	return result

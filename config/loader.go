@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +17,7 @@ var (
 	errInvalidConfig          = errors.New("the config is invalid")
 	errNoImageGroupsSpecified = errors.New("no image groups specified")
 	errDuplicate              = errors.New("duplicate")
+	errTooHighValue           = errors.New("too high value")
 	errCantProvideValue       = errors.New("can't provide a value")
 	errInvalidType            = errors.New("invalid type")
 )
@@ -76,6 +78,14 @@ func (cfg *Config) validate() error {
 
 			imageTypeNames[typ.Name] = true
 		}
+	}
+
+	if cfg.UI.ScaleInitialPercentage > math.MaxInt {
+		errs = append(errs, fmt.Errorf("ui.scaleInitialPercentage has a %w (%d)", errTooHighValue, cfg.UI.ScaleInitialPercentage))
+	}
+
+	if cfg.UI.MaxImagesDisplayCount > math.MaxInt {
+		errs = append(errs, fmt.Errorf("ui.maxImagesDisplayCount as a %w (%d)", errTooHighValue, cfg.UI.MaxImagesDisplayCount))
 	}
 
 	return errors.Join(errs...)
