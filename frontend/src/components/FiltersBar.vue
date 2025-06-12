@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useStaticInfoStore } from "@/stores/static_info";
-import { useImageStore } from "@/stores/images";
-import { useFilterStore } from "@/stores/filters";
 import RangeInput from "@/components/RangeInput.vue";
+import { useFilterStore } from "@/stores/filters";
+import { useImageStore } from "@/stores/images";
+import { useStaticInfoStore } from "@/stores/static_info";
 
 const staticInfo = useStaticInfoStore();
 const imageStore = useImageStore();
@@ -13,7 +13,7 @@ const filterStore = useFilterStore();
   <div class="min-w-12 space-y-3">
     <input
       type="search"
-      class="block w-full rounded-lg border-2 border-gray-100 bg-transparent px-2 py-1 text-base text-gray-200 placeholder-gray-300 placeholder-shown:border-neutral-200 focus:border-blue-500 focus:ring-neutral-600"
+      class="block w-full rounded-md border border-gray-100 bg-transparent px-2 py-1 text-base text-gray-200 placeholder-gray-300 placeholder-shown:border-neutral-200 focus:border-blue-500 focus:ring-neutral-600"
       placeholder="Search"
       @input="(e) => (filterStore.searchQuery = (e.target as HTMLInputElement).value)"
     />

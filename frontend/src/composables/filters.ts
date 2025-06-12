@@ -1,5 +1,5 @@
-import type { ImageSummary } from "@/models/image";
 import { compareSummaries } from "@/composables/images";
+import type { ImageSummary } from "@/models/image";
 
 export function applyFilters(
   summaries: Array<ImageSummary>,

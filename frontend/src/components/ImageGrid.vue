@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, type Ref, ref, watch } from "vue";
-import { storeToRefs } from "pinia";
-import { findSummaryIndex, useImageStore } from "@/stores/images";
-import { useFilterStore } from "@/stores/filters";
-import { compareSummaries, limitDisplayedImages, summaryKey } from "@/composables/images";
-import { applyFilters } from "@/composables/filters";
-import type { ImageSummary } from "@/models/image";
 import ImageCard from "@/components/ImageCard.vue";
 import ImageModal from "@/components/ImageModal.vue";
+import { applyFilters } from "@/composables/filters";
+import { compareSummaries, limitDisplayedImages, summaryKey } from "@/composables/images";
+import type { ImageSummary } from "@/models/image";
+import { useFilterStore } from "@/stores/filters";
+import { findSummaryIndex, useImageStore } from "@/stores/images";
 import { useStaticInfoStore } from "@/stores/static_info";
+import { storeToRefs } from "pinia";
+import { HSOverlay } from "preline";
+import { computed, nextTick, onMounted, type Ref, ref, watch } from "vue";
 
 const staticInfoStore = useStaticInfoStore();
 const imageStore = useImageStore();
@@ -17,7 +18,16 @@ const filterStore = useFilterStore();
 const filteredSummaries = ref<ImageSummary[]>([]);
 const { searchQuery, globalScaleValue } = storeToRefs(filterStore);
 
+const modalOverlay = ref<HSOverlay | undefined>();
+
 onMounted(() => {
+  const modalEl = document.getElementById("image-modal");
+  if (modalEl) {
+    modalOverlay.value = new HSOverlay(modalEl);
+  } else {
+    console.warn("Modal element not found");
+  }
+
   filteredSummaries.value = limitDisplayedImages(
     imageStore.allSummaries.sort(compareSummaries),
     staticInfoStore.staticInfo
@@ -50,6 +60,12 @@ function openModal(img: ImageSummary, reset = true) {
   if (imgIndex < 0) {
     console.warn("Can't find image to modalize.");
     return;
+  }
+
+  if (modalOverlay.value) {
+    if (modalOverlay.value.el.classList.contains("hidden")) {
+      modalOverlay.value.open();
+    }
   }
 
   // Let the time for the modal to realize that the selected image is possibly undefined
@@ -90,7 +106,7 @@ function modalNavigate(target: "prev" | "next") {
       :pagination-hints="modalPaginationHints"
       @navigate="modalNavigate"
     />
-    <!-- All (filtered) sumamries -->
+    <!-- All (filtered) sumaries -->
     <div
       class="mt-12 grid gap-x-4 gap-y-8 md:gap-x-6"
       :style="`grid-template-columns: repeat(${gridColumnsCount}, minmax(0, 1fr))`"

@@ -1,5 +1,5 @@
-import { ApolloClient, createHttpLink, InMemoryCache } from "@apollo/client/core";
 import { resolveBackendURL } from "@/composables/url";
+import { ApolloClient, createHttpLink, InMemoryCache } from "@apollo/client/core";
 
 // HTTP connection to the API
 const httpLink = createHttpLink({

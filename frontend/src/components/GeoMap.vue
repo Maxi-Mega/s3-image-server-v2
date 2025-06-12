@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { View } from "ol";
-import Map from "ol/Map";
-import TileLayer from "ol/layer/Tile";
-import { XYZ } from "ol/source";
-import { FullScreen, MousePosition, ScaleLine, Zoom, ZoomToExtent } from "ol/control";
-import { toStringHDMS } from "ol/coordinate";
-import { useGeographic } from "ol/proj";
-import { Vector as LayerVector } from "ol/layer";
-import { Vector as SourceVector } from "ol/source";
-import { GeoJSON } from "ol/format";
-import { Stroke, Style } from "ol/style";
 import type { Localization } from "@/models/localization";
 import { useStaticInfoStore } from "@/stores/static_info";
+import { View } from "ol";
+import Map from "ol/Map";
+import { FullScreen, MousePosition, ScaleLine, Zoom, ZoomToExtent } from "ol/control";
+import { toStringHDMS } from "ol/coordinate";
+import { GeoJSON } from "ol/format";
+import { Vector as LayerVector } from "ol/layer";
+import TileLayer from "ol/layer/Tile";
 import "ol/ol.css";
+import { useGeographic } from "ol/proj";
+import { Vector as SourceVector, XYZ } from "ol/source";
+import { Stroke, Style } from "ol/style";
+import { onMounted } from "vue";
 
 const props = defineProps<{
   localization: Localization;

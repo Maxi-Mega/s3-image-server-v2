@@ -1,19 +1,19 @@
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, watch } from "vue";
-import { useQuery } from "@vue/apollo-composable";
-import { useWebSocket } from "@vueuse/core";
-import { useStaticInfoStore } from "@/stores/static_info";
-import { useImageStore } from "@/stores/images";
-import { useFilterStore } from "@/stores/filters";
-import type { ImageGroup } from "@/models/static_info";
+import FiltersBar from "@/components/FiltersBar.vue";
+import GroupDropdown from "@/components/GroupDropdown.vue";
+import ImageGrid from "@/components/ImageGrid.vue";
+import LoaderSpinner from "@/components/LoaderSpinner.vue";
+import { parseEventData } from "@/composables/events";
 import { processSummaries } from "@/composables/images";
 import { ALL_IMAGE_SUMMARIES } from "@/composables/queries";
 import { wsURL } from "@/composables/url";
-import { parseEventData } from "@/composables/events";
-import GroupDropdown from "@/components/GroupDropdown.vue";
-import LoaderSpinner from "@/components/LoaderSpinner.vue";
-import ImageGrid from "@/components/ImageGrid.vue";
-import FiltersBar from "@/components/FiltersBar.vue";
+import type { ImageGroup } from "@/models/static_info";
+import { useFilterStore } from "@/stores/filters";
+import { useImageStore } from "@/stores/images";
+import { useStaticInfoStore } from "@/stores/static_info";
+import { useQuery } from "@vue/apollo-composable";
+import { useWebSocket } from "@vueuse/core";
+import { computed, onBeforeUnmount, onMounted, watch } from "vue";
 
 const staticInfo = useStaticInfoStore();
 const imageStore = useImageStore();
@@ -85,7 +85,7 @@ window.onbeforeunload = () => close();
 
 <template>
   <header
-    class="fixed z-10 flex w-full flex-wrap bg-[var(--dark-blue)] py-3 text-sm sm:flex-nowrap sm:justify-start"
+    class="fixed z-10 flex w-full flex-wrap border-b border-gray-300 bg-[var(--dark-blue)] py-3 text-sm sm:flex-nowrap sm:justify-start"
   >
     <nav aria-label="Global" class="mx-5 w-full px-4 sm:flex sm:items-center sm:justify-between">
       <div class="flex items-center justify-between gap-10">
@@ -100,13 +100,13 @@ window.onbeforeunload = () => close();
         </h1>
         <span v-else class="mx-5 px-5"></span>
         <div
-          class="flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0 sm:ps-5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-slate-700 [&::-webkit-scrollbar]:h-2"
+          class="flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:ps-5 sm:pb-0 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-track]:bg-slate-700"
         >
           <GroupDropdown v-for="group in groupsAndTypes" :key="group.name" :group="group" />
         </div>
       </div>
       <div
-        class="mt-5 flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0 sm:ps-5"
+        class="mt-5 flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:ps-5 sm:pb-0"
       >
         <FiltersBar />
       </div>

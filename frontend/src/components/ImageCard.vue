@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import type { ImageSummary } from "@/models/image";
+import { formatDate, wbr } from "@/composables/images";
 import { resolveBackendURL } from "@/composables/url";
-import { onMounted } from "vue";
+import type { ImageSummary } from "@/models/image";
 import { useFilterStore } from "@/stores/filters";
 import { storeToRefs } from "pinia";
-import { formatDate, wbr } from "@/composables/images";
 
 defineProps<{
   summary: ImageSummary;
@@ -16,15 +15,21 @@ const emit = defineEmits<{
 
 const { globalFontSize } = storeToRefs(useFilterStore());
 
-onMounted(() => {
+/*onMounted(() => {
+  console.info("Mounted", props.summary.key);
   window.HSStaticMethods.autoInit("overlay");
 });
+
+onBeforeUnmount(()=>{
+  console.info("Unmounted", props.summary.key);
+  window.HSStaticMethods.cleanCollection("overlay");
+});*/
 </script>
 
 <template>
+  <!-- data-hs-overlay="#image-modal" -->
   <div
     class="flex cursor-pointer flex-col justify-end rounded-lg p-2 transition-shadow hover:shadow-lg"
-    data-hs-overlay="#image-modal"
     @click="emit('openModal', summary)"
   >
     <div class="group relative mb-2 flex justify-center overflow-hidden rounded-lg lg:mb-3">
@@ -36,7 +41,7 @@ onMounted(() => {
       />
       <div
         v-if="summary.features"
-        class="absolute left-0 top-0 flex h-full w-full items-start justify-center overflow-hidden *:hover:bg-transparent *:hover:backdrop-blur-[2px]"
+        class="absolute top-0 left-0 flex h-full w-full items-start justify-center overflow-hidden *:hover:bg-transparent *:hover:backdrop-blur-[2px]"
         :title="`${summary.type}\n${summary.key}\n${formatDate(summary._lastModified)}`"
       >
         <div
@@ -57,7 +62,7 @@ onMounted(() => {
       class="mb-1 text-center text-sm text-gray-300 transition duration-100"
       :style="`font-size: ${globalFontSize}`"
     >
-      <span v-html="wbr(summary.name)" class="rounded bg-zinc-700/20 p-2 leading-9"></span>
+      <span v-html="wbr(summary.name)" class="rounded p-2"></span>
     </p>
   </div>
 </template>

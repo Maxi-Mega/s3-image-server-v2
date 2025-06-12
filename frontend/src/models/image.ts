@@ -1,7 +1,7 @@
 import { type CachedObject } from "@/models/common";
+import { Features } from "@/models/features";
 import { type Geonames } from "@/models/geonames";
 import { type Localization } from "@/models/localization";
-import { Features } from "@/models/features";
 
 export class ImageSummary {
   bucket: string;

@@ -1,13 +1,13 @@
-import "reflect-metadata";
 import "preline/preline";
+import "reflect-metadata";
 import "./assets/main.css";
 
+import { createPinia } from "pinia";
 import type { IStaticMethods } from "preline/preline";
 import { createApp } from "vue";
-import { createPinia } from "pinia";
 
-import { DefaultApolloClient } from "@vue/apollo-composable";
 import { apolloClient } from "@/apollo";
+import { DefaultApolloClient } from "@vue/apollo-composable";
 import App from "./App.vue";
 import router from "./router";
 

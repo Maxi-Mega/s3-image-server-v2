@@ -1,9 +1,9 @@
-import { Image, ImageSummary } from "@/models/image";
-import type { Geonames } from "@/models/geonames";
-import type { CachedObject } from "@/models/common";
 import { resolveBackendURL } from "@/composables/url";
-import { plainToInstance } from "class-transformer";
+import type { CachedObject } from "@/models/common";
+import type { Geonames } from "@/models/geonames";
+import { Image, ImageSummary } from "@/models/image";
 import type { StaticInfo } from "@/models/static_info";
+import { plainToInstance } from "class-transformer";
 
 export type GqlAllSummaries = Record<string, Record<string, ImageSummary[]>>;
 export type GqlImage = Record<"getImage", Image>;

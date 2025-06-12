@@ -29,6 +29,7 @@ export class StaticInfo {
   scaleInitialPercentage: number;
   maxImagesDisplayCount: number;
   tileServerURL: string;
+  imageGroups: ImageGroup[];
 
   constructor(
     softwareVersion: string,
@@ -51,6 +52,4 @@ export class StaticInfo {
     this.tileServerURL = tileServerURL;
     this.imageGroups = imageGroups;
   }
-
-  imageGroups: ImageGroup[];
 }

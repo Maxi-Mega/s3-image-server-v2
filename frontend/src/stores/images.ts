@@ -1,8 +1,8 @@
-import { ref } from "vue";
-import { defineStore } from "pinia";
-import type { Image, ImageSummary } from "@/models/image";
-import { compareSummaries } from "@/composables/images";
 import type { EventData } from "@/composables/events";
+import { compareSummaries } from "@/composables/images";
+import type { Image, ImageSummary } from "@/models/image";
+import { defineStore } from "pinia";
+import { ref } from "vue";
 
 export const useImageStore = defineStore("images", {
   state: () => {

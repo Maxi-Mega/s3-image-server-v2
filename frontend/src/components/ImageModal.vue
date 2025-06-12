@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import CloseIcon from "@/components/icons/CloseIcon.vue";
-import type { Image, ImageSummary } from "@/models/image";
-import { nextTick, type Ref, ref, toRefs, watch } from "vue";
-import Error from "@/components/ErrorBox.vue";
-import LoaderSpinner from "@/components/LoaderSpinner.vue";
-import { provideApolloClient, useQuery } from "@vue/apollo-composable";
-import { getImageQuery } from "@/composables/queries";
-import { ApolloError } from "@apollo/client";
 import { apolloClient } from "@/apollo";
-import { base, formatGeonames, processImage, wbr } from "@/composables/images";
-import { resolveBackendURL } from "@/composables/url";
-import { HSTabs } from "preline/preline";
+import Error from "@/components/ErrorBox.vue";
+import GeoMap from "@/components/GeoMap.vue";
+import LoaderSpinner from "@/components/LoaderSpinner.vue";
 import RangeInput from "@/components/RangeInput.vue";
+import CloseIcon from "@/components/icons/CloseIcon.vue";
 import LeftIcon from "@/components/icons/LeftIcon.vue";
 import RightIcon from "@/components/icons/RightIcon.vue";
-import GeoMap from "@/components/GeoMap.vue";
-import { useImageStore } from "@/stores/images";
+import { base, formatGeonames, processImage, wbr } from "@/composables/images";
+import { getImageQuery } from "@/composables/queries";
+import { resolveBackendURL } from "@/composables/url";
+import type { Image, ImageSummary } from "@/models/image";
 import type { Localization } from "@/models/localization";
+import { useImageStore } from "@/stores/images";
+import { ApolloError } from "@apollo/client";
+import { provideApolloClient, useQuery } from "@vue/apollo-composable";
+import { HSTabs } from "preline/preline";
+import { nextTick, type Ref, ref, toRefs, watch } from "vue";
 
 const props = defineProps<{
   id: string;
@@ -147,10 +147,10 @@ function targetName(target: string): string {
   <span :id="`${id}-trigger`" class="hidden" data-hs-overlay="#image-modal"></span>
   <div
     :id="id"
-    class="hs-overlay pointer-events-none fixed start-0 top-0 z-[80] hidden size-full overflow-y-auto overflow-x-hidden"
+    class="hs-overlay pointer-events-none fixed start-0 top-0 z-[80] hidden size-full overflow-x-hidden overflow-y-auto"
   >
     <div
-      class="m-3 mt-0 h-[calc(100%-3.5rem)] w-[calc(100%-3.5rem)] opacity-0 transition-all ease-out hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 sm:mx-auto"
+      class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 m-3 mt-0 h-[calc(100%-3.5rem)] w-[calc(100%-3.5rem)] opacity-0 transition-all ease-out sm:mx-auto"
     >
       <div
         class="pointer-events-auto flex h-full flex-col overflow-hidden rounded-xl border border-neutral-700 bg-gray-200 shadow-sm shadow-neutral-700/70"
@@ -183,7 +183,7 @@ function targetName(target: string): string {
           <div class="flex flex-col items-center justify-between">
             <button
               type="button"
-              class="flex size-7 items-center justify-center rounded-full border border-transparent text-sm font-semibold text-gray-700 hover:bg-gray-400 disabled:pointer-events-none disabled:opacity-50"
+              class="flex size-7 cursor-pointer items-center justify-center rounded-full border border-transparent text-sm font-semibold text-gray-700 hover:bg-gray-400 disabled:pointer-events-none disabled:opacity-50"
               :data-hs-overlay="'#' + id"
             >
               <span class="sr-only">Close</span>
@@ -193,7 +193,7 @@ function targetName(target: string): string {
               <button
                 type="button"
                 :disabled="!paginationHints[0]"
-                class="inline-flex min-h-[32px] min-w-8 items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
+                class="inline-flex min-h-[32px] min-w-8 cursor-pointer items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
                 @click="navigate('prev')"
               >
                 <LeftIcon />
@@ -202,7 +202,7 @@ function targetName(target: string): string {
               <button
                 type="button"
                 :disabled="!paginationHints[1]"
-                class="inline-flex min-h-[32px] min-w-8 items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
+                class="inline-flex min-h-[32px] min-w-8 cursor-pointer items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
                 @click="navigate('next')"
               >
                 <span aria-hidden="true" class="sr-only">Next</span>
@@ -251,7 +251,7 @@ function targetName(target: string): string {
                       <button
                         type="button"
                         :disabled="!hasTargets"
-                        class="active inline-flex items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-gray-700 transition disabled:pointer-events-none disabled:opacity-50 hs-tab-active:bg-[var(--dark-blue)] hs-tab-active:text-gray-200"
+                        class="active hs-tab-active:bg-[var(--dark-blue)] hs-tab-active:text-gray-200 inline-flex cursor-pointer items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-gray-700 transition disabled:pointer-events-none disabled:opacity-50"
                         id="modal-targets-item"
                         data-hs-tab="#modal-targets"
                         aria-controls="modal-targets"
@@ -262,7 +262,7 @@ function targetName(target: string): string {
                       <button
                         type="button"
                         :disabled="!hasMap"
-                        class="inline-flex items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-gray-700 transition disabled:pointer-events-none disabled:opacity-50 hs-tab-active:bg-[var(--dark-blue)] hs-tab-active:text-gray-200"
+                        class="hs-tab-active:bg-[var(--dark-blue)] hs-tab-active:text-gray-200 inline-flex cursor-pointer items-center gap-x-2 rounded-lg bg-transparent px-4 py-3 text-center text-sm font-medium text-gray-700 transition disabled:pointer-events-none disabled:opacity-50"
                         id="modal-map-item"
                         data-hs-tab="#modal-map"
                         aria-controls="modal-map"
@@ -295,7 +295,7 @@ function targetName(target: string): string {
                   </div>
                 </div>
               </div>
-              <div v-show="hasTargets || hasMap" class="row-span-3 h-full rounded-md mb-3">
+              <div v-show="hasTargets || hasMap" class="row-span-3 mb-3 h-full rounded-md">
                 <div
                   id="modal-targets"
                   role="tabpanel"
@@ -320,7 +320,7 @@ function targetName(target: string): string {
                         />
                         <p
                           v-html="targetName(target)"
-                          class="mb-1 break-all text-center text-gray-300 transition duration-100"
+                          class="mb-1 text-center break-all text-gray-300 transition duration-100"
                           :style="`font-size: ${targetsFontSize}`"
                         ></p>
                       </a>

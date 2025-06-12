@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { RouterView } from "vue-router";
 import Error from "@/components/ErrorBox.vue";
 import { fetchStaticInfo } from "@/composables/requests";
-import { useStaticInfoStore } from "@/stores/static_info";
-import { type Ref, ref } from "vue";
-import { plainToInstance } from "class-transformer";
 import { StaticInfo } from "@/models/static_info";
+import { useStaticInfoStore } from "@/stores/static_info";
+import { plainToInstance } from "class-transformer";
+import { type Ref, ref } from "vue";
+import { RouterView } from "vue-router";
 
 function setFavicon(base64Data: string): void {
   const link = (document.querySelector("link[rel*='icon']") ||

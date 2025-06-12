@@ -1,3 +1,7 @@
-@tailwind base;
-@tailwind components;
+@import "tailwindcss";
+@import "preline/variants.css";
+@import "preline/src/plugins/dropdown/variants.css";
+@import "preline/src/plugins/overlay/variants.css";
+@import "preline/src/plugins/tabs/variants.css";
+
 @tailwind utilities;
