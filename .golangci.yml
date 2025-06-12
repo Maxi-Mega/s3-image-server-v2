@@ -1,51 +1,60 @@
+version: "2"
+
 run:
-  go: "1.22"
-  timeout: 5m
+  go: "1.24"
   tests: true
 
 linters:
-  enable-all: true
+  default: all
   disable:
     - cyclop
     - err113
-    - exhaustivestruct
     - exhaustruct
     - funlen
     - gochecknoinits
     - gocognit
-    - gofumpt
-    - gomnd
     - ireturn
     - lll
     - mnd
     - nlreturn
     - nonamedreturns
-    - scopelint
-    - structcheck
     - tagliatelle
     - testpackage
     - varnamelen
-    # Deprecated linters
-    - deadcode
-    - execinquery
-    - ifshort
-    - interfacer
-    - golint
-    - maligned
-    - nosnakecase
-    - varcheck
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: io/ioutil
+              desc: ioutil is deprecated starting with Go 1.16
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 
-linters-settings:
-  depguard:
-    rules:
-      main:
-        deny:
-          - pkg: "io/ioutil"
-            desc: "ioutil is deprecated starting with Go 1.16"
-
-  gci:
-    sections:
-      - standard
-      - prefix(github.com/Maxi-Mega/s3-image-server-v2)
-      - default
-    custom-order: true
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - prefix(github.com/Maxi-Mega/s3-image-server-v2)
+        - default
+      custom-order: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
