@@ -69,7 +69,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		TileServerURL:          cfg.UI.Map.TileServerURL,
 	}
 
-	err = mapstructure.Decode(cfg.Products.ImageGroups, &staticInfo.ImageGroups) //nolint:musttag
+	err = mapstructure.Decode(cfg.Products.ImageGroups, &staticInfo.ImageGroups)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert image groups to static info: %w", err)
 	}

@@ -59,13 +59,6 @@ func (img image) summary(name string) types.ImageSummary {
 	if img.geonames != nil {
 		displayName = img.geonames.GetTopLevel()
 	} else {
-		/*displayName = img.name
-
-		lastSlash := strings.LastIndex(name, "/")
-		if lastSlash > -1 {
-			displayName = name[lastSlash+1:]
-		}*/
-
 		displayName = "No geonames found"
 	}
 
