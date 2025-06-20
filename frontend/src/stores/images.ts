@@ -117,7 +117,6 @@ function handleCreateEvent(
         updated._hasBeenUpdated = true; // will be fetched on next modal open
     }
 
-    // @ts-ignore
     updated._lastModified = event.objectTime;
   }
 

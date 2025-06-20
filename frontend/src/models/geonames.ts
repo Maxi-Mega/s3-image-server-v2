@@ -15,7 +15,8 @@ export class GeonamesObject {
     }[];
   }[];
 
-  constructor(name: string, states: any) {
+  // @ts-ingore
+  constructor(name: string, states: never) {
     this.name = name;
     this.states = states;
   }

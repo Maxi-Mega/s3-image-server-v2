@@ -13,7 +13,7 @@ export const useFilterStore = defineStore("filters", {
   actions: {
     reset() {
       this.searchQuery = "";
-      // @ts-ignore // without .value, the reference to the ref is lost
+      // @ts-expect-error // without .value, the reference to the ref is lost
       this.checkedTypes.value = {};
     },
     setCheckedTypes(group: string, types: string[]) {

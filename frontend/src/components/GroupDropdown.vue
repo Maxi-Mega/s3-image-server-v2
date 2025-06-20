@@ -14,7 +14,8 @@ onMounted(() => {
   window.HSStaticMethods.autoInit("dropdown");
 });
 
-function handleToggle(ev: any, group: string, type?: string): void {
+// @ts-ingore
+function handleToggle(ev: Event, group: string, type?: string): void {
   const typeInputs = Array.from(
     document.querySelectorAll(`input.img-type[type=checkbox][image-group='${group}']`) as NodeList
   ) as Array<HTMLInputElement>;

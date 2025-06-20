@@ -15,7 +15,7 @@ export interface EventData {
   imageBucket: string;
   imageKey: string;
   objectTime: Date;
-  object: any | undefined;
+  object: never | undefined; // @ts-ingore
   error: string | undefined;
 }
 

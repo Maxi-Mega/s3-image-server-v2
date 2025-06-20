@@ -1,18 +1,23 @@
-import js from "@eslint/js";
+import pluginJs from "@eslint/js";
 import pluginVue from "eslint-plugin-vue";
-import vueTsEslintConfig from "@vue/eslint-config-typescript";
-import prettierConfig from "@vue/eslint-config-prettier";
+import tseslint from "typescript-eslint";
 
+import globals from "globals";
+
+/** @type {import("eslint").Linter.Config[]} */
 export default [
-  js.configs.recommended,
-  pluginVue.configs["flat/recommended"],
-  vueTsEslintConfig,
-  prettierConfig,
+  { ignores: [".idea", ".yarn", "dist", "node_modules"] },
+  { files: ["**/*.{js,mjs,cjs,ts,vue}"] },
+  { languageOptions: { globals: globals.browser } },
+  pluginJs.configs.recommended,
+  ...tseslint.configs.recommended,
+  ...pluginVue.configs["flat/essential"],
+  { files: ["**/*.vue"], languageOptions: { parserOptions: { parser: tseslint.parser } } },
   {
-    files: ["**/*.vue", "**/*.js", "**/*.jsx", "**/*.cjs", "**/*.mjs", "**/*.ts", "**/*.tsx", "**/*.cts", "**/*.mts"],
+    files: ["postcss.config.cjs", "tailwind.config.js"],
     rules: {
-      semi: "error",
-      "prefer-const": "error"
-    }
-  }
+      "no-undef": "off",
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ];
