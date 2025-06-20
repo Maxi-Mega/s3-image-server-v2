@@ -20,7 +20,7 @@ jobs:
       - uses: sibiraj-s/action-eslint@v3
         with:
           working-directory: "frontend"
-          ignore-path: '.gitignore'
-          extensions: 'vue,js,jsx,cjs,mjs,ts,tsx,cts,mts'
+          eslint-args: "--ignore-pattern=/.gitignore"
+          extensions: "vue,js,jsx,cjs,mjs,ts,tsx,cts,mts"
           all-files: true
           annotations: true
