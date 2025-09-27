@@ -30,6 +30,7 @@ const filterStore = useFilterStore();
     :step="1"
     :initial-scale-percentage="staticInfo.staticInfo.scaleInitialPercentage"
     :base-scale="16"
+    width-cls="max-w-24"
     @change="filterStore.setGlobalSizes"
   />
   <p class="min-w-fit text-base text-gray-200">{{ staticInfo.staticInfo.softwareVersion }}</p>

@@ -86,6 +86,7 @@ function handleCreateEvent(
     }
 
     added = {
+      // @ts-ignore
       ...(event.object as ImageSummary),
       _hasBeenUpdated: false,
       _lastModified: event.objectTime,
@@ -94,10 +95,13 @@ function handleCreateEvent(
     updated = summaries[summaryIdx];
     switch (event.objectType) {
       case "preview":
+        // @ts-ignore
         updated = event.object;
         break;
       case "geonames":
+        // @ts-ignore
         if (event.object.topLevel) {
+          // @ts-ignore
           updated.name = event.object.topLevel;
         } else {
           updated.name = event.imageKey;
@@ -111,12 +115,13 @@ function handleCreateEvent(
         updated._hasBeenUpdated = true; // the whole geonames object still needs to be fetched
         break;
       case "features":
+        // @ts-ignore
         updated.features = event.object;
         break;
       default:
         updated._hasBeenUpdated = true; // will be fetched on next modal open
     }
-
+    // @ts-ignore
     updated._lastModified = event.objectTime;
   }
 

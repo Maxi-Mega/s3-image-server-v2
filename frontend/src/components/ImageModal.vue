@@ -288,7 +288,7 @@ function targetName(target: string): string {
                         :step="1"
                         :initial-scale-percentage="50"
                         :base-scale="16"
-                        :full-width="true"
+                        widthCls="w-full"
                         @change="updateTargetsSize"
                       />
                     </div>

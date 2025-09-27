@@ -36,6 +36,7 @@ function handleToggle(ev: Event, group: string, type?: string): void {
     }
   } else {
     // toggle of the whole group
+    // @ts-ignore
     const groupChecked = ev.target.checked;
     typeInputs.forEach((el) => (el.checked = groupChecked));
   }
