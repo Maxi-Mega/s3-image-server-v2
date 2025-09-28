@@ -17,7 +17,7 @@ onMounted(() => {
 // @ts-ingore
 function handleToggle(ev: Event, group: string, type?: string): void {
   const typeInputs = Array.from(
-    document.querySelectorAll(`input.img-type[type=checkbox][image-group='${group}']`) as NodeList
+    document.querySelectorAll(`input.img-type[type=checkbox][image-group='${group}']`)
   ) as Array<HTMLInputElement>;
 
   if (type) {
@@ -36,7 +36,7 @@ function handleToggle(ev: Event, group: string, type?: string): void {
     }
   } else {
     // toggle of the whole group
-    // @ts-ignore
+    // @ts-expect-error target does have a checked property
     const groupChecked = ev.target.checked;
     typeInputs.forEach((el) => (el.checked = groupChecked));
   }

@@ -13,7 +13,7 @@
     "format": "prettier --write index.html src/"
   },
   "dependencies": {
-    "@apollo/client": "^4.0.6",
+    "@apollo/client": "3.14.0",
     "@preline/dropdown": "^3.2.3",
     "@preline/overlay": "^3.2.3",
     "@preline/tabs": "^3.2.3",

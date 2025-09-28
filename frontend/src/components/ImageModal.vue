@@ -8,7 +8,7 @@ import CloseIcon from "@/components/icons/CloseIcon.vue";
 import LeftIcon from "@/components/icons/LeftIcon.vue";
 import RightIcon from "@/components/icons/RightIcon.vue";
 import { base, formatGeonames, processImage, wbr } from "@/composables/images";
-import { getImageQuery } from "@/composables/queries";
+import { GET_IMAGE_SUMMARY } from "@/composables/queries";
 import { resolveBackendURL } from "@/composables/url";
 import type { Image, ImageSummary } from "@/models/image";
 import type { Localization } from "@/models/localization";
@@ -16,7 +16,7 @@ import { useImageStore } from "@/stores/images";
 import { ApolloError } from "@apollo/client";
 import { provideApolloClient, useQuery } from "@vue/apollo-composable";
 import { HSTabs } from "preline/preline";
-import { nextTick, type Ref, ref, toRefs, watch } from "vue";
+import { nextTick, reactive, type Ref, ref, toRefs, watch } from "vue";
 
 const props = defineProps<{
   id: string;
@@ -43,6 +43,35 @@ const showingTargets = ref(true);
 const targetsFontSize = ref("13px");
 const targetsWidth = ref(12);
 
+const enableQuery = ref(false);
+const imageQueryParams = reactive({
+  bucket: "",
+  name: "",
+});
+
+const { onResult, onError } = provideApolloClient(apolloClient)(() =>
+  useQuery(GET_IMAGE_SUMMARY, imageQueryParams, () => ({
+    enabled: enableQuery.value,
+    fetchPolicy: "network-only",
+  }))
+);
+
+onResult((result) => {
+  loading.value = result.loading;
+  error.value = result.error || null;
+
+  if (result.data) {
+    image.value = imageStore.updateImage(processImage(result.data));
+    hasTargets.value = image.value.targetFiles.length > 0;
+    hasMap.value = image.value.localization != null;
+    updateTabs();
+  }
+});
+onError((err) => {
+  console.warn("Image fetch error:", err);
+  error.value = err;
+});
+
 watch(img, async (value) => {
   image.value = null;
   loading.value = true;
@@ -65,25 +94,9 @@ watch(img, async (value) => {
     return;
   }
 
-  const { onResult, onError } = provideApolloClient(apolloClient)(
-    () => useQuery(getImageQuery(bucket, key), null, { fetchPolicy: "network-only" }) // TODO: use GraphQL variables instead of string interpolation
-  );
-
-  onResult((result) => {
-    loading.value = result.loading;
-    error.value = result.error || null;
-
-    if (result.data) {
-      image.value = imageStore.updateImage(processImage(result.data));
-      hasTargets.value = image.value.targetFiles.length > 0;
-      hasMap.value = image.value.localization != null;
-      updateTabs();
-    }
-  });
-  onError((err) => {
-    console.warn("Image fetch error:", err);
-    error.value = err;
-  });
+  imageQueryParams.bucket = bucket;
+  imageQueryParams.name = key;
+  enableQuery.value = true;
 });
 
 function updateTabs() {
