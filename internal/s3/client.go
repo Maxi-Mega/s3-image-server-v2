@@ -70,7 +70,7 @@ func NewClient(cfg config.Config) (Client, error) {
 		if f := os.Getenv("SSL_CERT_FILE"); f == "" {
 			httpTransport.TLSClientConfig.InsecureSkipVerify = true
 		} else {
-			logger.Infof("Using cert file %q", f) // TODO: remove
+			logger.Infof("Using cert file %q", f)
 		}
 	}
 

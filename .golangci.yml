@@ -17,10 +17,12 @@ linters:
     - lll
     - mnd
     - nlreturn
+    - noinlineerr
     - nonamedreturns
     - tagliatelle
     - testpackage
     - varnamelen
+    - wsl
   settings:
     depguard:
       rules:
@@ -28,6 +30,10 @@ linters:
           deny:
             - pkg: io/ioutil
               desc: ioutil is deprecated starting with Go 1.16
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
   exclusions:
     generated: lax
     presets:
