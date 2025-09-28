@@ -93,7 +93,7 @@ function modalNavigate(target: "prev" | "next") {
     return;
   }
 
-  openModal(filteredSummaries.value[navigatedIndex], false);
+  openModal(filteredSummaries.value[navigatedIndex] as ImageSummary, false);
 }
 </script>
 

@@ -13,7 +13,7 @@ function setFavicon(base64Data: string): void {
   link.type = "image/x-icon";
   link.rel = "icon";
   link.href = "data:image/png;base64," + base64Data;
-  document.getElementsByTagName("head")[0].appendChild(link);
+  document.getElementsByTagName("head")[0]?.appendChild(link);
 }
 
 const error: Ref<string | undefined> = ref();

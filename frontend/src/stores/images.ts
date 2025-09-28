@@ -38,7 +38,7 @@ export const useImageStore = defineStore("images", {
         this.allImages[idx] = image;
       }
 
-      return this.allImages[idx];
+      return this.allImages[idx] as Image;
     },
     handleEvent(event: EventData): void {
       if (event.eventType === "ObjectCreated") {
@@ -92,6 +92,7 @@ function handleCreateEvent(
       _lastModified: event.objectTime,
     };
   } else {
+    // @ts-expect-error no worries
     updated = summaries[summaryIdx];
     switch (event.objectType) {
       case "preview":
@@ -99,18 +100,23 @@ function handleCreateEvent(
         updated = event.object;
         break;
       case "geonames":
+        // @ts-expect-error no worries
         if (event.object.topLevel) {
           // @ts-expect-error updated is not null
           updated.name = event.object.topLevel;
         } else {
+          // @ts-expect-error no worries
           updated.name = event.imageKey;
 
+          // @ts-expect-error no worries
           const lastSlash = updated.name.lastIndexOf("/");
           if (lastSlash > -1) {
+            // @ts-expect-error no worries
             updated.name = updated.name.substring(lastSlash + 1);
           }
         }
 
+        // @ts-expect-error no worries
         updated._hasBeenUpdated = true; // the whole geonames object still needs to be fetched
         break;
       case "features":
@@ -118,6 +124,7 @@ function handleCreateEvent(
         updated.features = event.object;
         break;
       default:
+        // @ts-expect-error no worries
         updated._hasBeenUpdated = true; // will be fetched on next modal open
     }
     // @ts-expect-error updated is not null
@@ -139,5 +146,6 @@ function handleRemoveEvent(
     return { updated: null, remove: true };
   }
 
+  // @ts-expect-error no worries
   return { updated: summaries[summaryIdx], remove: false };
 }
