@@ -92,6 +92,7 @@ func (op *objectTemporizer) handleBaseDir(ctx context.Context, baseDir string) {
 	for dir, oots := range op.unassignedObjects {
 		if dir == baseDir || strings.HasPrefix(dir, baseDir+"/") {
 			go op.signalObjects(ctx, baseDir, oots)
+
 			delete(op.unassignedObjects, dir)
 		}
 	}

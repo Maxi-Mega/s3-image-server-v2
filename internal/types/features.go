@@ -1,4 +1,4 @@
-package types
+package types //nolint: revive,nolintlint
 
 type RawFeaturesFile struct {
 	Type     string `json:"type"`
@@ -9,8 +9,9 @@ type RawFeaturesFile struct {
 }
 
 type Features struct {
+	CachedObject
+
 	Class   string         `json:"class"`
 	Count   int            `json:"featuresCount"`
 	Objects map[string]int `json:"objects"`
-	CachedObject
 }

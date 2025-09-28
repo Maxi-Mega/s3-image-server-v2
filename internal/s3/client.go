@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -49,9 +51,33 @@ type bucketSpecificInfo struct {
 }
 
 func NewClient(cfg config.Config) (Client, error) {
+	var (
+		transport http.RoundTripper
+		err       error
+	)
+
+	if cfg.S3.UseSSL {
+		transport, err = minio.DefaultTransport(true)
+		if err != nil {
+			return nil, fmt.Errorf("can't create s3 client transport: %w", err)
+		}
+
+		httpTransport, ok := transport.(*http.Transport)
+		if !ok {
+			return nil, fmt.Errorf("unexpected http transport %T", transport)
+		}
+
+		if f := os.Getenv("SSL_CERT_FILE"); f == "" {
+			httpTransport.TLSClientConfig.InsecureSkipVerify = true
+		} else {
+			logger.Infof("Using cert file %q", f) // TODO: remove
+		}
+	}
+
 	client, err := minio.New(cfg.S3.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.S3.AccessID, cfg.S3.AccessSecret, ""),
-		Secure: cfg.S3.UseSSL,
+		Creds:     credentials.NewStaticV4(cfg.S3.AccessID, cfg.S3.AccessSecret, ""),
+		Secure:    cfg.S3.UseSSL,
+		Transport: transport,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize s3 client: %w", err)

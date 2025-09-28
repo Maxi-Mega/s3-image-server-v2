@@ -17,6 +17,7 @@ const chanBuf = 256
 
 type s3Event struct {
 	s3.Event
+
 	baseDir  string
 	imgGroup config.ImageGroup
 	imgType  config.ImageType
@@ -108,6 +109,7 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 		evt.baseDir = basePath
 
 		consumer.cache.handleEvent(ctx, evt)
+
 		consumer.baseDirChan <- basePath
 	} else {
 		consumer.temporizationChan <- evt

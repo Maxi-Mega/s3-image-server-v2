@@ -1,4 +1,4 @@
-package types
+package types //nolint: revive,nolintlint
 
 import (
 	"sort"
@@ -22,8 +22,9 @@ type GeonamesObject struct {
 }
 
 type Geonames struct {
-	Objects []GeonamesObject `json:"objects"`
 	CachedObject
+
+	Objects []GeonamesObject `json:"objects"`
 }
 
 func (geonames *Geonames) Sort() {

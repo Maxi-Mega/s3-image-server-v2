@@ -120,6 +120,7 @@ type wsClient struct {
 
 func (c *wsClient) writer() {
 	ticker := time.NewTicker(pingPeriod)
+
 	defer func() {
 		ticker.Stop()
 		logger.Trace("Closing WS connection from ", c.conn.RemoteAddr())

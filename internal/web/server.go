@@ -17,6 +17,7 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph"
 
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/gin-gonic/gin"
 	"github.com/go-viper/mapstructure/v2"
@@ -75,7 +76,12 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 	}
 
 	graphqlHandler := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: graphResolver}))
+	graphqlHandler.AddTransport(transport.Options{})
 	graphqlHandler.AddTransport(transport.POST{})
+
+	if !prod {
+		graphqlHandler.Use(extension.Introspection{})
+	}
 
 	srv := &Server{
 		uiCfg:          cfg.UI,
@@ -95,6 +101,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 
 func (srv *Server) Start(ctx context.Context, eventsChan chan types.OutEvent) error {
 	srv.wsHub.goRun(ctx, eventsChan)
+
 	eventsChan <- types.OutEvent{EventType: types.EventReset}
 
 	httpServer := &http.Server{

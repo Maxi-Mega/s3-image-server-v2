@@ -1,0 +1,6 @@
+s3:
+  endpoint: "https://localhost:9000"
+
+products:
+  imageGroups:
+    - groupName: "Group 1"

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -92,6 +93,10 @@ func (cfg *Config) validate() error {
 }
 
 func (cfg *Config) process() (err error) {
+	if idx := strings.Index(cfg.S3.Endpoint, "://"); idx >= 0 {
+		cfg.S3.Endpoint = cfg.S3.Endpoint[idx+3:]
+	}
+
 	cfg.Cache.CacheDir, err = filepath.Abs(cfg.Cache.CacheDir)
 	if err != nil {
 		return fmt.Errorf("could not resolve cache dir: %w", err)

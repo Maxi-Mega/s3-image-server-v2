@@ -1,4 +1,4 @@
-package types
+package types //nolint: revive,nolintlint
 
 type Point struct {
 	Coordinates struct {
@@ -15,6 +15,7 @@ type LocalizationCorner struct {
 }
 
 type Localization struct {
-	Corner LocalizationCorner `json:"corner"`
 	CachedObject
+
+	Corner LocalizationCorner `json:"corner"`
 }

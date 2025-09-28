@@ -75,6 +75,47 @@ func TestLoad(t *testing.T) {
 			expectedError: "",
 		},
 		{
+			filePath: "s3_endpoint_transform.yml",
+			expectedConfig: Config{
+				S3: S3{
+					PollingMode:   true,
+					PollingPeriod: 30 * time.Second,
+					Endpoint:      "localhost:9000", // without "https://"
+				},
+				UI: UI{
+					BaseURL:                "/",
+					WindowTitle:            "S3 Image Viewer",
+					ScaleInitialPercentage: 50,
+					MaxImagesDisplayCount:  10,
+					Map: UIMap{
+						TileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+					},
+				},
+				Products: Products{
+					DefaultPreviewSuffix: "preview.jpg",
+					GeonamesFilename:     "geonames.json",
+					LocalizationFilename: "localization.json",
+					ImageGroups: []ImageGroup{
+						{
+							GroupName: "Group 1",
+						},
+					},
+				},
+				Cache: Cache{
+					CacheDir:        "/tmp/s3_image_server",
+					RetentionPeriod: 7 * 24 * time.Hour,
+				},
+				Log: Log{
+					LogLevel:  "info",
+					ColorLogs: true,
+				},
+				Monitoring: Monitoring{
+					PrometheusInstanceLabel: "s3_image_server",
+				},
+			},
+			expectedError: "",
+		},
+		{
 			filePath:       "invalid_yaml.yml",
 			expectedConfig: Config{},
 			expectedError:  "failed to parse config: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `invalid...` into config.Config",
