@@ -28,6 +28,10 @@ export const GET_IMAGE_SUMMARY = gql`
           lastModified
           cacheKey
         }
+        size {
+          width
+          height
+        }
       }
       geonames {
         objects

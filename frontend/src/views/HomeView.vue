@@ -61,9 +61,14 @@ function handleWSConnectionFailure() {
 
 function handleWSEvent(ws: WebSocket, event: MessageEvent) {
   try {
-    imageStore.handleEvent(parseEventData(event.data));
+    event.data
+      .trim()
+      .split("\n")
+      .filter((line: string) => line.trim() !== "")
+      .map(parseEventData)
+      .forEach(imageStore.handleEvent);
   } catch (e) {
-    console.warn("Error while handling WS event:", e);
+    console.warn(`Error while handling WS event:\nerror=${e}\nevent data=${event.data}`);
     // TODO: emit error ?
   }
 }

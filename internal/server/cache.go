@@ -53,13 +53,18 @@ type image struct {
 
 // summary returns the [ImageSummary] of this [image],
 // the name parameter corresponds to the image base dir.
-func (img image) summary(name string) types.ImageSummary {
+func (img image) summary(name, cacheDir string) types.ImageSummary {
 	var displayName string
 
 	if img.geonames != nil {
 		displayName = img.geonames.GetTopLevel()
 	} else {
 		displayName = "No geonames found"
+	}
+
+	imgSize, err := utils.GetImageSize(img.previewCacheKey, cacheDir)
+	if err != nil {
+		logger.Warnf("Failed to get image size of %q: %v", img.previewCacheKey, err)
 	}
 
 	return types.ImageSummary{
@@ -73,6 +78,7 @@ func (img image) summary(name string) types.ImageSummary {
 			LastModified: img.lastModified,
 			CacheKey:     img.previewCacheKey,
 		},
+		Size: imgSize,
 	}
 }
 
@@ -147,7 +153,7 @@ func (c *cache) GetAllImages(start, end time.Time) types.AllImageSummaries {
 				allImages[grp] = make(map[string][]types.ImageSummary)
 			}
 
-			allImages[grp][typ] = append(allImages[grp][typ], img.summary(name))
+			allImages[grp][typ] = append(allImages[grp][typ], img.summary(name, c.cacheDir))
 		}
 
 		bucket.l.RUnlock()
@@ -177,7 +183,7 @@ func (c *cache) GetImage(bucketName, name string) (types.Image, error) {
 	}
 
 	return types.Image{
-		ImageSummary:     img.summary(name),
+		ImageSummary:     img.summary(name, c.cacheDir),
 		Geonames:         img.geonames,
 		Localization:     img.localization,
 		AdditionalFiles:  toFilenameValueMap(img.additional),

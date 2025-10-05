@@ -4,9 +4,11 @@ import { resolveBackendURL } from "@/composables/url";
 import type { ImageSummary } from "@/models/image";
 import { useFilterStore } from "@/stores/filters";
 import { storeToRefs } from "pinia";
+import { computed } from "vue";
 
-defineProps<{
+const props = defineProps<{
   summary: ImageSummary;
+  placeholderImageWidth: number;
 }>();
 
 const emit = defineEmits<{
@@ -15,30 +17,40 @@ const emit = defineEmits<{
 
 const { globalFontSize } = storeToRefs(useFilterStore());
 
-/*onMounted(() => {
-  console.info("Mounted", props.summary.key);
-  window.HSStaticMethods.autoInit("overlay");
-});
+const imgSize = computed(() => {
+  if (!props.summary.size || !props.summary.size.width || !props.summary.size.height) {
+    return {
+      minWidth: undefined,
+      minHeight: undefined,
+    };
+  }
 
-onBeforeUnmount(()=>{
-  console.info("Unmounted", props.summary.key);
-  window.HSStaticMethods.cleanCollection("overlay");
-});*/
+  return {
+    minWidth: Math.round(props.placeholderImageWidth),
+    minHeight: Math.round(
+      (props.placeholderImageWidth / props.summary.size.width) * props.summary.size.height
+    ),
+  };
+});
 </script>
 
 <template>
-  <!-- data-hs-overlay="#image-modal" -->
   <div
     class="flex cursor-pointer flex-col justify-end rounded-lg p-2 transition-shadow hover:shadow-lg"
     @click="emit('openModal', summary)"
   >
     <div class="group relative mb-2 flex justify-center overflow-hidden rounded-lg lg:mb-3">
       <img
-        :src="resolveBackendURL('/api/cache/' + summary.cachedObject.cacheKey)"
+        v-lazy-img="{
+          src: resolveBackendURL('/api/cache/' + summary.cachedObject.cacheKey),
+        }"
         :alt="summary.cachedObject.cacheKey"
-        class="h-full w-full object-cover object-center transition duration-300 group-hover:scale-105"
         :title="`${summary.type}\n${summary.key}\n${formatDate(summary._lastModified)}`"
+        class="skeleton h-full w-full object-cover object-center transition duration-300 group-hover:scale-105"
+        :width="imgSize.minWidth"
+        :height="imgSize.minHeight"
       />
+
       <div
         v-if="summary.features"
         class="absolute top-0 left-0 flex h-full w-full items-start justify-center overflow-hidden *:hover:bg-transparent *:hover:backdrop-blur-[2px]"
@@ -67,4 +79,8 @@ onBeforeUnmount(()=>{
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.skeleton {
+  background-color: rgba(121, 134, 161, 0.25);
+}
+</style>

@@ -47,6 +47,13 @@ watch(
 );
 
 const gridColumnsCount = computed(() => Math.round(globalScaleValue.value / 3));
+const placeholderImageWidth = computed(() => {
+  const colCount = gridColumnsCount.value;
+  // (windowWidth - mainPadding * 2 - imagePadding * colCount - gridGap * (gapCount)) / colCount
+  const estimatedWidth =
+    (window.innerWidth - 24 * 2 - 8 * colCount - 32 * (colCount - 1)) / colCount;
+  return estimatedWidth * 0.99; // remove 1% to use it as min width and height
+});
 
 const selectedImage: Ref<ImageSummary | undefined> = ref();
 const modalPaginationHints: Ref<[boolean, boolean]> = ref([false, false]);
@@ -115,6 +122,7 @@ function modalNavigate(target: "prev" | "next") {
         v-for="summary in filteredSummaries"
         :key="summaryKey(summary)"
         :summary="summary"
+        :placeholder-image-width="placeholderImageWidth"
         @openModal="openModal"
       />
     </div>

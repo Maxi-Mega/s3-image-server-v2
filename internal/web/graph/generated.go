@@ -74,6 +74,11 @@ type ComplexityRoot struct {
 		TargetFiles      func(childComplexity int) int
 	}
 
+	ImageSize struct {
+		Height func(childComplexity int) int
+		Width  func(childComplexity int) int
+	}
+
 	ImageSummary struct {
 		Bucket       func(childComplexity int) int
 		CachedObject func(childComplexity int) int
@@ -81,6 +86,7 @@ type ComplexityRoot struct {
 		Group        func(childComplexity int) int
 		Key          func(childComplexity int) int
 		Name         func(childComplexity int) int
+		Size         func(childComplexity int) int
 		Type         func(childComplexity int) int
 	}
 
@@ -215,6 +221,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Image.TargetFiles(childComplexity), true
 
+	case "ImageSize.height":
+		if e.complexity.ImageSize.Height == nil {
+			break
+		}
+
+		return e.complexity.ImageSize.Height(childComplexity), true
+	case "ImageSize.width":
+		if e.complexity.ImageSize.Width == nil {
+			break
+		}
+
+		return e.complexity.ImageSize.Width(childComplexity), true
+
 	case "ImageSummary.bucket":
 		if e.complexity.ImageSummary.Bucket == nil {
 			break
@@ -251,6 +270,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ImageSummary.Name(childComplexity), true
+	case "ImageSummary.size":
+		if e.complexity.ImageSummary.Size == nil {
+			break
+		}
+
+		return e.complexity.ImageSummary.Size(childComplexity), true
 	case "ImageSummary.type":
 		if e.complexity.ImageSummary.Type == nil {
 			break
@@ -398,6 +423,11 @@ type CachedObject {
     cacheKey:     String!
 }
 
+type ImageSize {
+    width:  Int!
+    height: Int!
+}
+
 type ImageSummary {
     bucket:       String!
     key:          String!
@@ -406,6 +436,7 @@ type ImageSummary {
     type:         String!
     features:     Features
     cachedObject: CachedObject!
+    size:         ImageSize!
 }
 
 type Geonames {
@@ -823,6 +854,8 @@ func (ec *executionContext) fieldContext_Image_imageSummary(_ context.Context, f
 				return ec.fieldContext_ImageSummary_features(ctx, field)
 			case "cachedObject":
 				return ec.fieldContext_ImageSummary_cachedObject(ctx, field)
+			case "size":
+				return ec.fieldContext_ImageSummary_size(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ImageSummary", field.Name)
 		},
@@ -982,6 +1015,64 @@ func (ec *executionContext) fieldContext_Image_fullProductFiles(_ context.Contex
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageSize_width(ctx context.Context, field graphql.CollectedField, obj *types.ImageSize) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageSize_width,
+		func(ctx context.Context) (any, error) {
+			return obj.Width, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageSize_width(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSize",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageSize_height(ctx context.Context, field graphql.CollectedField, obj *types.ImageSize) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageSize_height,
+		func(ctx context.Context) (any, error) {
+			return obj.Height, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageSize_height(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSize",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1201,6 +1292,41 @@ func (ec *executionContext) fieldContext_ImageSummary_cachedObject(_ context.Con
 				return ec.fieldContext_CachedObject_cacheKey(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type CachedObject", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageSummary_size(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageSummary_size,
+		func(ctx context.Context) (any, error) {
+			return obj.Size, nil
+		},
+		nil,
+		ec.marshalNImageSize2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐImageSize,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageSummary_size(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "width":
+				return ec.fieldContext_ImageSize_width(ctx, field)
+			case "height":
+				return ec.fieldContext_ImageSize_height(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ImageSize", field.Name)
 		},
 	}
 	return fc, nil
@@ -3221,6 +3347,50 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var imageSizeImplementors = []string{"ImageSize"}
+
+func (ec *executionContext) _ImageSize(ctx context.Context, sel ast.SelectionSet, obj *types.ImageSize) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, imageSizeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ImageSize")
+		case "width":
+			out.Values[i] = ec._ImageSize_width(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "height":
+			out.Values[i] = ec._ImageSize_height(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var imageSummaryImplementors = []string{"ImageSummary"}
 
 func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.SelectionSet, obj *types.ImageSummary) graphql.Marshaler {
@@ -3261,6 +3431,11 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 			out.Values[i] = ec._ImageSummary_features(ctx, field, obj)
 		case "cachedObject":
 			out.Values[i] = ec._ImageSummary_cachedObject(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "size":
+			out.Values[i] = ec._ImageSummary_size(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -3843,6 +4018,10 @@ func (ec *executionContext) marshalNGeonamesObject2ᚕgithubᚗcomᚋMaxiᚑMega
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNImageSize2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐImageSize(ctx context.Context, sel ast.SelectionSet, v types.ImageSize) graphql.Marshaler {
+	return ec._ImageSize(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNImageSummary2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐImageSummary(ctx context.Context, sel ast.SelectionSet, v types.ImageSummary) graphql.Marshaler {

@@ -18,8 +18,18 @@ const filterStore = useFilterStore();
       @input="(e) => (filterStore.searchQuery = (e.target as HTMLInputElement).value)"
     />
   </div>
-  <p class="min-w-fit text-lg text-white">
+  <p
+    v-if="staticInfo.staticInfo.maxImagesDisplayCount > imageStore.totalCount"
+    class="min-w-fit text-lg text-white"
+  >
     ({{ imageStore.filteredCount }} / {{ imageStore.totalCount }})
+  </p>
+  <p
+    v-else
+    class="min-w-fit text-lg font-bold text-red-500"
+    :title="`Max number of images displayed reached (total is ${imageStore.totalCount})`"
+  >
+    ({{ imageStore.filteredCount }} / {{ staticInfo.staticInfo.maxImagesDisplayCount }})
   </p>
   <RangeInput
     v-if="staticInfo.staticInfo.scaleInitialPercentage"

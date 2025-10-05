@@ -1,4 +1,4 @@
-package utils
+package utils //nolint: revive,nolintlint
 
 func Map[I, O any](s []I, fn func(I) O) []O {
 	result := make([]O, len(s))

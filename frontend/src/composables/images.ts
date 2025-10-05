@@ -32,7 +32,7 @@ export function summaryKey(summary: ImageSummary): string {
   return `${summary.bucket}_${summary.key}`;
 }
 
-const defaultMaxImagesDisplayCount = 20;
+const defaultMaxImagesDisplayCount = 100;
 
 export function limitDisplayedImages(
   summaries: ImageSummary[],

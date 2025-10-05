@@ -3,6 +3,11 @@ import { Features } from "@/models/features";
 import { type Geonames } from "@/models/geonames";
 import { type Localization } from "@/models/localization";
 
+export type ImageSize = {
+  width: number;
+  height: number;
+};
+
 export class ImageSummary {
   bucket: string;
   key: string;
@@ -11,6 +16,7 @@ export class ImageSummary {
   type: string;
   features: Features | null;
   cachedObject: CachedObject;
+  size: ImageSize;
 
   _hasBeenUpdated: boolean;
   _lastModified: Date;
@@ -23,6 +29,7 @@ export class ImageSummary {
     type: string,
     features: Features | null,
     cachedObject: CachedObject,
+    size: ImageSize,
     hasBeenUpdated: boolean,
     _lastModified: Date
   ) {
@@ -33,6 +40,7 @@ export class ImageSummary {
     this.type = type;
     this.features = features;
     this.cachedObject = cachedObject;
+    this.size = size;
     this._hasBeenUpdated = hasBeenUpdated;
     this._lastModified = _lastModified;
   }

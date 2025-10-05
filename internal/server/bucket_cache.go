@@ -165,7 +165,8 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 
 func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s3Event, img *image, fullFilePath string) (eventObj any, err error) {
 	cacheKey := func(subDir ...string) string {
-		subdir := ""
+		var subdir string
+
 		if len(subDir) > 0 {
 			subdir = subDir[0]
 		}
@@ -177,7 +178,7 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 	case types.ObjectPreview:
 		img.lastModified = event.ObjectLastModified
 		img.previewCacheKey = cacheKey()
-		eventObj = img.summary(event.baseDir)
+		eventObj = img.summary(event.baseDir, bc.cfg.Cache.CacheDir)
 	case types.ObjectGeonames:
 		img.geonames, err = parseGeonames(fullFilePath, event.ObjectLastModified, cacheKey())
 		if img.geonames != nil {

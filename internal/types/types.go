@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
 )
 
 type CachedObject struct {
 	LastModified time.Time `json:"lastModified"`
 	CacheKey     string    `json:"cacheKey"`
+}
+
+type ImageSize struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 
 type ImageSummary struct {
@@ -22,6 +25,7 @@ type ImageSummary struct {
 	Features *Features `json:"features"`
 	// Contains the cache key to the image preview.
 	CachedObject CachedObject `json:"cachedObject"`
+	Size         ImageSize    `json:"size"`
 }
 
 type Image struct {
