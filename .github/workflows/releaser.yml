@@ -3,7 +3,7 @@ name: Release drafter
 on:
   push:
     tags:
-      - "*.*.*"
+      - "*"
 
 jobs:
   draft-release:

@@ -23,7 +23,7 @@ fi
 
 BINARY_FILENAME="S3ImageServer-$VERSION"
 
-source "${ENV_FILE}" # Load $BASE_URL
+test -f "${ENV_FILE}" && source "${ENV_FILE}" # Load $BASE_URL
 
 echo "Building front-end with base URL '$BASE_URL' ..."
 
