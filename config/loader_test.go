@@ -29,7 +29,7 @@ func TestLoad(t *testing.T) {
 					BaseURL:                "/",
 					WindowTitle:            "S3 Image Viewer",
 					ScaleInitialPercentage: 50,
-					MaxImagesDisplayCount:  10,
+					MaxImagesDisplayCount:  100,
 					Map: UIMap{
 						TileServerURL: "localhost:3000/{z}/{x}/{y}.png",
 					},
@@ -86,7 +86,7 @@ func TestLoad(t *testing.T) {
 					BaseURL:                "/",
 					WindowTitle:            "S3 Image Viewer",
 					ScaleInitialPercentage: 50,
-					MaxImagesDisplayCount:  10,
+					MaxImagesDisplayCount:  100,
 					Map: UIMap{
 						TileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
 					},

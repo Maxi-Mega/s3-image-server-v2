@@ -5,7 +5,7 @@ s3:
   endpoint: "127.0.0.1:9000"
   accessID: "admin"
   accessSecret: "password"
-  useSSL: false              # Not tested
+  useSSL: false
 
 ui:
   webServerPort: 9999
@@ -15,7 +15,7 @@ ui:
   faviconPngBase64: ""
   logoPngBase64: ""
   scaleInitialPercentage: 50
-  maxImagesDisplayCount: 10
+  maxImagesDisplayCount: 100
   displayTimeOffset: 1h
   map:
     tileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
