@@ -3,9 +3,11 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,8 +20,9 @@ import (
 )
 
 type bucketCache struct {
-	l        sync.RWMutex
-	s3Client s3.Client
+	l           sync.RWMutex
+	s3Client    s3.Client
+	exprManager *expressionManager
 
 	bucket  string
 	dirPath string
@@ -29,14 +32,15 @@ type bucketCache struct {
 	dropTimers map[string]*time.Timer
 }
 
-func newBucketCache(s3Client s3.Client, bucket, dirPath string, cfg config.Config) *bucketCache {
+func newBucketCache(s3Client s3.Client, exprMan *expressionManager, bucket, dirPath string, cfg config.Config) *bucketCache {
 	return &bucketCache{
-		s3Client:   s3Client,
-		bucket:     bucket,
-		dirPath:    dirPath,
-		cfg:        cfg,
-		images:     make(map[string]image),
-		dropTimers: make(map[string]*time.Timer),
+		s3Client:    s3Client,
+		exprManager: exprMan,
+		bucket:      bucket,
+		dirPath:     dirPath,
+		cfg:         cfg,
+		images:      make(map[string]image),
+		dropTimers:  make(map[string]*time.Timer),
 	}
 }
 
@@ -53,44 +57,40 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		}
 
 		img.lastModified = event.ObjectLastModified
-		img.s3Key = event.Bucket
-	case types.ObjectGeonames:
-		if img.geonames != nil && !img.geonames.LastModified.Before(event.ObjectLastModified) {
-			return nil
-		}
-
-		// Geonames file may sometime be empty, so we prevent further processing to avoid getting an error like "end of JSON input".
-		if event.Size == 0 {
-			logger.Warnf("Geonames file %q is empty; ignoring it", event.ObjectKey)
-
-			return nil
-		}
-	case types.ObjectLocalization:
-		if img.localization != nil && !img.localization.LastModified.Before(event.ObjectLastModified) {
-			return nil
-		}
-	case types.ObjectAdditional:
-		if !img.additional[event.ObjectKey].lastUpdate.Before(event.ObjectLastModified) {
-			return nil
-		}
-
-		subDir = additionalDirName
-	case types.ObjectFeatures:
-		if img.features != nil && !img.features.LastModified.Before(event.ObjectLastModified) {
-			return nil
-		}
+		img.s3Key = event.ObjectKey
 	case types.ObjectTarget:
 		if !img.targets[event.ObjectKey].lastUpdate.Before(event.ObjectLastModified) {
 			return nil
 		}
 
 		subDir = targetsDirName
-	case types.ObjectFullProduct:
-		if !bc.cfg.Products.FullProductSignedURL {
+	case types.ObjectDynamicInput:
+		cachedFile, found := img.dynamicInputFiles[event.InputFile]
+		if found {
+			if !cachedFile.lastUpdate.Before(event.ObjectLastModified) {
+				return nil
+			}
+
+			if cachedFile.value.S3Path != event.ObjectKey {
+				logger.Errorf("Input file %q for image type %q/%q matches multiple objects; this should be fixed !", event.InputFile, event.imgGroup.GroupName, event.imgType.Name)
+
+				return nil
+			}
+		}
+
+		selector, ok := event.imgType.DynamicData.FileSelectors[event.InputFile]
+		if !ok {
+			logger.Errorf("Input file %q for image type %q/%q is not defined in the config", event.InputFile, event.imgGroup.GroupName, event.imgType.Name)
+
 			return nil
 		}
 
-		download = false
+		switch selector.Kind {
+		case config.FileSelectorKindCached:
+			subDir = dynamicInputFilesDirName
+		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL:
+			download = false
+		}
 	}
 
 	if img.name == "" {
@@ -110,9 +110,10 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.imgGroup = event.imgGroup.GroupName
 		img.imgType = event.imgType.Name
 		img.lastModified = event.ObjectLastModified
-		img.additional = make(map[string]valueWithLastUpdate[string])
 		img.targets = make(map[string]valueWithLastUpdate[string])
-		img.fullProducts = make(map[string]valueWithLastUpdate[signedURL])
+		img.dynamicInputFiles = make(map[string]valueWithLastUpdate[types.DynamicInputFile])
+		img.linksFromCache = make(map[string]valueWithLastUpdate[string])
+		img.signedURLs = make(map[string]valueWithLastUpdate[signedURL])
 
 		bc.setDropTimer(event.baseDir, event.Time)
 	}
@@ -137,7 +138,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		}
 	}
 
-	eventObj, err := bc.applyObjectTypeSpecificHooks(ctx, event, &img, fullFilePath)
+	eventObj, err := bc.applyObjectTypeSpecificHooks(ctx, event, &img)
 	if err != nil {
 		switch {
 		case errors.Is(err, errObjectAlreadyCached):
@@ -163,7 +164,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 	}
 }
 
-func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s3Event, img *image, fullFilePath string) (eventObj any, err error) {
+func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s3Event, img *image) (eventObj any, err error) {
 	cacheKey := func(subDir ...string) string {
 		var subdir string
 
@@ -178,52 +179,83 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 	case types.ObjectPreview:
 		img.lastModified = event.ObjectLastModified
 		img.previewCacheKey = cacheKey()
-		eventObj = img.summary(event.baseDir, bc.cfg.Cache.CacheDir)
-	case types.ObjectGeonames:
-		img.geonames, err = parseGeonames(fullFilePath, event.ObjectLastModified, cacheKey())
-		if img.geonames != nil {
-			eventObj = struct {
-				TopLevel string `json:"topLevel"`
-			}{
-				TopLevel: img.geonames.GetTopLevel(),
-			}
-		}
-	case types.ObjectLocalization:
-		img.localization, err = parseLocalization(fullFilePath, event.ObjectLastModified, cacheKey())
-		eventObj = img.localization
-	case types.ObjectAdditional:
-		img.additional[event.ObjectKey] = valueWithLastUpdate[string]{
-			value:      cacheKey(additionalDirName),
-			lastUpdate: event.ObjectLastModified,
-		}
-		eventObj = img.additional[event.ObjectKey]
-	case types.ObjectFeatures:
-		img.features, err = parseFeatures(bc.cfg.Products, fullFilePath, event.ObjectLastModified, cacheKey(), event.ObjectKey)
-		eventObj = img.features
+		eventObj = img.summary(ctx, event.baseDir, bc.cfg.Cache.CacheDir, bc.exprManager)
 	case types.ObjectTarget:
 		img.targets[event.ObjectKey] = valueWithLastUpdate[string]{
 			value:      cacheKey(targetsDirName),
 			lastUpdate: event.ObjectLastModified,
 		}
 		eventObj = img.targets[event.ObjectKey]
-	case types.ObjectFullProduct:
-		if fullProduct, exists := img.fullProducts[event.ObjectKey]; exists {
-			// Checking if we have the latest version of the object, and if the signed URL is still valid.
-			if !fullProduct.lastUpdate.Before(event.ObjectLastModified) && fullProduct.value.isValid() {
-				return nil, errObjectAlreadyCached
-			}
+	case types.ObjectDynamicInput:
+		selector, ok := event.imgType.DynamicData.FileSelectors[event.InputFile]
+		if !ok {
+			return nil, errNoEventNeeded
 		}
 
-		if signURL, err := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey); err == nil {
-			img.fullProducts[event.ObjectKey] = valueWithLastUpdate[signedURL]{
-				value: signedURL{
-					value:          injectFullProductURLParams(event.imgGroup, event.ObjectKey, signURL),
-					generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual gen TS
+		switch selector.Kind {
+		case config.FileSelectorKindCached:
+			img.dynamicInputFiles[event.InputFile] = valueWithLastUpdate[types.DynamicInputFile]{
+				value: types.DynamicInputFile{
+					S3Path:   event.ObjectKey,
+					CacheKey: cacheKey(dynamicInputFilesDirName),
+					Date:     event.ObjectLastModified,
 				},
 				lastUpdate: event.ObjectLastModified,
 			}
-			eventObj = img.fullProducts[event.ObjectKey]
+
+			if selector.Link {
+				img.linksFromCache[event.ObjectKey] = valueWithLastUpdate[string]{
+					value:      cacheKey(dynamicInputFilesDirName),
+					lastUpdate: event.ObjectLastModified,
+				}
+			}
+		case config.FileSelectorKindSignedURL:
+			if fullProduct, exists := img.signedURLs[event.ObjectKey]; exists {
+				// Checking if we have the latest version of the object, and if the signed URL is still valid.
+				if !fullProduct.lastUpdate.Before(event.ObjectLastModified) && fullProduct.value.isValid() {
+					return nil, errObjectAlreadyCached
+				}
+			}
+
+			signURL, errURL := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey)
+			if errURL != nil {
+				err = errURL
+
+				break
+			}
+
+			img.signedURLs[event.ObjectKey] = valueWithLastUpdate[signedURL]{
+				value: signedURL{
+					value:          signURL.String(),
+					generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual generation timestamp
+				},
+				lastUpdate: event.ObjectLastModified,
+			}
+		case config.FileSelectorKindFullProductSignedURL:
+			if fullProduct, exists := img.signedURLs[event.ObjectKey]; exists {
+				// Checking if we have the latest version of the object, and if the signed URL is still valid.
+				if !fullProduct.lastUpdate.Before(event.ObjectLastModified) && fullProduct.value.isValid() {
+					return nil, errObjectAlreadyCached
+				}
+			}
+
+			signURL, errURL := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey)
+			if errURL != nil {
+				err = errURL
+
+				break
+			}
+
+			img.signedURLs[event.ObjectKey] = valueWithLastUpdate[signedURL]{
+				value: signedURL{
+					value:          bc.injectFullProductURLParamsFromExpr(ctx, signURL, *img, selector.KindParams[0]),
+					generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual generation timestamp
+				},
+				lastUpdate: event.ObjectLastModified,
+			}
 		}
+
+		eventObj = img.dynamicInputFiles[event.InputFile]
 	}
 
 	return eventObj, err
@@ -246,24 +278,30 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 		bc.dropImage(img.name)
 
 		return nil
-	case types.ObjectGeonames:
-		img.geonames = nil
-	case types.ObjectLocalization:
-		img.localization = nil
-	case types.ObjectAdditional:
-		delete(img.additional, event.ObjectKey)
-
-		subDir = additionalDirName
-	case types.ObjectFeatures:
-		img.features = nil
 	case types.ObjectTarget:
 		delete(img.targets, event.ObjectKey)
 
 		subDir = targetsDirName
-	case types.ObjectFullProduct:
-		delete(img.fullProducts, event.ObjectKey)
+	case types.ObjectDynamicInput:
+		selector, ok := event.imgType.DynamicData.FileSelectors[event.InputFile]
+		if !ok {
+			return nil
+		}
 
-		deleteFile = false // not a file
+		delete(img.dynamicInputFiles, event.InputFile)
+
+		switch selector.Kind {
+		case config.FileSelectorKindCached:
+			if selector.Link {
+				delete(img.linksFromCache, event.ObjectKey)
+			}
+
+			subDir = dynamicInputFilesDirName
+		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL:
+			delete(img.signedURLs, event.ObjectKey)
+
+			deleteFile = false
+		}
 	}
 
 	if deleteFile {
@@ -312,57 +350,35 @@ func (bc *bucketCache) dropImage(imgBaseDir string) {
 	}
 }
 
-func (bc *bucketCache) updateMetrics(gatherer *observability.Metrics) {
-	gatherer.CacheImagesPerBucket.WithLabelValues(bc.bucket).Set(float64(len(bc.images)))
-}
+func (bc *bucketCache) injectFullProductURLParamsFromExpr(ctx context.Context, signedURL *url.URL, img image, paramsExpr string) string {
+	withoutSchemeAndHost := strings.TrimPrefix(signedURL.String(), signedURL.Scheme+"://"+signedURL.Host)
+	newURL := bc.cfg.Products.FullProductProtocol + url.QueryEscape(bc.cfg.Products.FullProductRootURL+withoutSchemeAndHost)
 
-func injectFullProductURLParams(imgGroup config.ImageGroup, fpoKey string, signedURL string) string {
-	if imgGroup.FullProductURLParamsRgx == nil {
-		return signedURL
-	}
-
-	namedGroups, ok := utils.GetAllRegexNameGroups(imgGroup.FullProductURLParamsRgx, fpoKey)
-	if !ok {
-		logger.Warnf("The fullProductURLParamsRegexp of group %q doesn't match full product file %q", imgGroup.GroupName, fpoKey)
-
-		return signedURL
-	}
-
-	su, err := url.Parse(signedURL)
+	su, err := url.Parse(newURL)
 	if err != nil {
-		logger.Warnf("Failed to parse signed URL %q: %v", signedURL, err)
+		logger.Warnf("Failed to parse full product signed URL %q: %v", signedURL, err)
 
-		return signedURL
+		return newURL
+	}
+
+	params, err := bc.exprManager.signedURLParams(ctx, img, paramsExpr)
+	if err != nil {
+		logger.Warnf("Failed to get parameters from expression %q for full product signed URL %q: %v", paramsExpr, signedURL, err)
+
+		return newURL
 	}
 
 	q := su.Query()
 
-	for _, param := range imgGroup.FullPoductURLParams {
-		switch param.Type {
-		case config.FullProductURLParamConstant:
-			q.Add(param.Name, param.Value)
-		case config.FullProductURLParamRegexp:
-			value, ok := namedGroups[param.Name]
-			if !ok { // should not happen since it's checked at config loading
-				logger.Warnf("Param %q not found in fullProductURLParamsRegexp of group %q", param.Name, imgGroup.GroupName)
-
-				continue
-			}
-
-			if param.ValueMapping != nil {
-				value, ok = param.ValueMapping[value]
-				if !ok {
-					logger.Warnf("Value mapping for %q was not found in for param %q of group %q", value, param.Name, imgGroup.GroupName)
-
-					value = "UNKNOWN"
-				}
-			}
-
-			q.Add(param.Name, value)
-		}
+	for name, value := range params {
+		q.Add(name, fmt.Sprint(value))
 	}
 
 	su.RawQuery = q.Encode()
 
 	return su.String()
+}
+
+func (bc *bucketCache) updateMetrics(gatherer *observability.Metrics) {
+	gatherer.CacheImagesPerBucket.WithLabelValues(bc.bucket).Set(float64(len(bc.images)))
 }

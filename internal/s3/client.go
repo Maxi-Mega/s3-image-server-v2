@@ -1,3 +1,4 @@
+// nolint: unused,revive,gci,godoclint,gofmt,goimports
 package s3
 
 import (
@@ -36,13 +37,14 @@ type Client interface {
 	SubscribeToBucket(ctx context.Context, bucket string, s3Chan chan Event) error
 	PollOnce(ctx context.Context, bucket string, s3Chan chan Event) error
 	DownloadObject(ctx context.Context, bucket, objectKey, destPath string) error
-	GenerateSignedURL(ctx context.Context, bucket, objectKey string) (string, error)
+	GenerateSignedURL(ctx context.Context, bucket, objectKey string) (*url.URL, error)
 }
 
 type s3Client struct {
-	productsCfg           config.Products
-	specificInfoPerBucket map[string]bucketSpecificInfo
-	client                *minio.Client
+	productsCfg             config.Products
+	specificInfoPerBucket   map[string]bucketSpecificInfo
+	commonPrefixesPerBucket map[string]string
+	client                  *minio.Client
 }
 
 type bucketSpecificInfo struct {
@@ -84,31 +86,23 @@ func NewClient(cfg config.Config) (Client, error) {
 	}
 
 	prefixesPerBucket := make(map[string][]string, len(cfg.Products.ImageGroups))
-	previewSuffixesPerBucket := make(map[string][]string)
 
 	for _, imgGroup := range cfg.Products.ImageGroups {
 		for _, imgType := range imgGroup.Types {
 			prefixesPerBucket[imgGroup.Bucket] = append(prefixesPerBucket[imgGroup.Bucket], imgType.ProductPrefix)
-
-			if imgType.PreviewSuffix != "" {
-				previewSuffixesPerBucket[imgGroup.Bucket] = append(previewSuffixesPerBucket[imgGroup.Bucket], imgType.PreviewSuffix)
-			}
 		}
 	}
 
-	commonPrefixPerBucket := make(map[string]bucketSpecificInfo, len(prefixesPerBucket))
+	commonPrefixPerBucket := make(map[string]string, len(prefixesPerBucket))
 
 	for bucket, prefixes := range prefixesPerBucket {
-		commonPrefixPerBucket[bucket] = bucketSpecificInfo{
-			commonPrefix:              utils.CommonPrefix(prefixes...),
-			notDefaultPreviewSuffixes: previewSuffixesPerBucket[bucket],
-		}
+		commonPrefixPerBucket[bucket] = utils.CommonPrefix(prefixes...)
 	}
 
 	return s3Client{
-		productsCfg:           cfg.Products,
-		specificInfoPerBucket: commonPrefixPerBucket,
-		client:                client,
+		productsCfg:             cfg.Products,
+		commonPrefixesPerBucket: commonPrefixPerBucket,
+		client:                  client,
 	}, nil
 }
 
@@ -125,50 +119,49 @@ func (s3 s3Client) BucketExists(ctx context.Context, bucket string) (bool, error
 }
 
 func (s3 s3Client) SubscribeToBucket(ctx context.Context, bucket string, s3Chan chan Event) error {
-	var (
-		previewEvents      = []string{"s3:ObjectCreated:*", "s3:ObjectRemoved:*"}
-		geonameEvents      = []string{"s3:ObjectCreated:*"}
-		localizationEvents = []string{"s3:ObjectCreated:*"}
-		fullProductEvents  = []string{"s3:ObjectCreated:*"}
-	)
+	/*var (
+	  	previewEvents      = []string{"s3:ObjectCreated:*", "s3:ObjectRemoved:*"}
+	  	geonameEvents      = []string{"s3:ObjectCreated:*"}
+	  	localizationEvents = []string{"s3:ObjectCreated:*"}
+	  	fullProductEvents  = []string{"s3:ObjectCreated:*"}
+	  )
 
-	specificInfo := s3.specificInfoPerBucket[bucket]
+	  specificInfo := s3.specificInfoPerBucket[bucket]
 
-	previewNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.DefaultPreviewSuffix, previewEvents)
-	geonameNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.GeonamesFilename, geonameEvents)
-	localizationNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.LocalizationFilename, localizationEvents)
-	fullProductNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.FullProductExtension, fullProductEvents)
+	  previewNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.DefaultPreviewSuffix, previewEvents)
+	  geonameNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.GeonamesFilename, geonameEvents)
+	  localizationNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.LocalizationFilename, localizationEvents)
+	  fullProductNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.FullProductExtension, fullProductEvents)
 
-	time.Sleep(10 * time.Millisecond) // Let the time for errors to occur
+	  time.Sleep(10 * time.Millisecond) // Let the time for errors to occur
 
-	err := ensureNoError(previewNotifs, geonameNotifs, localizationNotifs, fullProductNotifs)
-	if err != nil {
-		return fmt.Errorf("failed to subscribe to notifications of bucket %q: %w", bucket, err)
-	}
+	  err := ensureNoError(previewNotifs, geonameNotifs, localizationNotifs, fullProductNotifs)
+	  if err != nil {
+	  	return fmt.Errorf("failed to subscribe to notifications of bucket %q: %w", bucket, err)
+	  }
 
-	go func() {
-		logger.Debugf("Starting to listen for notifications from bucket %q", bucket)
+	  go func() {
+	  	logger.Debugf("Starting to listen for notifications from bucket %q", bucket)
 
-		for {
-			select {
-			case notif := <-previewNotifs:
-				s3.handleEvent(bucket, types.ObjectPreview, notif, s3Chan)
-			case notif := <-geonameNotifs:
-				s3.handleEvent(bucket, types.ObjectGeonames, notif, s3Chan)
-			case notif := <-localizationNotifs:
-				s3.handleEvent(bucket, types.ObjectLocalization, notif, s3Chan)
-			case notif := <-fullProductNotifs:
-				s3.handleEvent(bucket, types.ObjectFullProduct, notif, s3Chan)
-			case <-ctx.Done():
-				logger.Info("Context expired, closing event channel")
+	  	for {
+	  		select {
+	  		case notif := <-previewNotifs:
+	  			s3.handleEvent(bucket, types.ObjectPreview, notif, s3Chan)
+	  		case notif := <-geonameNotifs:
+	  			s3.handleEvent(bucket, types.ObjectGeonames, notif, s3Chan)
+	  		case notif := <-localizationNotifs:
+	  			s3.handleEvent(bucket, types.ObjectLocalization, notif, s3Chan)
+	  		case notif := <-fullProductNotifs:
+	  			s3.handleEvent(bucket, types.ObjectFullProduct, notif, s3Chan)
+	  case <-ctx.Done():
+	  logger.Info("Context expired, closing event channel")
 
-				close(s3Chan)
+	  close(s3Chan)
 
-				return
-			}
-		}
-	}()
-
+	  return
+	  }
+	  }
+	  }()*/
 	return nil
 }
 
@@ -206,15 +199,13 @@ func (s3 s3Client) DownloadObject(ctx context.Context, bucket, objectKey, destPa
 	return s3.client.FGetObject(ctx, bucket, objectKey, destPath, minio.GetObjectOptions{}) //nolint:wrapcheck
 }
 
-func (s3 s3Client) GenerateSignedURL(ctx context.Context, bucket, objectKey string) (string, error) {
+func (s3 s3Client) GenerateSignedURL(ctx context.Context, bucket, objectKey string) (*url.URL, error) {
 	signedURL, err := s3.client.PresignedGetObject(ctx, bucket, objectKey, SignedURLLifetime, url.Values{})
 	if err != nil {
-		return "", fmt.Errorf("failed to generate presigned URL for object %q in bucket %q: %w", objectKey, bucket, err)
+		return nil, fmt.Errorf("failed to generate presigned URL for object %q in bucket %q: %w", objectKey, bucket, err)
 	}
 
-	withoutSchemeAndHost := strings.TrimPrefix(signedURL.String(), signedURL.Scheme+"://"+signedURL.Host)
-
-	return s3.productsCfg.FullProductProtocol + url.QueryEscape(s3.productsCfg.FullProductRootURL+withoutSchemeAndHost), nil
+	return signedURL, nil
 }
 
 func (s3 s3Client) handleEvent(bucket string, objectType types.ObjectType, notif notification.Info, eventChan chan Event) {
@@ -255,9 +246,9 @@ func (s3 s3Client) matchesPreviewFilename(bucket, objectKey string) bool {
 		return false
 	}
 
-	if s3.productsCfg.DefaultPreviewSuffix != "" && strings.HasSuffix(objectKey, s3.productsCfg.DefaultPreviewSuffix) {
+	/*if s3.productsCfg.DefaultPreviewSuffix != "" && strings.HasSuffix(objectKey, s3.productsCfg.DefaultPreviewSuffix) {
 		return true
-	}
+	}*/
 
 	for _, previewSuffix := range specificInfo.notDefaultPreviewSuffixes {
 		if strings.HasSuffix(objectKey, previewSuffix) {

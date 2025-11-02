@@ -3,17 +3,56 @@ s3:
 
 ui:
   map:
-    tileServerURL: "localhost:3000/{z}/{x}/{y}.png"
+    pmtilesURL: "localhost:3000/{z}/{x}/{y}.pmtiles"
+    pmtilesStyleURL: "localhost:3000/protomap-styles.json"
 
 products:
+  dynamicData:
+    fileSelectors:
+      preview:
+        regex: "preview.jpg$"
+        kind: cached
+        link: true
+      geonames:
+        regex: "geonames.json$"
+        kind: cached
+        link: true
+    expressions:
+      key: "'value'"
+
   imageGroups:
     - groupName: "Group 1"
+
+      dynamicData:
+        fileSelectors:
+          geonames:
+            regex: "geonames.json$"
+            kind: cached
+            link: true
+        expressions:
+          image: "'DIR/DIR2/IMAGE.tif'"
+
       types:
         - name: "1"
           displayName: "One"
+          dynamicData:
+            expressions:
+              key: "'value type'"
         - name: "2"
           displayName: "Two"
           previewSuffix: "other"
+          dynamicData:
+            fileSelectors:
+              localization:
+                regex: "localization.json$"
+                kind: cached
+                link: true
+              product:
+                regex: "product.tif$"
+                kind: fullProductSignedURL(urlParams)
+                link: true
+            expressions:
+              urlParams: '{"p": "val", "n": 5}'
 
 log:
   colorLogs: false

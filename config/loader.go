@@ -3,30 +3,36 @@ package config
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"testing"
 
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
+
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	"gopkg.in/yaml.v3"
 )
 
 const defaultCacheDirName = "s3_image_server"
+
+var fullProductSignedURLRegexp = regexp.MustCompile(`fullProductSignedURL\((.*)\)`)
 
 var (
 	errInvalidConfig          = errors.New("the config is invalid")
 	errNoImageGroupsSpecified = errors.New("no image groups specified")
 	errDuplicate              = errors.New("duplicate")
 	errTooHighValue           = errors.New("too high value")
-	errCantProvideValue       = errors.New("can't provide a value")
-	errInvalidType            = errors.New("invalid type")
 )
 
-func Load(configPath string) (Config, error) {
+func Load(configPath string) (Config, []string, error) {
 	file, err := os.Open(configPath)
 	if err != nil {
-		return Config{}, err //nolint:wrapcheck
+		return Config{}, nil, err //nolint:wrapcheck
 	}
 
 	defer file.Close()
@@ -35,27 +41,33 @@ func Load(configPath string) (Config, error) {
 
 	err = yaml.NewDecoder(file).Decode(&cfg)
 	if err != nil {
-		return Config{}, fmt.Errorf("failed to parse config: %w", err)
+		return Config{}, nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	err = cfg.validate()
+	warnings, err := cfg.validate()
 	if err != nil {
-		return Config{}, fmt.Errorf("%w: %w", errInvalidConfig, err)
+		return Config{}, warnings, fmt.Errorf("%w: %w", errInvalidConfig, err)
 	}
 
 	err = cfg.process()
 	if err != nil {
-		return Config{}, fmt.Errorf("%w: %w", errInvalidConfig, err)
+		return Config{}, warnings, fmt.Errorf("%w: %w", errInvalidConfig, err)
 	}
 
-	return cfg, nil
+	return cfg, warnings, nil
 }
 
-func (cfg *Config) validate() error {
+func (cfg *Config) validate() ([]string, error) {
+	warnings := make([]string, 0)
 	errs := make([]error, 0)
 
 	if len(cfg.Products.ImageGroups) == 0 {
 		errs = append(errs, errNoImageGroupsSpecified)
+	}
+
+	err := validateFileSelectors(cfg.Products.DynamicData.FileSelectors)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("invalid products file selectors: %w", err))
 	}
 
 	imageGroupNames := make(map[string]bool)
@@ -67,6 +79,11 @@ func (cfg *Config) validate() error {
 			break
 		}
 
+		err := validateFileSelectors(grp.DynamicData.FileSelectors)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("invalid file selectors in group %q: %w", grp.GroupName, err))
+		}
+
 		imageGroupNames[grp.GroupName] = true
 		imageTypeNames := make(map[string]bool)
 
@@ -75,6 +92,24 @@ func (cfg *Config) validate() error {
 				errs = append(errs, fmt.Errorf("image type name %q of group %q is %w", typ.Name, grp.GroupName, errDuplicate))
 
 				break
+			}
+
+			for _, objType := range []string{types.ObjectPreview, types.ExprGeonames, types.ExprLocalization} {
+				_, ok := typ.DynamicData.FileSelectors[objType]
+				if !ok {
+					_, ok = grp.DynamicData.FileSelectors[objType]
+					if !ok {
+						_, ok = cfg.Products.DynamicData.FileSelectors[objType]
+						if !ok {
+							warnings = append(warnings, fmt.Sprintf("no file selector provided for object type %q, in type %q/%q", objType, grp.GroupName, typ.Name))
+						}
+					}
+				}
+			}
+
+			err := validateFileSelectors(typ.DynamicData.FileSelectors)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid file selectors in type %q/%q: %w", typ.Name, grp.GroupName, err))
 			}
 
 			imageTypeNames[typ.Name] = true
@@ -89,7 +124,17 @@ func (cfg *Config) validate() error {
 		errs = append(errs, fmt.Errorf("ui.maxImagesDisplayCount as a %w (%d)", errTooHighValue, cfg.UI.MaxImagesDisplayCount))
 	}
 
-	return errors.Join(errs...)
+	return warnings, errors.Join(errs...)
+}
+
+func validateFileSelectors(fileSelectors map[string]FileSelector) error {
+	for name, selector := range fileSelectors {
+		if selector.Kind != FileSelectorKindCached && selector.Kind != FileSelectorKindSignedURL && !fullProductSignedURLRegexp.MatchString(selector.Kind) {
+			return fmt.Errorf("selector %q: unknown kind %q (accepted values are: %q, %q, %q)", name, selector.Kind, FileSelectorKindCached, FileSelectorKindSignedURL, FileSelectorKindFullProductSignedURL)
+		}
+	}
+
+	return nil
 }
 
 func (cfg *Config) process() (err error) {
@@ -108,61 +153,120 @@ func (cfg *Config) process() (err error) {
 		cfg.UI.BaseURL = "/"
 	}
 
-	cfg.Products.AdditionalProductFilesRgx, err = regexp.Compile(cfg.Products.AdditionalProductFilesRegexp)
-	if err != nil {
-		return fmt.Errorf("can't parse products.additionalProductFilesRegexp: %w", err)
-	}
-
 	cfg.Products.TargetRelativeRgx, err = regexp.Compile(cfg.Products.TargetRelativeRegexp)
 	if err != nil {
 		return fmt.Errorf("can't parse products.targetRelativeRegexp: %w", err)
 	}
 
-	cfg.Products.FeaturesExtensionRgx, err = regexp.Compile(cfg.Products.FeaturesExtensionRegexp)
-	if err != nil {
-		return fmt.Errorf("can't parse products.featuresExtensionRegexp: %w", err)
-	}
-
 	for g, imgGroup := range cfg.Products.ImageGroups {
-		namedGroups := make(map[string]bool)
-
-		if imgGroup.FullProductURLParamsRegexp != "" {
-			cfg.Products.ImageGroups[g].FullProductURLParamsRgx, err = regexp.Compile(imgGroup.FullProductURLParamsRegexp)
-			if err != nil {
-				return fmt.Errorf("can't parse products.imageGroups[%q].fullProductURLParamsRegexp: %w", imgGroup.GroupName, err)
-			}
-
-			for _, group := range cfg.Products.ImageGroups[g].FullProductURLParamsRgx.SubexpNames() {
-				if group != "" {
-					namedGroups[group] = true
-				}
-			}
-		}
-
-		for _, param := range imgGroup.FullPoductURLParams {
-			switch param.Type {
-			case FullProductURLParamConstant:
-				// pass
-			case FullProductURLParamRegexp:
-				if param.Value != "" {
-					return fmt.Errorf("%w for regexp-typed full product URL param %q of group %q", errCantProvideValue, param.Name, imgGroup.GroupName)
-				}
-
-				if !namedGroups[param.Name] {
-					return fmt.Errorf("fullProductURLParamsRegexp of group %q is missing the named group %q", imgGroup.GroupName, param.Name)
-				}
-			default:
-				return fmt.Errorf("%w %q for param %q of group %q", errInvalidType, param.Type, param.Name, imgGroup.GroupName)
-			}
-		}
+		cfg.Products.ImageGroups[g].DynamicData = mergeDynamicData(imgGroup.DynamicData, cfg.Products.DynamicData)
 
 		for t, imgType := range imgGroup.Types {
-			cfg.Products.ImageGroups[g].Types[t].ProductRgx, err = regexp.Compile(imgType.ProductRegexp)
+			cfg.Products.ImageGroups[g].Types[t].DynamicData = mergeDynamicData(imgType.DynamicData, cfg.Products.ImageGroups[g].DynamicData)
+
+			err = ParseDynamicData(imgGroup.GroupName, imgType.Name, &cfg.Products.ImageGroups[g].Types[t].DynamicData)
 			if err != nil {
-				return fmt.Errorf("can't parse products.imageGroups[%q].types[%q].productRegexp: %w", imgGroup.GroupName, imgType.Name, err)
+				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func mergeDynamicData(child, parent DynamicData) DynamicData {
+	result := DynamicData{
+		FileSelectors: maps.Clone(parent.FileSelectors),
+		Expressions:   maps.Clone(parent.Expressions),
+	}
+
+	if result.FileSelectors == nil {
+		result.FileSelectors = make(map[string]FileSelector, len(child.FileSelectors))
+	}
+
+	if result.Expressions == nil {
+		result.Expressions = make(map[string]string, len(child.Expressions))
+	}
+
+	maps.Insert(result.FileSelectors, maps.All(child.FileSelectors))
+	maps.Insert(result.Expressions, maps.All(child.Expressions))
+
+	return result
+}
+
+func ParseDynamicData(imgGroup, imgType string, dynData *DynamicData) error {
+	err := parseFileSelectors(dynData.FileSelectors)
+	if err != nil {
+		return fmt.Errorf("can't parse products.imageGroups[%q].types[%q].dynamicData.fileSelectors: %w", imgGroup, imgType, err)
+	}
+
+	dynData.ExpressionsPrograms, err = parseExpressions(dynData.Expressions)
+	if err != nil {
+		return fmt.Errorf("can't parse products.imageGroups[%q].types[%q].dynamicData.expressions: %w", imgGroup, imgType, err)
+	}
+
+	for name, selector := range dynData.FileSelectors {
+		switch selector.Kind {
+		case FileSelectorKindSignedURL:
+			selector.Link = true
+		case FileSelectorKindFullProductSignedURL:
+			_, found := dynData.Expressions[selector.KindParams[0]]
+			if !found {
+				return fmt.Errorf("invalid products.imageGroups[%q].types[%q].dynamicData.fileSelectors[%q]: fullProductSignedURL references the expression %q which is not defined", imgGroup, imgType, name, selector.KindParams[0])
+			}
+
+			selector.Link = true
+		}
+	}
+
+	return nil
+}
+
+func parseFileSelectors(fileSelectors map[string]FileSelector) error {
+	var err error
+
+	for name, selector := range fileSelectors {
+		selector.Rgx, err = regexp.Compile(selector.Regex)
+		if err != nil {
+			return fmt.Errorf("%q: %w", name, err)
+		}
+
+		matches := fullProductSignedURLRegexp.FindStringSubmatch(selector.Kind)
+		if len(matches) == 2 && matches[1] != "" {
+			selector.Kind = FileSelectorKindFullProductSignedURL
+			selector.KindParams = strings.Split(strings.ReplaceAll(matches[1], " ", ""), ",")
+		} else if matches != nil {
+			return fmt.Errorf("%q: invalid fullProductSignedURL expression %q", name, selector.Kind)
+		}
+
+		fileSelectors[name] = selector
+	}
+
+	return nil
+}
+
+func parseExpressions(expressions map[string]string) (map[string]*vm.Program, error) {
+	result := make(map[string]*vm.Program, len(expressions))
+
+	options := append( //nolint: gocritic
+		types.ExprFunctions,
+		expr.Env(types.ExprEnv{}),
+		expr.WithContext("Ctx"),
+		expr.Patch(types.ExprEnvInjector{}),
+	)
+
+	if testing.Testing() {
+		options = append(options, types.ExprTestingFunctions...)
+	}
+
+	for name, rawExpr := range expressions {
+		program, err := expr.Compile(rawExpr, options...)
+		if err != nil {
+			return nil, fmt.Errorf("expression %q: %w", name, err)
+		}
+
+		result[name] = program
+	}
+
+	return result, nil
 }

@@ -32,11 +32,12 @@ export const vLazyImg: Directive<HTMLImageElement, string | Value> = {
       },
       { rootMargin }
     );
-
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     (el as any).__vLazyImgIO = io;
     io.observe(el);
   },
   unmounted(el) {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const io: IntersectionObserver | undefined = (el as any).__vLazyImgIO;
     io?.unobserve(el);
     io?.disconnect();

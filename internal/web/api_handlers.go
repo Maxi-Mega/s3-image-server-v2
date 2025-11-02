@@ -26,7 +26,8 @@ type StaticInfo struct {
 	LogoBase64             string `json:"logoBase64"`
 	ScaleInitialPercentage int    `json:"scaleInitialPercentage"`
 	MaxImagesDisplayCount  int    `json:"maxImagesDisplayCount"`
-	TileServerURL          string `json:"tileServerURL"`
+	PMTilesURL             string `json:"pmtilesURL"`
+	PMTilesStyleURL        string `json:"pmtilesStyleURL"`
 	ImageGroups            []struct {
 		GroupName string `json:"name"`
 		Bucket    string `json:"bucket"`

@@ -66,7 +66,10 @@ func (hub *wsHub) goRun(ctx context.Context, eventChan <-chan types.OutEvent) {
 			case evt := <-eventChan:
 				logger.Trace("Sending WS event: ", evt.String())
 
-				eventMsg := evt.JSON()
+				eventMsg, err := evt.JSON()
+				if err != nil {
+					logger.Error(err)
+				}
 
 				for client := range hub.clients {
 					select {

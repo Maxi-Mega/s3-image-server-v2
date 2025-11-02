@@ -67,7 +67,8 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		LogoBase64:             cfg.UI.LogoPngBase64,
 		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage), //nolint: gosec
 		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),  //nolint: gosec
-		TileServerURL:          cfg.UI.Map.TileServerURL,
+		PMTilesURL:             cfg.UI.Map.PMTilesURL,
+		PMTilesStyleURL:        cfg.UI.Map.PMTilesStyleURL,
 	}
 
 	err = mapstructure.Decode(cfg.Products.ImageGroups, &staticInfo.ImageGroups)
@@ -120,7 +121,7 @@ func (srv *Server) Start(ctx context.Context, eventsChan chan types.OutEvent) er
 		_ = httpServer.Shutdown(shutdownCtx) //nolint:contextcheck
 	}()
 
-	logger.Info("Starting web server on http://localhost" + srv.addr + srv.uiCfg.BaseURL)
+	logger.Infof("Starting web server on %s (base URL %q)", srv.addr, srv.uiCfg.BaseURL)
 
 	err := httpServer.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {

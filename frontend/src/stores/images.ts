@@ -1,6 +1,8 @@
 import type { EventData } from "@/composables/events";
-import { compareSummaries } from "@/composables/images";
+import { compareSummaries, type GqlImage, processImage } from "@/composables/images";
+import { type ImageQueryResult, useImageQuery } from "@/composables/queries.ts";
 import type { Image, ImageSummary } from "@/models/image";
+import { useDebounceFn, type UseDebounceFnReturn } from "@vueuse/core";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
@@ -10,6 +12,7 @@ export const useImageStore = defineStore("images", {
       allSummaries: ref<ImageSummary[]>([]),
       allImages: ref<Image[]>([]),
       filteredCount: 0,
+      bouncingQueries: new Map<[string, string], UseDebounceFnReturn<() => ImageQueryResult>>(),
     };
   },
   getters: {
@@ -38,17 +41,59 @@ export const useImageStore = defineStore("images", {
         this.allImages[idx] = image;
       }
 
+      const summaryIdx = findSummaryIndex(
+        image.imageSummary.bucket,
+        image.imageSummary.key,
+        this.allSummaries
+      );
+      if (summaryIdx >= 0) {
+        this.allSummaries[summaryIdx] = image.imageSummary;
+      }
+
       return this.allImages[idx] as Image;
+    },
+    handleImageDetailsResult(gqlImage: GqlImage | null, debounceID?: [string, string]): void {
+      if (!gqlImage || !gqlImage.getImage) {
+        return;
+      }
+
+      if (debounceID) {
+        this.bouncingQueries.delete(debounceID);
+      }
+
+      this.updateImage(processImage(gqlImage));
+    },
+    requestImageDetails(bucket: string, key: string): void {
+      const { onResult } = useImageQuery({ bucket: bucket, name: key });
+      onResult((gqlImage: GqlImage | null) => this.handleImageDetailsResult(gqlImage));
     },
     handleEvent(event: EventData): void {
       if (event.eventType === "ObjectCreated") {
-        const { added, updated } = handleCreateEvent(event, this.allSummaries);
+        const { added, updated, needsDebounceUpdate } = handleCreateEvent(event, this.allSummaries);
         if (added) {
           this.allSummaries.push(added);
         } else if (updated) {
           this.allSummaries[
             findSummaryIndex(event.imageBucket, event.imageKey, this.allSummaries)
           ] = updated;
+        }
+
+        if (needsDebounceUpdate) {
+          const debouncingQuery = this.bouncingQueries.get([event.imageBucket, event.imageKey]);
+          if (debouncingQuery) {
+            debouncingQuery();
+          } else {
+            const debouncedQuery = useDebounceFn(
+              () => useImageQuery({ bucket: event.imageBucket, name: event.imageKey }),
+              1000
+            );
+            debouncedQuery().then((result: ImageQueryResult) => {
+              result.onResult((gqlImage: GqlImage | null) =>
+                this.handleImageDetailsResult(gqlImage, [event.imageBucket, event.imageKey])
+              );
+            });
+            this.bouncingQueries.set([event.imageBucket, event.imageKey], debouncedQuery);
+          }
         }
       } else if (event.eventType === "ObjectRemoved") {
         const { updated, remove } = handleRemoveEvent(event, this.allSummaries);
@@ -76,13 +121,16 @@ function handleCreateEvent(
 ): {
   added: ImageSummary | null;
   updated: ImageSummary | null;
+  needsDebounceUpdate: boolean;
 } {
-  const summaryIdx = findSummaryIndex(event.imageBucket, event.imageKey, summaries);
   let added: ImageSummary | null = null,
-    updated: ImageSummary | null = null;
+    updated: ImageSummary | null = null,
+    needsDebounceUpdate: boolean = false;
+
+  const summaryIdx = findSummaryIndex(event.imageBucket, event.imageKey, summaries);
   if (summaryIdx < 0) {
     if (event.objectType !== "preview") {
-      return { added: null, updated: null };
+      return { added: null, updated: null, needsDebounceUpdate: false };
     }
 
     added = {
@@ -99,29 +147,10 @@ function handleCreateEvent(
         // @ts-expect-error no worries
         updated = event.object;
         break;
-      case "geonames":
-        // @ts-expect-error no worries
-        if (event.object.topLevel) {
-          // @ts-expect-error updated is not null
-          updated.name = event.object.topLevel;
-        } else {
-          // @ts-expect-error no worries
-          updated.name = event.imageKey;
-
-          // @ts-expect-error no worries
-          const lastSlash = updated.name.lastIndexOf("/");
-          if (lastSlash > -1) {
-            // @ts-expect-error no worries
-            updated.name = updated.name.substring(lastSlash + 1);
-          }
+      case "dynamic_input":
+        if (document.querySelector(`img[full-key='${event.imageBucket}/${event.imageKey}'][src]`)) {
+          needsDebounceUpdate = true;
         }
-
-        // @ts-expect-error no worries
-        updated._hasBeenUpdated = true; // the whole geonames object still needs to be fetched
-        break;
-      case "features":
-        // @ts-expect-error updated is not null
-        updated.features = event.object;
         break;
       default:
         // @ts-expect-error no worries
@@ -131,7 +160,7 @@ function handleCreateEvent(
     updated._lastModified = event.objectTime;
   }
 
-  return { added, updated };
+  return { added, updated, needsDebounceUpdate };
 }
 
 function handleRemoveEvent(

@@ -88,6 +88,7 @@ func (srv *Server) Start(ctx context.Context) (types.Cache, chan types.OutEvent,
 
 		err = srv.startPollingS3(ctx)
 	} else {
+		logger.Fatal("S3 notification mode is not available at the moment.")
 		logger.Trace("Starting server in notification mode ...")
 
 		err = srv.subscribeToS3(ctx)

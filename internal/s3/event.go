@@ -1,3 +1,4 @@
+// nolint: unused,gci,godoclint,gofmt,goimports
 package s3
 
 import (
@@ -13,6 +14,7 @@ type Event struct {
 	Bucket             string
 	EventType          types.EventType
 	ObjectType         types.ObjectType
+	InputFile          string // only for ObjectDynamicInput
 	Size               int64
 	ObjectKey          string
 	ObjectLastModified time.Time

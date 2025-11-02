@@ -39,7 +39,6 @@ type Config struct {
 }
 
 type ResolverRoot interface {
-	Features() FeaturesResolver
 	Image() ImageResolver
 	Query() QueryResolver
 }
@@ -53,25 +52,17 @@ type ComplexityRoot struct {
 		LastModified func(childComplexity int) int
 	}
 
-	Features struct {
-		CachedObject func(childComplexity int) int
-		Class        func(childComplexity int) int
-		Count        func(childComplexity int) int
-		Objects      func(childComplexity int) int
-	}
-
 	Geonames struct {
 		CachedObject func(childComplexity int) int
 		Objects      func(childComplexity int) int
 	}
 
 	Image struct {
-		AdditionalFiles  func(childComplexity int) int
-		FullProductFiles func(childComplexity int) int
-		Geonames         func(childComplexity int) int
-		ImageSummary     func(childComplexity int) int
-		Localization     func(childComplexity int) int
-		TargetFiles      func(childComplexity int) int
+		CachedFileLinks func(childComplexity int) int
+		ImageSummary    func(childComplexity int) int
+		Localization    func(childComplexity int) int
+		SignedURLs      func(childComplexity int) int
+		TargetFiles     func(childComplexity int) int
 	}
 
 	ImageSize struct {
@@ -82,10 +73,11 @@ type ComplexityRoot struct {
 	ImageSummary struct {
 		Bucket       func(childComplexity int) int
 		CachedObject func(childComplexity int) int
-		Features     func(childComplexity int) int
+		Geonames     func(childComplexity int) int
 		Group        func(childComplexity int) int
 		Key          func(childComplexity int) int
 		Name         func(childComplexity int) int
+		ProductInfo  func(childComplexity int) int
 		Size         func(childComplexity int) int
 		Type         func(childComplexity int) int
 	}
@@ -95,19 +87,22 @@ type ComplexityRoot struct {
 		Corner       func(childComplexity int) int
 	}
 
+	ProductInformation struct {
+		Entries  func(childComplexity int) int
+		Subtitle func(childComplexity int) int
+		Summary  func(childComplexity int) int
+		Title    func(childComplexity int) int
+	}
+
 	Query struct {
 		GetAllImageSummaries func(childComplexity int, from *time.Time, to *time.Time) int
 		GetImage             func(childComplexity int, bucket string, name string) int
 	}
 }
 
-type FeaturesResolver interface {
-	Objects(ctx context.Context, obj *types.Features) (map[string]any, error)
-}
 type ImageResolver interface {
-	AdditionalFiles(ctx context.Context, obj *types.Image) (map[string]any, error)
-
-	FullProductFiles(ctx context.Context, obj *types.Image) (map[string]any, error)
+	CachedFileLinks(ctx context.Context, obj *types.Image) (map[string]any, error)
+	SignedURLs(ctx context.Context, obj *types.Image) (map[string]any, error)
 }
 type QueryResolver interface {
 	GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error)
@@ -146,31 +141,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CachedObject.LastModified(childComplexity), true
 
-	case "Features.cachedObject":
-		if e.complexity.Features.CachedObject == nil {
-			break
-		}
-
-		return e.complexity.Features.CachedObject(childComplexity), true
-	case "Features.class":
-		if e.complexity.Features.Class == nil {
-			break
-		}
-
-		return e.complexity.Features.Class(childComplexity), true
-	case "Features.count":
-		if e.complexity.Features.Count == nil {
-			break
-		}
-
-		return e.complexity.Features.Count(childComplexity), true
-	case "Features.objects":
-		if e.complexity.Features.Objects == nil {
-			break
-		}
-
-		return e.complexity.Features.Objects(childComplexity), true
-
 	case "Geonames.cachedObject":
 		if e.complexity.Geonames.CachedObject == nil {
 			break
@@ -184,24 +154,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Geonames.Objects(childComplexity), true
 
-	case "Image.additionalFiles":
-		if e.complexity.Image.AdditionalFiles == nil {
+	case "Image.cachedFileLinks":
+		if e.complexity.Image.CachedFileLinks == nil {
 			break
 		}
 
-		return e.complexity.Image.AdditionalFiles(childComplexity), true
-	case "Image.fullProductFiles":
-		if e.complexity.Image.FullProductFiles == nil {
-			break
-		}
-
-		return e.complexity.Image.FullProductFiles(childComplexity), true
-	case "Image.geonames":
-		if e.complexity.Image.Geonames == nil {
-			break
-		}
-
-		return e.complexity.Image.Geonames(childComplexity), true
+		return e.complexity.Image.CachedFileLinks(childComplexity), true
 	case "Image.imageSummary":
 		if e.complexity.Image.ImageSummary == nil {
 			break
@@ -214,6 +172,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Image.Localization(childComplexity), true
+	case "Image.signedURLs":
+		if e.complexity.Image.SignedURLs == nil {
+			break
+		}
+
+		return e.complexity.Image.SignedURLs(childComplexity), true
 	case "Image.targetFiles":
 		if e.complexity.Image.TargetFiles == nil {
 			break
@@ -246,12 +210,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ImageSummary.CachedObject(childComplexity), true
-	case "ImageSummary.features":
-		if e.complexity.ImageSummary.Features == nil {
+	case "ImageSummary.geonames":
+		if e.complexity.ImageSummary.Geonames == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Features(childComplexity), true
+		return e.complexity.ImageSummary.Geonames(childComplexity), true
 	case "ImageSummary.group":
 		if e.complexity.ImageSummary.Group == nil {
 			break
@@ -270,6 +234,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ImageSummary.Name(childComplexity), true
+	case "ImageSummary.productInfo":
+		if e.complexity.ImageSummary.ProductInfo == nil {
+			break
+		}
+
+		return e.complexity.ImageSummary.ProductInfo(childComplexity), true
 	case "ImageSummary.size":
 		if e.complexity.ImageSummary.Size == nil {
 			break
@@ -295,6 +265,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Localization.Corner(childComplexity), true
+
+	case "ProductInformation.entries":
+		if e.complexity.ProductInformation.Entries == nil {
+			break
+		}
+
+		return e.complexity.ProductInformation.Entries(childComplexity), true
+	case "ProductInformation.subtitle":
+		if e.complexity.ProductInformation.Subtitle == nil {
+			break
+		}
+
+		return e.complexity.ProductInformation.Subtitle(childComplexity), true
+	case "ProductInformation.summary":
+		if e.complexity.ProductInformation.Summary == nil {
+			break
+		}
+
+		return e.complexity.ProductInformation.Summary(childComplexity), true
+	case "ProductInformation.title":
+		if e.complexity.ProductInformation.Title == nil {
+			break
+		}
+
+		return e.complexity.ProductInformation.Title(childComplexity), true
 
 	case "Query.getAllImageSummaries":
 		if e.complexity.Query.GetAllImageSummaries == nil {
@@ -434,7 +429,8 @@ type ImageSummary {
     name:         String!
     group:        String!
     type:         String!
-    features:     Features
+    geonames:     Geonames
+    productInfo:  ProductInformation
     cachedObject: CachedObject!
     size:         ImageSize!
 }
@@ -449,20 +445,19 @@ type Localization {
     cachedObject: CachedObject!
 }
 
-type Features {
-    class:        String!
-    count:        Int!
-    objects:      Map!
-    cachedObject: CachedObject!
+type ProductInformation {
+    title:    String
+    subtitle: String
+    entries:  [String]
+    summary:  String
 }
 
 type Image {
     imageSummary:     ImageSummary!
-    geonames:         Geonames
     localization:     Localization
-    additionalFiles:  Map!
+    cachedFileLinks:  Map!
+    signedURLs:       Map!
     targetFiles:      [String!]!
-    fullProductFiles: Map!
 }
 
 type Query {
@@ -630,128 +625,6 @@ func (ec *executionContext) fieldContext_CachedObject_cacheKey(_ context.Context
 	return fc, nil
 }
 
-func (ec *executionContext) _Features_class(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Features_class,
-		func(ctx context.Context) (any, error) {
-			return obj.Class, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Features_class(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Features",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Features_count(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Features_count,
-		func(ctx context.Context) (any, error) {
-			return obj.Count, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Features_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Features",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Features_objects(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Features_objects,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Features().Objects(ctx, obj)
-		},
-		nil,
-		ec.marshalNMap2map,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Features_objects(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Features",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Features_cachedObject(ctx context.Context, field graphql.CollectedField, obj *types.Features) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Features_cachedObject,
-		func(ctx context.Context) (any, error) {
-			return obj.CachedObject, nil
-		},
-		nil,
-		ec.marshalNCachedObject2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐCachedObject,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Features_cachedObject(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Features",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "lastModified":
-				return ec.fieldContext_CachedObject_lastModified(ctx, field)
-			case "cacheKey":
-				return ec.fieldContext_CachedObject_cacheKey(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CachedObject", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Geonames_objects(ctx context.Context, field graphql.CollectedField, obj *types.Geonames) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -850,49 +723,16 @@ func (ec *executionContext) fieldContext_Image_imageSummary(_ context.Context, f
 				return ec.fieldContext_ImageSummary_group(ctx, field)
 			case "type":
 				return ec.fieldContext_ImageSummary_type(ctx, field)
-			case "features":
-				return ec.fieldContext_ImageSummary_features(ctx, field)
+			case "geonames":
+				return ec.fieldContext_ImageSummary_geonames(ctx, field)
+			case "productInfo":
+				return ec.fieldContext_ImageSummary_productInfo(ctx, field)
 			case "cachedObject":
 				return ec.fieldContext_ImageSummary_cachedObject(ctx, field)
 			case "size":
 				return ec.fieldContext_ImageSummary_size(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ImageSummary", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Image_geonames(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Image_geonames,
-		func(ctx context.Context) (any, error) {
-			return obj.Geonames, nil
-		},
-		nil,
-		ec.marshalOGeonames2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonames,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Image_geonames(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Image",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "objects":
-				return ec.fieldContext_Geonames_objects(ctx, field)
-			case "cachedObject":
-				return ec.fieldContext_Geonames_cachedObject(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Geonames", field.Name)
 		},
 	}
 	return fc, nil
@@ -933,14 +773,14 @@ func (ec *executionContext) fieldContext_Image_localization(_ context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _Image_additionalFiles(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
+func (ec *executionContext) _Image_cachedFileLinks(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Image_additionalFiles,
+		ec.fieldContext_Image_cachedFileLinks,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Image().AdditionalFiles(ctx, obj)
+			return ec.resolvers.Image().CachedFileLinks(ctx, obj)
 		},
 		nil,
 		ec.marshalNMap2map,
@@ -949,7 +789,36 @@ func (ec *executionContext) _Image_additionalFiles(ctx context.Context, field gr
 	)
 }
 
-func (ec *executionContext) fieldContext_Image_additionalFiles(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Image_cachedFileLinks(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Image",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Image_signedURLs(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Image_signedURLs,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Image().SignedURLs(ctx, obj)
+		},
+		nil,
+		ec.marshalNMap2map,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Image_signedURLs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Image",
 		Field:      field,
@@ -986,35 +855,6 @@ func (ec *executionContext) fieldContext_Image_targetFiles(_ context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Image_fullProductFiles(ctx context.Context, field graphql.CollectedField, obj *types.Image) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Image_fullProductFiles,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Image().FullProductFiles(ctx, obj)
-		},
-		nil,
-		ec.marshalNMap2map,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Image_fullProductFiles(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Image",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1223,23 +1063,23 @@ func (ec *executionContext) fieldContext_ImageSummary_type(_ context.Context, fi
 	return fc, nil
 }
 
-func (ec *executionContext) _ImageSummary_features(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+func (ec *executionContext) _ImageSummary_geonames(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_ImageSummary_features,
+		ec.fieldContext_ImageSummary_geonames,
 		func(ctx context.Context) (any, error) {
-			return obj.Features, nil
+			return obj.Geonames, nil
 		},
 		nil,
-		ec.marshalOFeatures2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐFeatures,
+		ec.marshalOGeonames2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonames,
 		true,
 		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_ImageSummary_features(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_ImageSummary_geonames(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "ImageSummary",
 		Field:      field,
@@ -1247,16 +1087,51 @@ func (ec *executionContext) fieldContext_ImageSummary_features(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "class":
-				return ec.fieldContext_Features_class(ctx, field)
-			case "count":
-				return ec.fieldContext_Features_count(ctx, field)
 			case "objects":
-				return ec.fieldContext_Features_objects(ctx, field)
+				return ec.fieldContext_Geonames_objects(ctx, field)
 			case "cachedObject":
-				return ec.fieldContext_Features_cachedObject(ctx, field)
+				return ec.fieldContext_Geonames_cachedObject(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Features", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Geonames", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageSummary_productInfo(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageSummary_productInfo,
+		func(ctx context.Context) (any, error) {
+			return obj.ProductInfo, nil
+		},
+		nil,
+		ec.marshalOProductInformation2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐProductInformation,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageSummary_productInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "title":
+				return ec.fieldContext_ProductInformation_title(ctx, field)
+			case "subtitle":
+				return ec.fieldContext_ProductInformation_subtitle(ctx, field)
+			case "entries":
+				return ec.fieldContext_ProductInformation_entries(ctx, field)
+			case "summary":
+				return ec.fieldContext_ProductInformation_summary(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProductInformation", field.Name)
 		},
 	}
 	return fc, nil
@@ -1396,6 +1271,122 @@ func (ec *executionContext) fieldContext_Localization_cachedObject(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _ProductInformation_title(ctx context.Context, field graphql.CollectedField, obj *types.ProductInformation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductInformation_title,
+		func(ctx context.Context) (any, error) {
+			return obj.Title, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductInformation_title(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductInformation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProductInformation_subtitle(ctx context.Context, field graphql.CollectedField, obj *types.ProductInformation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductInformation_subtitle,
+		func(ctx context.Context) (any, error) {
+			return obj.Subtitle, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductInformation_subtitle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductInformation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProductInformation_entries(ctx context.Context, field graphql.CollectedField, obj *types.ProductInformation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductInformation_entries,
+		func(ctx context.Context) (any, error) {
+			return obj.Entries, nil
+		},
+		nil,
+		ec.marshalOString2ᚕstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductInformation_entries(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductInformation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProductInformation_summary(ctx context.Context, field graphql.CollectedField, obj *types.ProductInformation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProductInformation_summary,
+		func(ctx context.Context) (any, error) {
+			return obj.Summary, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProductInformation_summary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProductInformation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_getAllImageSummaries(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1464,16 +1455,14 @@ func (ec *executionContext) fieldContext_Query_getImage(ctx context.Context, fie
 			switch field.Name {
 			case "imageSummary":
 				return ec.fieldContext_Image_imageSummary(ctx, field)
-			case "geonames":
-				return ec.fieldContext_Image_geonames(ctx, field)
 			case "localization":
 				return ec.fieldContext_Image_localization(ctx, field)
-			case "additionalFiles":
-				return ec.fieldContext_Image_additionalFiles(ctx, field)
+			case "cachedFileLinks":
+				return ec.fieldContext_Image_cachedFileLinks(ctx, field)
+			case "signedURLs":
+				return ec.fieldContext_Image_signedURLs(ctx, field)
 			case "targetFiles":
 				return ec.fieldContext_Image_targetFiles(ctx, field)
-			case "fullProductFiles":
-				return ec.fieldContext_Image_fullProductFiles(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Image", field.Name)
 		},
@@ -3098,91 +3087,6 @@ func (ec *executionContext) _CachedObject(ctx context.Context, sel ast.Selection
 	return out
 }
 
-var featuresImplementors = []string{"Features"}
-
-func (ec *executionContext) _Features(ctx context.Context, sel ast.SelectionSet, obj *types.Features) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, featuresImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Features")
-		case "class":
-			out.Values[i] = ec._Features_class(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "count":
-			out.Values[i] = ec._Features_count(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "objects":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Features_objects(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "cachedObject":
-			out.Values[i] = ec._Features_cachedObject(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var geonamesImplementors = []string{"Geonames"}
 
 func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet, obj *types.Geonames) graphql.Marshaler {
@@ -3243,11 +3147,9 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "geonames":
-			out.Values[i] = ec._Image_geonames(ctx, field, obj)
 		case "localization":
 			out.Values[i] = ec._Image_localization(ctx, field, obj)
-		case "additionalFiles":
+		case "cachedFileLinks":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -3256,7 +3158,43 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Image_additionalFiles(ctx, field, obj)
+				res = ec._Image_cachedFileLinks(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "signedURLs":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Image_signedURLs(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -3288,42 +3226,6 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "fullProductFiles":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Image_fullProductFiles(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3427,8 +3329,10 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "features":
-			out.Values[i] = ec._ImageSummary_features(ctx, field, obj)
+		case "geonames":
+			out.Values[i] = ec._ImageSummary_geonames(ctx, field, obj)
+		case "productInfo":
+			out.Values[i] = ec._ImageSummary_productInfo(ctx, field, obj)
 		case "cachedObject":
 			out.Values[i] = ec._ImageSummary_cachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -3483,6 +3387,48 @@ func (ec *executionContext) _Localization(ctx context.Context, sel ast.Selection
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var productInformationImplementors = []string{"ProductInformation"}
+
+func (ec *executionContext) _ProductInformation(ctx context.Context, sel ast.SelectionSet, obj *types.ProductInformation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, productInformationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ProductInformation")
+		case "title":
+			out.Values[i] = ec._ProductInformation_title(ctx, field, obj)
+		case "subtitle":
+			out.Values[i] = ec._ProductInformation_subtitle(ctx, field, obj)
+		case "entries":
+			out.Values[i] = ec._ProductInformation_entries(ctx, field, obj)
+		case "summary":
+			out.Values[i] = ec._ProductInformation_summary(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4427,13 +4373,6 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) marshalOFeatures2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐFeatures(ctx context.Context, sel ast.SelectionSet, v *types.Features) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Features(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalOGeonames2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonames(ctx context.Context, sel ast.SelectionSet, v *types.Geonames) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -4453,6 +4392,55 @@ func (ec *executionContext) marshalOLocalization2ᚖgithubᚗcomᚋMaxiᚑMega�
 		return graphql.Null
 	}
 	return ec._Localization(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOProductInformation2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐProductInformation(ctx context.Context, sel ast.SelectionSet, v *types.ProductInformation) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ProductInformation(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOString2string(ctx context.Context, v any) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalString(v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstring(ctx context.Context, v any) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOString2string(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {

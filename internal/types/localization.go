@@ -17,5 +17,5 @@ type LocalizationCorner struct {
 type Localization struct {
 	CachedObject
 
-	Corner LocalizationCorner `json:"corner"`
+	Corner LocalizationCorner `json:"corner" mapstructure:"corner"`
 }

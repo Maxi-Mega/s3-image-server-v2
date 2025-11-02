@@ -12,19 +12,14 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 )
 
-// Objects is the resolver for the Objects field.
-func (r *featuresResolver) Objects(ctx context.Context, obj *types.Features) (map[string]any, error) {
-	return toMapStringAny(obj.Objects), nil
+// CachedFileLinks is the resolver for the cachedFileLinks field.
+func (r *imageResolver) CachedFileLinks(ctx context.Context, obj *types.Image) (map[string]any, error) {
+	return toMapStringAny(obj.CachedFileLinks), nil
 }
 
-// AdditionalFiles is the resolver for the AdditionalFiles field.
-func (r *imageResolver) AdditionalFiles(ctx context.Context, obj *types.Image) (map[string]any, error) {
-	return toMapStringAny(obj.AdditionalFiles), nil
-}
-
-// FullProductFiles is the resolver for the FullProductFiles field.
-func (r *imageResolver) FullProductFiles(ctx context.Context, obj *types.Image) (map[string]any, error) {
-	return toMapStringAny(obj.FullProductFiles), nil
+// SignedURLs is the resolver for the signedURLs field.
+func (r *imageResolver) SignedURLs(ctx context.Context, obj *types.Image) (map[string]any, error) {
+	return toMapStringAny(obj.SignedURLs), nil
 }
 
 // GetAllImageSummaries is the resolver for the getAllImageSummaries field.
@@ -44,12 +39,12 @@ func (r *queryResolver) GetAllImageSummaries(ctx context.Context, from *time.Tim
 		return nil, errInvalidTimeRange
 	}
 
-	return r.Cache.GetAllImages(start, end), nil
+	return r.Cache.GetAllImages(ctx, start, end), nil
 }
 
 // GetImage is the resolver for the getImage field.
 func (r *queryResolver) GetImage(ctx context.Context, bucket string, name string) (*types.Image, error) {
-	img, err := r.Cache.GetImage(bucket, name)
+	img, err := r.Cache.GetImage(ctx, bucket, name)
 	if err != nil {
 		if errors.Is(err, types.ErrImageNotFound) {
 			return nil, nil
@@ -61,15 +56,11 @@ func (r *queryResolver) GetImage(ctx context.Context, bucket string, name string
 	return &img, nil
 }
 
-// Features returns FeaturesResolver implementation.
-func (r *Resolver) Features() FeaturesResolver { return &featuresResolver{r} }
-
 // Image returns ImageResolver implementation.
 func (r *Resolver) Image() ImageResolver { return &imageResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
-type featuresResolver struct{ *Resolver }
 type imageResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

@@ -19,13 +19,8 @@ func defaultConfig() Config {
 			ScaleInitialPercentage: 50,
 			MaxImagesDisplayCount:  100,
 			Map: UIMap{
-				TileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+				PMTilesURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
 			},
-		},
-		Products: Products{
-			DefaultPreviewSuffix: "preview.jpg",
-			GeonamesFilename:     "geonames.json",
-			LocalizationFilename: "localization.json",
 		},
 		Cache: Cache{
 			CacheDir:        os.TempDir(),

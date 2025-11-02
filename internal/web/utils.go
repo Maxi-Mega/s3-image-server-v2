@@ -13,10 +13,10 @@ type Error struct {
 
 func (err Error) MarshalJSON() ([]byte, error) {
 	if err.Err != nil {
-		return []byte(fmt.Sprintf(`{"error":%q}`, err.Err.Error())), nil //nolint:nilerr
+		return fmt.Appendf(nil, `{"error": %q}`, err.Err), nil //nolint:nilerr
 	}
 
-	return []byte(`{"error":null}`), nil
+	return []byte(`{"error": null}`), nil
 }
 
 func detectContentType(filename string, data []byte) string {

@@ -1,13 +1,6 @@
 type EventType = "ObjectCreated" | "ObjectRemoved";
 
-type ObjectType =
-  | "preview"
-  | "geonames"
-  | "localization"
-  | "additional"
-  | "features"
-  | "target"
-  | "full_product";
+type ObjectType = "preview" | "target" | "dynamic_input";
 
 export interface EventData {
   eventType: EventType;
@@ -15,7 +8,7 @@ export interface EventData {
   imageBucket: string;
   imageKey: string;
   objectTime: Date;
-  object: never | undefined; // @ts-ingore
+  object: never | undefined;
   error: string | undefined;
 }
 

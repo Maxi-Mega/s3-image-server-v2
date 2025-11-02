@@ -1,6 +1,7 @@
 package types //nolint: revive,nolintlint
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -11,18 +12,26 @@ type CachedObject struct {
 	CacheKey     string    `json:"cacheKey"`
 }
 
+type ProductInformation struct {
+	Title    string   `json:"title"`
+	Subtitle string   `json:"subtitle"`
+	Entries  []string `json:"entries"`
+	Summary  string   `json:"summary"`
+}
+
 type ImageSize struct {
 	Width  int `json:"width"`
 	Height int `json:"height"`
 }
 
 type ImageSummary struct {
-	Bucket   string    `json:"bucket"`
-	Key      string    `json:"key"`
-	Name     string    `json:"name"`
-	Group    string    `json:"group"`
-	Type     string    `json:"type"`
-	Features *Features `json:"features"`
+	Bucket      string              `json:"bucket"`
+	Key         string              `json:"key"`
+	Name        string              `json:"name"`
+	Group       string              `json:"group"`
+	Type        string              `json:"type"`
+	Geonames    *Geonames           `json:"geonames"`
+	ProductInfo *ProductInformation `json:"productInfo"`
 	// Contains the cache key to the image preview.
 	CachedObject CachedObject `json:"cachedObject"`
 	Size         ImageSize    `json:"size"`
@@ -30,26 +39,21 @@ type ImageSummary struct {
 
 type Image struct {
 	ImageSummary ImageSummary
-	Geonames     *Geonames
 	Localization *Localization
-	// AdditionalFiles is a map[filename] -> cache key
-	AdditionalFiles map[string]string
+	// CachedFileLinks is a map[filename] -> cache key
+	CachedFileLinks map[string]string
+	// SignedURLs is a map[filename] -> cache key
+	SignedURLs map[string]string
 	// TargetFiles is a slice of cache keys
 	TargetFiles []string
-	// FullProductFiles is a map[filename] -> cache key
-	FullProductFiles map[string]string
 }
 
 type ObjectType string
 
 const (
 	ObjectPreview      = "preview"
-	ObjectGeonames     = "geonames"
-	ObjectLocalization = "localization"
-	ObjectAdditional   = "additional"
-	ObjectFeatures     = "features"
 	ObjectTarget       = "target"
-	ObjectFullProduct  = "full_product"
+	ObjectDynamicInput = "dynamic_input"
 	// ObjectNotYetAssigned represents a special case where
 	// we don't have enough information yet to classify the object.
 	ObjectNotYetAssigned = "not_yet_assigned"
@@ -59,8 +63,8 @@ const (
 type AllImageSummaries map[string]map[string][]ImageSummary
 
 type Cache interface {
-	GetAllImages(start, end time.Time) AllImageSummaries
-	GetImage(bucket, name string) (Image, error)
+	GetAllImages(ctx context.Context, start, end time.Time) AllImageSummaries
+	GetImage(ctx context.Context, bucket, name string) (Image, error)
 	GetCachedObject(cacheKey string) ([]byte, error)
 	DumpImages() map[string][]string
 }
@@ -99,13 +103,11 @@ func (evt OutEvent) String() string {
 	return str
 }
 
-func (evt OutEvent) JSON() []byte {
+func (evt OutEvent) JSON() ([]byte, error) {
 	data, err := json.Marshal(evt)
 	if err != nil {
-		logger.Errorf("Failed to marshal OutEvent{%s}: %v", evt.String(), err)
-
-		return []byte(fmt.Sprintf(`{"error": %q`, err))
+		return fmt.Appendf(nil, `{"error": %q}`, err), fmt.Errorf("failed to marshal OutEvent{%s}: %w", evt.String(), err)
 	}
 
-	return data
+	return data, nil
 }

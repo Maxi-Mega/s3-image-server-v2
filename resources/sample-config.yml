@@ -1,7 +1,6 @@
 s3:
-  pollingMode: true          # Can be set to false for MinIO servers
+  pollingMode: true # Can be set to false for MinIO servers
   pollingPeriod: 30s
-  exitOnS3Error: false
   endpoint: "127.0.0.1:9000"
   accessID: "admin"
   accessSecret: "password"
@@ -9,7 +8,7 @@ s3:
 
 ui:
   webServerPort: 9999
-  baseURL: ""                       # The path the server will listen on (empty means /)
+  baseURL: "" # The path the server will listen on (empty means /)
   windowTitle: "S3 Image Viewer"
   applicationTitle: "My collection"
   faviconPngBase64: ""
@@ -18,54 +17,90 @@ ui:
   maxImagesDisplayCount: 100
   displayTimeOffset: 1h
   map:
-    tileServerURL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    pmtilesURL: "https://example.com/map.pmtiles"
+    pmtilesStyleURL: "https://example.com/styles.json"
 
 products:
-  defaultPreviewSuffix: "/preview.jpg"
-  geonamesFilename: "geonames.json"
-  localizationFilename: "localization.json"
-  additionalProductFilesRegexp: "osmtags.json"
   targetRelativeRegexp: "[^/]*/preview.jpg$"
-  featuresExtensionRegexp: ".*features\\.json$"
-  featuresCategoryName: "category"
-  featuresClassName: "class"
-  fullProductExtension: "tif"
   fullProductProtocol: "protocol://"
   fullProductRootURL: "http://a.b.c.d:5000"
-  fullProductSignedURL: false
   maxObjectsAge: 24h
+  dynamicData:
+    fileSelectors:
+      geonames:
+        regex: "geonames.json$"
+        kind: cached
+        link: true
+      localization:
+        regex: "localization.json$"
+        kind: cached
+        link: true
+    expressions:
+      # Well known
+      productBasePath: 'let key = _s3Key("preview"); key[:lastIndexOf(key, "/")]'
+      geonames: '_exist("geonames") ? _loadJSON("geonames") : nil'
+      localization: '_exist("localization") ? _loadJSON("localization") : nil'
+      productInfo: |
+        {
+          "title": _call("productTitle"),
+        }
   imageGroups:
     - groupName: "Group 1"
       bucket: "group-1"
+      dynamicData:
+        fileSelectors:
+          preview:
+            regex: "preview.jpg$"
+            kind: cached
+            link: true
+        expressions:
+          productTitle: 'split(_s3Key("preview"), "/")[1]'
       types:
         - name: "TYPE1"
           displayName: "Type 1"
           productPrefix: "my-prefix/TYPE1/"
-          # The productRegexp is used to choose a name for each image (the parent named group).
-          # The productPrefix will be trimed from the object key before testing it against this regexp.
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
         - name: "TYPE2"
           displayName: "Type 2"
           productPrefix: "my-prefix/TYPE2/"
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/[^/]*_preview\\.jpg$"
-          previewSuffix: "_preview.jpg"
+          dynamicData:
+            fileSelectors:
+              product:
+                regex: "prod.tif$"
+                kind: signedURL
+                # for signedURL and fullProductSignedURL, link is always true
     - groupName: "Group 2"
       bucket: "group-2"
-      fullProductURLParams:
-        - name: key
-          type: constant
-          value: 777
-        - name: dir
-          type: regexp
-      fullProductURLParamsRegexp: "^my-prefix/TYPE3/.*/DIR_(?P<dir>\\w+)/[^/]*/file\\.tif$"
+      dynamicData:
+        fileSelectors:
+          preview:
+            regex: "prev.jpg$"
+            kind: cached
+            link: true
+          product:
+            regex: "prod.tif$"
+            kind: fullProductSignedURL(urlParams)
+        expressions:
+          productTitle: 'split(_s3Key("preview"), "/")[1]'
+          urlParams: |
+            {
+              "product_title": _call("productTitle"),
+              "product_id": split(_s3Key("preview"), '/')[5],
+            }
       types:
         - name: "TYPE3"
           displayName: "Type 3"
           productPrefix: "my-prefix/TYPE3/"
-          productRegexp: "^(?P<parent>.*/DIR_[^/]*/[^/]*)/preview\\.jpg$"
+          dynamicData:
+            fileSelectors:
+              metadata:
+                regex: "metadata.json$"
+                kind: cached
+                link: false
+            expressions:
+              productTitle: '_loadJSON("metadata").title'
 
 cache:
-  cacheDir: "/tmp"       # The actual cache directory will be created in /tmp
+  cacheDir: "/tmp" # The actual cache directory will be created in /tmp
   retentionPeriod: "48h"
 
 log:

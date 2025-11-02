@@ -1,6 +1,6 @@
 {
   "name": "s3-image-server-v2-front",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,6 +24,8 @@
     "graphql": "^16.11.0",
     "graphql-tag": "^2.12.6",
     "ol": "^10.6.1",
+    "ol-mapbox-style": "^13.1.0",
+    "ol-pmtiles": "^2.0.2",
     "pinia": "^3.0.3",
     "postcss-import": "^16.1.1",
     "preline": "3.2.3",

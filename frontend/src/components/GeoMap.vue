@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import type { Localization } from "@/models/localization";
+import type { Localization, Point } from "@/models/localization";
 import { useStaticInfoStore } from "@/stores/static_info";
-import { View } from "ol";
-import Map from "ol/Map";
+import { Map, View } from "ol";
+import { applyStyle } from "ol-mapbox-style";
+import { PMTilesVectorSource } from "ol-pmtiles";
 import { FullScreen, MousePosition, ScaleLine, Zoom, ZoomToExtent } from "ol/control";
 import { toStringHDMS } from "ol/coordinate";
+import type { Extent } from "ol/extent";
 import { GeoJSON } from "ol/format";
-import { Vector as LayerVector } from "ol/layer";
-import TileLayer from "ol/layer/Tile";
+import { Vector as LayerVector, VectorTile } from "ol/layer";
 import "ol/ol.css";
 import { useGeographic } from "ol/proj";
-import { Vector as SourceVector, XYZ } from "ol/source";
+import { Vector as SourceVector } from "ol/source";
 import { Stroke, Style } from "ol/style";
+import { storeToRefs } from "pinia";
 import { onMounted } from "vue";
 
 const props = defineProps<{
   localization: Localization;
 }>();
 
-const staticInfo = useStaticInfoStore();
+const { staticInfo } = storeToRefs(useStaticInfoStore());
 
 function makeGeoFeature(localization: Localization) {
   return {
@@ -54,6 +56,26 @@ function makeGeoFeature(localization: Localization) {
   };
 }
 
+function makeBoundingBox(localization: Localization, marginRatio = 0.1): Extent {
+  const pts = (Object.values(localization.corner) as Array<Point>).map((c) => c.coordinates);
+
+  const lons = pts.map((p) => p.lon);
+  const lats = pts.map((p) => p.lat);
+
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+
+  const width = maxLon - minLon;
+  const height = maxLat - minLat;
+
+  const dx = width * marginRatio;
+  const dy = height * marginRatio;
+
+  return [minLon - dx, minLat - dy, maxLon + dx, maxLat + dy];
+}
+
 onMounted(() => {
   useGeographic(); // To be able to center the map using lon/lat coordinates
 
@@ -65,15 +87,23 @@ onMounted(() => {
     return;
   }
 
+  const vectorLayer = new VectorTile({
+    declutter: true,
+    source: new PMTilesVectorSource({
+      url: staticInfo.value.pmtilesURL,
+    }),
+  });
+
+  // Load styles for layer
+  fetch(staticInfo.value.pmtilesStyleURL)
+    .then((res) => res.json())
+    .then((style) => {
+      applyStyle(vectorLayer, style, "protomaps", { updateSource: false });
+    });
+
   const cartoMap = new Map({
     target: "carto-map",
-    layers: [
-      new TileLayer({
-        source: new XYZ({
-          url: staticInfo.staticInfo.tileServerURL,
-        }),
-      }),
-    ],
+    layers: [vectorLayer],
     view: new View({
       center: [0, 0],
       zoom: 10,
@@ -123,17 +153,7 @@ onMounted(() => {
 
     cartoMap.getView().setCenter([centerLon, centerLat]);
 
-    const marginPercent = 10;
-    const deltaX = (Math.abs(ulLon - urLon) * marginPercent) / 100;
-    const deltaY = (Math.abs(ulLat - llLat) * marginPercent) / 100;
-    const cartoExtent = [
-      Math.min(ulLon, llLon) - deltaX,
-      Math.min(llLat, lrLat) - deltaY,
-      Math.max(urLon, lrLon) + deltaX,
-      Math.max(ulLat, urLat) + deltaY,
-    ];
-
-    cartoMap.getView().fit(cartoExtent);
+    cartoMap.getView().fit(makeBoundingBox(props.localization));
     cartoMap.updateSize();
   });
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
@@ -19,6 +20,7 @@ import (
 
 var (
 	version   = "dev"
+	buildTime = "now"                   //nolint: gochecknoglobals
 	prod      = "false"                 //nolint: gochecknoglobals
 	isProd, _ = strconv.ParseBool(prod) //nolint: gochecknoglobals
 )
@@ -26,9 +28,10 @@ var (
 func main() {
 	configPath := flag.String("c", "", "config file path")
 	justPrintVersion := flag.Bool("v", false, "just print software version")
+	justPrintDocs := flag.Bool("d", false, "just print documentation")
 
 	flag.Usage = func() {
-		fmt.Println("S3 Image Server V2", version, "- usage") //nolint:forbidigo
+		fmt.Println("S3 Image Server", version, "- usage") //nolint:forbidigo
 		flag.PrintDefaults()
 		fmt.Println("\n- - Sample configuration - -") //nolint:forbidigo
 
@@ -51,20 +54,32 @@ func main() {
 			build = "production"
 		}
 
-		fmt.Printf("S3 Image Server V2 %s, %s build\n", version, build) //nolint:forbidigo
+		fmt.Printf("S3 Image Server %s, %s build / built at %s\n", version, build, buildTime) //nolint:forbidigo
+		os.Exit(0)
+	case *justPrintDocs:
+		fmt.Println("S3 Image Server", version, "- documentation") //nolint:forbidigo
+
+		if err := printDocumentation(os.Stdout); err != nil {
+			log.Fatalln("Failed to print documentation:", err)
+		}
+
 		os.Exit(0)
 	case *configPath == "":
 		log.Fatalln("No configuration file path provided. Use -c <path> to specify one.")
 	}
 
-	cfg, err := config.Load(*configPath)
+	cfg, warnings, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalln("Can't load configuration:", err)
 	}
 
-	err = logger.Init(cfg.Log)
+	err = logger.Init(cfg.Log.LogLevel, cfg.Log.ColorLogs, cfg.Log.JSONLogFormat, cfg.Log.JSONLogFields)
 	if err != nil {
 		log.Fatalln("Can't initialize logger:", err)
+	}
+
+	if len(warnings) > 0 {
+		logger.Warnf("Configuration warnings:\n- %s", strings.Join(warnings, "\n- "))
 	}
 
 	start(cfg)

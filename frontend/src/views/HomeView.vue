@@ -64,7 +64,8 @@ function handleWSEvent(ws: WebSocket, event: MessageEvent) {
     event.data
       .trim()
       .split("\n")
-      .filter((line: string) => line.trim() !== "")
+      .map((line: string) => line.trim())
+      .filter((line: string) => line !== "")
       .map(parseEventData)
       .forEach(imageStore.handleEvent);
   } catch (e) {

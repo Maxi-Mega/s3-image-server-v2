@@ -28,7 +28,8 @@ export class StaticInfo {
   logoBase64: string;
   scaleInitialPercentage: number;
   maxImagesDisplayCount: number;
-  tileServerURL: string;
+  pmtilesURL: string;
+  pmtilesStyleURL: string;
   imageGroups: ImageGroup[];
 
   constructor(
@@ -39,7 +40,8 @@ export class StaticInfo {
     logoBase64: string,
     scaleInitialPercentage: number,
     maxImagesDisplayCount: number,
-    tileServerURL: string,
+    pmtilesURL: string,
+    pmtilesStyleURL: string,
     imageGroups: ImageGroup[]
   ) {
     this.softwareVersion = softwareVersion;
@@ -49,7 +51,8 @@ export class StaticInfo {
     this.logoBase64 = logoBase64;
     this.scaleInitialPercentage = scaleInitialPercentage;
     this.maxImagesDisplayCount = maxImagesDisplayCount;
-    this.tileServerURL = tileServerURL;
+    this.pmtilesURL = pmtilesURL;
+    this.pmtilesStyleURL = pmtilesStyleURL;
     this.imageGroups = imageGroups;
   }
 }

@@ -22,10 +22,12 @@ export function processSummaries(summaries: GqlAllSummaries): ImageSummary[] {
     }
   }
 
-  return flattened.map((s) => {
-    s.cachedObject.lastModified = new Date(s.cachedObject.lastModified);
-    return { ...s, _hasBeenUpdated: false, _lastModified: s.cachedObject.lastModified };
-  });
+  return flattened.map(processSummary);
+}
+
+function processSummary(summary: ImageSummary): ImageSummary {
+  summary.cachedObject.lastModified = new Date(summary.cachedObject.lastModified);
+  return { ...summary, _hasBeenUpdated: false, _lastModified: summary.cachedObject.lastModified };
 }
 
 export function summaryKey(summary: ImageSummary): string {
@@ -58,19 +60,18 @@ function fromCachedObj(cachedObject: CachedObject): [string, string] {
 function makeLinks(img: Image): Array<[string, string]> {
   const links = [] as Array<[string, string]>;
 
-  for (const key in img.fullProductFiles) {
+  for (const key in img.signedURLs) {
     // The URL of full product files already has its own host
     // @ts-expect-error no worries
-    links.push([base(key), img.fullProductFiles[key]]);
+    links.push([base(key), img.signedURLs[key]]);
   }
 
-  for (const key in img.additionalFiles) {
-    links.push([base(key), resolveBackendURL("/api/cache/" + img.additionalFiles[key])]);
+  for (const key in img.cachedFileLinks) {
+    links.push([base(key), resolveBackendURL("/api/cache/" + img.cachedFileLinks[key])]);
   }
 
-  if (img.geonames) links.push(fromCachedObj(img.geonames.cachedObject));
+  if (img.imageSummary.geonames) links.push(fromCachedObj(img.imageSummary.geonames.cachedObject));
   if (img.localization) links.push(fromCachedObj(img.localization.cachedObject));
-  if (img.imageSummary.features) links.push(fromCachedObj(img.imageSummary.features.cachedObject));
 
   return links;
 }
@@ -81,14 +82,15 @@ export function formatDate(d: Date): string {
 
 export function processImage(image: GqlImage): Image {
   const img = plainToInstance(Image, image.getImage);
-  const imageSummary = { ...img.imageSummary, _hasBeenUpdated: false };
-  imageSummary.cachedObject.lastModified = new Date(imageSummary.cachedObject.lastModified);
+  const imageSummary = processSummary(img.imageSummary);
   const _lastModified = formatDate(imageSummary.cachedObject.lastModified);
   const _links = makeLinks(img);
   return { ...img, imageSummary, _lastModified, _links };
 }
 
 export function formatGeonames(geonames: Geonames | null): string {
+  if (!geonames) return "No geonames found";
+
   let final = "";
 
   if (geonames && geonames.objects) {

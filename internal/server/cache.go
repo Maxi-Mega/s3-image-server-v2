@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	additionalDirName = "__additional__"
-	targetsDirName    = "__targets__"
+	targetsDirName           = "__targets__"
+	dynamicInputFilesDirName = "__dynamic_input_files__"
 )
 
 var (
@@ -28,10 +28,11 @@ var (
 )
 
 type cache struct {
-	gatherer  *observability.Metrics
-	cacheDir  string
-	buckets   map[string]*bucketCache
-	outEvents chan types.OutEvent
+	gatherer    *observability.Metrics
+	cacheDir    string
+	buckets     map[string]*bucketCache
+	outEvents   chan types.OutEvent
+	exprManager *expressionManager
 }
 
 type image struct {
@@ -39,27 +40,34 @@ type image struct {
 	bucket, s3Key     string
 	name              string
 	imgGroup, imgType string
-	geonames          *types.Geonames
-	localization      *types.Localization
-	features          *types.Features
-	// map[filename] -> cache key & last update
-	additional map[string]valueWithLastUpdate[string]
 	// map[s3 key] -> cache key & last update
 	targets map[string]valueWithLastUpdate[string]
-	// map[filename] -> signed URL & last update
-	fullProducts    map[string]valueWithLastUpdate[signedURL]
+	// map[config key] -> cache key & last update
+	dynamicInputFiles map[string]valueWithLastUpdate[types.DynamicInputFile]
+	// map[s3 key] -> cache key & last update
+	linksFromCache map[string]valueWithLastUpdate[string]
+	// map[s3 key] -> signed URL & last update
+	signedURLs      map[string]valueWithLastUpdate[signedURL]
 	previewCacheKey string
 }
 
 // summary returns the [ImageSummary] of this [image],
 // the name parameter corresponds to the image base dir.
-func (img image) summary(name, cacheDir string) types.ImageSummary {
+func (img image) summary(ctx context.Context, name, cacheDir string, exprMan *expressionManager) types.ImageSummary {
 	var displayName string
 
-	if img.geonames != nil {
-		displayName = img.geonames.GetTopLevel()
-	} else {
+	geonames, err := exprMan.imageGeonames(ctx, img)
+	if err != nil {
+		logger.Errorf("Failed to evaluate image geonames for %q: %v", img.name, err)
+
 		displayName = "No geonames found"
+	} else if geonames != nil {
+		displayName = geonames.GetTopLevel()
+	}
+
+	productInfo, err := exprMan.productInfo(ctx, img)
+	if err != nil {
+		logger.Errorf("Failed to evaluate product information for %q: %v", img.name, err)
 	}
 
 	imgSize, err := utils.GetImageSize(img.previewCacheKey, cacheDir)
@@ -68,12 +76,13 @@ func (img image) summary(name, cacheDir string) types.ImageSummary {
 	}
 
 	return types.ImageSummary{
-		Bucket:   img.bucket,
-		Key:      name,
-		Name:     displayName,
-		Group:    img.imgGroup,
-		Type:     img.imgType,
-		Features: img.features,
+		Bucket:      img.bucket,
+		Key:         name,
+		Name:        displayName,
+		Group:       img.imgGroup,
+		Type:        img.imgType,
+		Geonames:    geonames,
+		ProductInfo: productInfo,
 		CachedObject: types.CachedObject{
 			LastModified: img.lastModified,
 			CacheKey:     img.previewCacheKey,
@@ -112,6 +121,8 @@ func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent
 		return nil, fmt.Errorf("can't create cache dir: %w", err)
 	}
 
+	exprManager := newExpressionManager(cfg)
+
 	buckets := make(map[string]*bucketCache)
 
 	for _, group := range cfg.Products.ImageGroups {
@@ -125,19 +136,20 @@ func newCache(cfg config.Config, s3Client s3.Client, outChan chan types.OutEvent
 				return nil, fmt.Errorf("can't create cache dir: %w", err)
 			}
 
-			buckets[group.Bucket] = newBucketCache(s3Client, bucket, dir, cfg)
+			buckets[group.Bucket] = newBucketCache(s3Client, exprManager, bucket, dir, cfg)
 		}
 	}
 
 	return &cache{
-		gatherer:  gatherer,
-		cacheDir:  cfg.Cache.CacheDir,
-		buckets:   buckets,
-		outEvents: outChan,
+		gatherer:    gatherer,
+		cacheDir:    cfg.Cache.CacheDir,
+		buckets:     buckets,
+		outEvents:   outChan,
+		exprManager: exprManager,
 	}, nil
 }
 
-func (c *cache) GetAllImages(start, end time.Time) types.AllImageSummaries {
+func (c *cache) GetAllImages(ctx context.Context, start, end time.Time) types.AllImageSummaries {
 	allImages := make(types.AllImageSummaries)
 
 	for _, bucket := range c.buckets {
@@ -153,7 +165,7 @@ func (c *cache) GetAllImages(start, end time.Time) types.AllImageSummaries {
 				allImages[grp] = make(map[string][]types.ImageSummary)
 			}
 
-			allImages[grp][typ] = append(allImages[grp][typ], img.summary(name, c.cacheDir))
+			allImages[grp][typ] = append(allImages[grp][typ], img.summary(ctx, name, c.cacheDir, c.exprManager))
 		}
 
 		bucket.l.RUnlock()
@@ -162,7 +174,7 @@ func (c *cache) GetAllImages(start, end time.Time) types.AllImageSummaries {
 	return allImages
 }
 
-func (c *cache) GetImage(bucketName, name string) (types.Image, error) {
+func (c *cache) GetImage(ctx context.Context, bucketName, name string) (types.Image, error) {
 	bucket, ok := c.buckets[bucketName]
 	if !ok {
 		return types.Image{}, types.ErrImageNotFound
@@ -182,13 +194,17 @@ func (c *cache) GetImage(bucketName, name string) (types.Image, error) {
 		targetFiles = append(targetFiles, target.value)
 	}
 
+	localization, err := c.exprManager.imageLocalization(ctx, img)
+	if err != nil {
+		logger.Errorf("Failed to evaluate image localization for %q: %v", img.name, err)
+	}
+
 	return types.Image{
-		ImageSummary:     img.summary(name, c.cacheDir),
-		Geonames:         img.geonames,
-		Localization:     img.localization,
-		AdditionalFiles:  toFilenameValueMap(img.additional),
-		TargetFiles:      targetFiles,
-		FullProductFiles: toFilenameValueMap(img.fullProducts),
+		ImageSummary:    img.summary(ctx, name, c.cacheDir, c.exprManager),
+		Localization:    localization,
+		CachedFileLinks: toFilenameValueMap(img.linksFromCache),
+		SignedURLs:      toFilenameValueMap(img.signedURLs),
+		TargetFiles:     targetFiles,
 	}, nil
 }
 

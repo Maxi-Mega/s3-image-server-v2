@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"github.com/Maxi-Mega/s3-image-server-v2/config"
+	"testing"
 
 	"github.com/rs/zerolog"
 )
@@ -14,20 +13,20 @@ const logTimeFormat = "2006-01-02T15:04:05.000Z"
 
 var errInvalidConfig = errors.New("invalid configuration")
 
-var logger zerolog.Logger //nolint:gochecknoglobals
+var logger = defaultLogger() //nolint:gochecknoglobals
 
-func Init(cfg config.Log) error {
-	level, err := zerolog.ParseLevel(cfg.LogLevel)
+func Init(logLevel string, colorLogs, jsonLogFormat bool, jsonLogFields map[string]any) error {
+	level, err := zerolog.ParseLevel(logLevel)
 	if err != nil {
 		return fmt.Errorf("%w: %w", errInvalidConfig, err)
 	}
 
 	zerolog.TimeFieldFormat = logTimeFormat
 
-	if cfg.JSONLogFormat {
+	if jsonLogFormat {
 		logCtx := zerolog.New(os.Stdout).With().Timestamp()
 
-		for field, value := range cfg.JSONLogFields {
+		for field, value := range jsonLogFields {
 			logCtx = logCtx.Any(field, value)
 		}
 
@@ -35,7 +34,7 @@ func Init(cfg config.Log) error {
 	} else {
 		consoleWriter := zerolog.ConsoleWriter{
 			Out:        os.Stdout,
-			NoColor:    !cfg.ColorLogs,
+			NoColor:    !colorLogs,
 			TimeFormat: logTimeFormat,
 		}
 
@@ -45,6 +44,16 @@ func Init(cfg config.Log) error {
 	Trace("Logger is initialized")
 
 	return nil
+}
+
+func defaultLogger() zerolog.Logger {
+	if testing.Testing() {
+		return zerolog.New(zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+			w.TimeFormat = logTimeFormat
+		})).With().Timestamp().Logger()
+	}
+
+	return zerolog.Logger{}
 }
 
 func Trace(a ...any) {

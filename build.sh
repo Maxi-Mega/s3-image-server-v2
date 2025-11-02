@@ -8,6 +8,7 @@ echo "Building ..."
 
 VERSION="dev"
 ENV_FILE="build-dev.env"
+BUILD_TIME=$(date "+%Y-%m-%d %H:%M:%S")
 PROD="false"
 MINIFY="false"
 
@@ -32,7 +33,7 @@ echo "Building front-end with base URL '$BASE_URL' ..."
 echo "Building binary ..."
 
 go generate ./...
-go build -ldflags="-X 'main.version=$VERSION' -X 'main.prod=$PROD' -extldflags=-static" -tags osusergo,netgo -o "$BINARY_FILENAME" .
+go build -ldflags="-X 'main.version=$VERSION' -X 'main.buildTime=$BUILD_TIME' -X 'main.prod=$PROD' -extldflags=-static" -tags osusergo,netgo -o "$BINARY_FILENAME" .
 
 $PROD && upx --best "$BINARY_FILENAME" # Only compress when building for prod
 

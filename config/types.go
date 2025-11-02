@@ -3,13 +3,16 @@ package config
 import (
 	"regexp"
 	"time"
+
+	"github.com/expr-lang/expr/vm"
 )
 
-type FullProductURLParamType string
+type FileSelectorKind = string
 
 const (
-	FullProductURLParamConstant = "constant"
-	FullProductURLParamRegexp   = "regexp"
+	FileSelectorKindCached               FileSelectorKind = "cached"
+	FileSelectorKindSignedURL            FileSelectorKind = "signedURL"
+	FileSelectorKindFullProductSignedURL FileSelectorKind = "fullProductSignedURL"
 )
 
 type (
@@ -25,7 +28,6 @@ type (
 	S3 struct {
 		PollingMode   bool          `yaml:"pollingMode"`
 		PollingPeriod time.Duration `yaml:"pollingPeriod"`
-		ExitOnS3Error bool          `yaml:"exitOnS3Error"`
 		Endpoint      string        `yaml:"endpoint"`
 		AccessID      string        `yaml:"accessID"`
 		AccessSecret  string        `yaml:"accessSecret"`
@@ -46,23 +48,13 @@ type (
 	}
 
 	Products struct {
-		DefaultPreviewSuffix         string         `yaml:"defaultPreviewSuffix"`
-		GeonamesFilename             string         `yaml:"geonamesFilename"`
-		LocalizationFilename         string         `yaml:"localizationFilename"`
-		AdditionalProductFilesRegexp string         `yaml:"additionalProductFilesRegexp"`
-		AdditionalProductFilesRgx    *regexp.Regexp `yaml:"-"`
-		TargetRelativeRegexp         string         `yaml:"targetRelativeRegexp"`
-		TargetRelativeRgx            *regexp.Regexp `yaml:"-"`
-		FeaturesExtensionRegexp      string         `yaml:"featuresExtensionRegexp"`
-		FeaturesExtensionRgx         *regexp.Regexp `yaml:"-"`
-		FeaturesCategoryName         string         `yaml:"featuresCategoryName"`
-		FeaturesClassName            string         `yaml:"featuresClassName"`
-		FullProductExtension         string         `yaml:"fullProductExtension"`
-		FullProductProtocol          string         `yaml:"fullProductProtocol"`
-		FullProductRootURL           string         `yaml:"fullProductRootURL"`
-		FullProductSignedURL         bool           `yaml:"fullProductSignedURL"`
-		MaxObjectsAge                time.Duration  `yaml:"maxObjectsAge"`
-		ImageGroups                  []ImageGroup   `yaml:"imageGroups"`
+		TargetRelativeRegexp string         `yaml:"targetRelativeRegexp"`
+		TargetRelativeRgx    *regexp.Regexp `yaml:"-"`
+		FullProductProtocol  string         `yaml:"fullProductProtocol"`
+		FullProductRootURL   string         `yaml:"fullProductRootURL"`
+		MaxObjectsAge        time.Duration  `yaml:"maxObjectsAge"`
+		DynamicData          DynamicData    `yaml:"dynamicData"`
+		ImageGroups          []ImageGroup   `yaml:"imageGroups"`
 	}
 
 	Cache struct {
@@ -83,31 +75,35 @@ type (
 	}
 
 	UIMap struct {
-		TileServerURL string `yaml:"tileServerURL"`
+		PMTilesURL      string `yaml:"pmtilesURL"`
+		PMTilesStyleURL string `yaml:"pmtilesStyleURL"`
+	}
+
+	DynamicData struct {
+		FileSelectors       map[string]FileSelector `yaml:"fileSelectors"`
+		Expressions         map[string]string       `yaml:"expressions"`
+		ExpressionsPrograms map[string]*vm.Program  `yaml:"-"`
+	}
+
+	FileSelector struct {
+		Regex      string           `yaml:"regex"`
+		Rgx        *regexp.Regexp   `yaml:"-"`
+		Kind       FileSelectorKind `yaml:"kind"`
+		KindParams []string         `yaml:"-"`
+		Link       bool             `yaml:"link"`
 	}
 
 	ImageGroup struct {
-		GroupName                  string                `yaml:"groupName"`
-		Bucket                     string                `yaml:"bucket"`
-		FullPoductURLParams        []FullProductURLParam `yaml:"fullProductURLParams"`
-		FullProductURLParamsRegexp string                `yaml:"fullProductURLParamsRegexp"`
-		FullProductURLParamsRgx    *regexp.Regexp        `yaml:"-"`
-		Types                      []ImageType           `yaml:"types"`
-	}
-
-	FullProductURLParam struct {
-		Name         string                  `yaml:"name"`
-		Type         FullProductURLParamType `yaml:"type"`
-		Value        string                  `yaml:"value"`
-		ValueMapping map[string]string       `yaml:"valueMapping"`
+		GroupName   string      `yaml:"groupName"`
+		Bucket      string      `yaml:"bucket"`
+		DynamicData DynamicData `yaml:"dynamicData"`
+		Types       []ImageType `yaml:"types"`
 	}
 
 	ImageType struct {
-		Name          string         `yaml:"name"`
-		DisplayName   string         `yaml:"displayName"`
-		ProductPrefix string         `yaml:"productPrefix"`
-		ProductRegexp string         `yaml:"productRegexp"`
-		ProductRgx    *regexp.Regexp `yaml:"-"`
-		PreviewSuffix string         `yaml:"previewSuffix"`
+		Name          string      `yaml:"name"`
+		DisplayName   string      `yaml:"displayName"`
+		ProductPrefix string      `yaml:"productPrefix"`
+		DynamicData   DynamicData `yaml:"dynamicData"`
 	}
 )

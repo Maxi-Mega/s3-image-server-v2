@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { apolloClient } from "@/apollo";
 import Error from "@/components/ErrorBox.vue";
 import GeoMap from "@/components/GeoMap.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
@@ -8,13 +7,11 @@ import CloseIcon from "@/components/icons/CloseIcon.vue";
 import LeftIcon from "@/components/icons/LeftIcon.vue";
 import RightIcon from "@/components/icons/RightIcon.vue";
 import { base, formatGeonames, processImage, wbr } from "@/composables/images";
-import { GET_IMAGE_SUMMARY } from "@/composables/queries";
+import { useImageQuery } from "@/composables/queries";
 import { resolveBackendURL } from "@/composables/url";
 import type { Image, ImageSummary } from "@/models/image";
 import type { Localization } from "@/models/localization";
 import { useImageStore } from "@/stores/images";
-import { ApolloError } from "@apollo/client";
-import { provideApolloClient, useQuery } from "@vue/apollo-composable";
 import { HSTabs } from "preline/preline";
 import { nextTick, reactive, type Ref, ref, toRefs, watch } from "vue";
 
@@ -33,9 +30,6 @@ const imageStore = useImageStore();
 const { img } = toRefs(props);
 
 const image: Ref<Image | null> = ref(null);
-const loading = ref(true);
-const error: Ref<ApolloError | null> = ref(null);
-
 const hasTargets = ref(false);
 const hasMap = ref(false);
 
@@ -44,36 +38,16 @@ const targetsFontSize = ref("13px");
 const targetsWidth = ref(12);
 
 const enableQuery = ref(false);
-const imageQueryParams = reactive({
+const imageQueryVariables = reactive({
   bucket: "",
   name: "",
 });
 
-const { onResult, onError } = provideApolloClient(apolloClient)(() =>
-  useQuery(GET_IMAGE_SUMMARY, imageQueryParams, () => ({
-    enabled: enableQuery.value,
-    fetchPolicy: "network-only",
-  }))
-);
-
-onResult((result) => {
-  loading.value = result.loading;
-  error.value = result.error || null;
-
-  if (result.data) {
-    image.value = imageStore.updateImage(processImage(result.data));
-    hasTargets.value = image.value.targetFiles.length > 0;
-    hasMap.value = image.value.localization != null;
-    updateTabs();
-  }
-});
-onError((err) => {
-  console.warn("Image fetch error:", err);
-  error.value = err;
-});
-
 watch(img, async (value) => {
   image.value = null;
+  imageQueryVariables.bucket = "";
+  imageQueryVariables.name = "";
+  enableQuery.value = false;
   loading.value = true;
 
   const summary = value;
@@ -94,9 +68,22 @@ watch(img, async (value) => {
     return;
   }
 
-  imageQueryParams.bucket = bucket;
-  imageQueryParams.name = key;
+  imageQueryVariables.bucket = bucket;
+  imageQueryVariables.name = key;
   enableQuery.value = true;
+});
+
+const { loading, error, data } = useImageQuery(imageQueryVariables);
+
+watch(data, (gqlImage) => {
+  if (!gqlImage || !gqlImage.getImage) {
+    return;
+  }
+
+  image.value = imageStore.updateImage(processImage(gqlImage));
+  hasTargets.value = image.value.targetFiles.length > 0;
+  hasMap.value = image.value.localization != null;
+  updateTabs();
 });
 
 function updateTabs() {
@@ -181,15 +168,12 @@ function targetName(target: string): string {
               <span class="col-span-3 font-bold">{{ image.imageSummary.type }}</span>
               <span class="col-span-2 text-end">Generation date: </span>
               <span class="col-span-4 font-bold">{{ image._lastModified }}</span>
-              <span v-if="image.imageSummary.features" class="text-end"
-                >{{ image.imageSummary.features.class }}:
-              </span>
-              <span v-if="image.imageSummary.features" class="font-bold">{{
-                image.imageSummary.features.count
+              <span v-if="image.imageSummary.productInfo?.summary" class="col-span-2 text-center">{{
+                image.imageSummary.productInfo.summary
               }}</span>
             </div>
             <div class="bg-blue col-span-1 flex grow items-center justify-center rounded-md p-2">
-              {{ formatGeonames(image.geonames) }}
+              {{ formatGeonames(image.imageSummary.geonames) }}
             </div>
           </div>
           <h3 v-else class="font-bold text-white">Loading image info ...</h3>

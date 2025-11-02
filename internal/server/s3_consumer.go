@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"path"
 	"strings"
 	"time"
 
@@ -86,7 +85,7 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 	}
 
 	if event.ObjectType == "" { // event comes from polling
-		event.ObjectType = consumer.getObjectType(event.ObjectKey, imgType)
+		event.ObjectType, event.InputFile = consumer.getObjectType(event.ObjectKey, imgType)
 	}
 
 	evt := s3Event{
@@ -96,16 +95,13 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 	}
 
 	if event.ObjectType == types.ObjectPreview {
-		objKeyWithoutPrefix := strings.TrimPrefix(event.ObjectKey, imgType.ProductPrefix)
-
-		basePath, ok := utils.GetRegexNameGroup(imgType.ProductRgx, objKeyWithoutPrefix, "parent")
-		if !ok {
-			logger.Tracef("Preview %s/%q doesn't match the productRegexp of type %s/%s", event.Bucket, event.ObjectKey, imgGroup.GroupName, imgType.Name)
+		basePath, err := consumer.cache.exprManager.productBasePath(ctx, imgGroup.GroupName, imgType.Name, event)
+		if err != nil {
+			logger.Errorf("Failed to get product base path image %q of type %q/%q: %v", event.ObjectKey, imgGroup.GroupName, imgType.Name, err)
 
 			return
 		}
 
-		basePath = imgType.ProductPrefix + strings.TrimSuffix(basePath, "/")
 		evt.baseDir = basePath
 
 		consumer.cache.handleEvent(ctx, evt)
@@ -132,34 +128,25 @@ func (consumer *eventConsumer) getImageGroupType(bucket, objectKey string) (imgG
 	return config.ImageGroup{}, config.ImageType{}, false
 }
 
-func (consumer *eventConsumer) getObjectType(objectKey string, imgType config.ImageType) types.ObjectType {
-	cfg := consumer.productsCfg
+func (consumer *eventConsumer) getObjectType(objectKey string, imgType config.ImageType) (objType types.ObjectType, inputFile string) {
+	if matchesFileSelectorRegex(objectKey, types.ObjectPreview, imgType) {
+		return types.ObjectPreview, ""
+	}
 
-	if imgType.PreviewSuffix != "" {
-		if strings.HasSuffix(objectKey, imgType.PreviewSuffix) && imgType.ProductRgx.MatchString(strings.TrimPrefix(objectKey, imgType.ProductPrefix)) {
-			return types.ObjectPreview
-		}
-	} else {
-		if strings.HasSuffix(objectKey, cfg.DefaultPreviewSuffix) && imgType.ProductRgx.MatchString(strings.TrimPrefix(objectKey, imgType.ProductPrefix)) {
-			return types.ObjectPreview
+	for inputFile, selector := range imgType.DynamicData.FileSelectors {
+		if selector.Rgx.MatchString(objectKey) {
+			return types.ObjectDynamicInput, inputFile
 		}
 	}
 
-	switch path.Base(objectKey) {
-	case cfg.GeonamesFilename:
-		return types.ObjectGeonames
-	case cfg.LocalizationFilename:
-		return types.ObjectLocalization
+	return types.ObjectNotYetAssigned, ""
+}
+
+func matchesFileSelectorRegex(objectKey string, objectType string, imgType config.ImageType) bool {
+	selector, found := imgType.DynamicData.FileSelectors[objectType]
+	if !found {
+		return false
 	}
 
-	switch {
-	case cfg.AdditionalProductFilesRgx.MatchString(objectKey):
-		return types.ObjectAdditional
-	case cfg.FeaturesExtensionRgx.MatchString(objectKey):
-		return types.ObjectFeatures
-	case strings.HasSuffix(objectKey, cfg.FullProductExtension) && cfg.FullProductSignedURL:
-		return types.ObjectFullProduct
-	default:
-		return types.ObjectNotYetAssigned
-	}
+	return selector.Rgx.MatchString(objectKey)
 }

@@ -24,7 +24,8 @@ type ImageSummary {
     name:         String!
     group:        String!
     type:         String!
-    features:     Features
+    geonames:     Geonames
+    productInfo:  ProductInformation
     cachedObject: CachedObject!
     size:         ImageSize!
 }
@@ -39,20 +40,19 @@ type Localization {
     cachedObject: CachedObject!
 }
 
-type Features {
-    class:        String!
-    count:        Int!
-    objects:      Map!
-    cachedObject: CachedObject!
+type ProductInformation {
+    title:    String
+    subtitle: String
+    entries:  [String]
+    summary:  String
 }
 
 type Image {
     imageSummary:     ImageSummary!
-    geonames:         Geonames
     localization:     Localization
-    additionalFiles:  Map!
+    cachedFileLinks:  Map!
+    signedURLs:       Map!
     targetFiles:      [String!]!
-    fullProductFiles: Map!
 }
 
 type Query {
