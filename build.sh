@@ -26,6 +26,13 @@ BINARY_FILENAME="S3ImageServer-$VERSION"
 
 test -f "${ENV_FILE}" && source "${ENV_FILE}" # Load $BASE_URL
 
+set +u
+if [[ -z $BASE_URL ]]; then
+    echo "Variable BASE_URL (used for frontend base path) is not defined"
+    exit 1
+fi
+set -u
+
 echo "Building front-end with base URL '$BASE_URL' ..."
 
 (cd frontend && yarn build --base="$BASE_URL" --minify="$MINIFY" && touch dist/.gitkeep)
