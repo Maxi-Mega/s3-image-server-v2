@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import DropdownIcon from "@/components/icons/DropdownIcon.vue";
 import type { ImageGroup } from "@/models/static_info";
 import { useFilterStore } from "@/stores/filters";
+import { ChevronDown } from "lucide-vue-next";
 import { onMounted } from "vue";
 
 defineProps<{
@@ -63,7 +63,7 @@ function handleToggle(ev: Event, group: string, type?: string): void {
       type="button"
     >
       {{ group.name }}
-      <DropdownIcon />
+      <ChevronDown :size="16" />
     </button>
     <!-- Group's types -->
     <div

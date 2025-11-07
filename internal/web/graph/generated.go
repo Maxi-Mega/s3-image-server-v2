@@ -15,6 +15,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -39,6 +40,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	DynamicData() DynamicDataResolver
 	Image() ImageResolver
 	Query() QueryResolver
 }
@@ -50,6 +52,11 @@ type ComplexityRoot struct {
 	CachedObject struct {
 		CacheKey     func(childComplexity int) int
 		LastModified func(childComplexity int) int
+	}
+
+	DynamicData struct {
+		Expressions   func(childComplexity int) int
+		FileSelectors func(childComplexity int) int
 	}
 
 	Geonames struct {
@@ -96,10 +103,15 @@ type ComplexityRoot struct {
 
 	Query struct {
 		GetAllImageSummaries func(childComplexity int, from *time.Time, to *time.Time) int
+		GetDynamicData       func(childComplexity int, group string, typeArg string) int
 		GetImage             func(childComplexity int, bucket string, name string) int
 	}
 }
 
+type DynamicDataResolver interface {
+	FileSelectors(ctx context.Context, obj *model.DynamicData) (map[string]any, error)
+	Expressions(ctx context.Context, obj *model.DynamicData) (map[string]any, error)
+}
 type ImageResolver interface {
 	CachedFileLinks(ctx context.Context, obj *types.Image) (map[string]any, error)
 	SignedURLs(ctx context.Context, obj *types.Image) (map[string]any, error)
@@ -107,6 +119,7 @@ type ImageResolver interface {
 type QueryResolver interface {
 	GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error)
 	GetImage(ctx context.Context, bucket string, name string) (*types.Image, error)
+	GetDynamicData(ctx context.Context, group string, typeArg string) (*model.DynamicData, error)
 }
 
 type executableSchema struct {
@@ -140,6 +153,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CachedObject.LastModified(childComplexity), true
+
+	case "DynamicData.expressions":
+		if e.complexity.DynamicData.Expressions == nil {
+			break
+		}
+
+		return e.complexity.DynamicData.Expressions(childComplexity), true
+	case "DynamicData.fileSelectors":
+		if e.complexity.DynamicData.FileSelectors == nil {
+			break
+		}
+
+		return e.complexity.DynamicData.FileSelectors(childComplexity), true
 
 	case "Geonames.cachedObject":
 		if e.complexity.Geonames.CachedObject == nil {
@@ -302,6 +328,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.GetAllImageSummaries(childComplexity, args["from"].(*time.Time), args["to"].(*time.Time)), true
+	case "Query.getDynamicData":
+		if e.complexity.Query.GetDynamicData == nil {
+			break
+		}
+
+		args, err := ec.field_Query_getDynamicData_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GetDynamicData(childComplexity, args["group"].(string), args["type"].(string)), true
 	case "Query.getImage":
 		if e.complexity.Query.GetImage == nil {
 			break
@@ -460,9 +497,15 @@ type Image {
     targetFiles:      [String!]!
 }
 
+type DynamicData {
+    fileSelectors: Map!
+    expressions:   Map!
+}
+
 type Query {
-    getAllImageSummaries(from: Time, to: Time): AllImageSummaries!
-    getImage(bucket: String!, name: String!):   Image
+    getAllImageSummaries(from: Time, to: Time):    AllImageSummaries!
+    getImage(bucket: String!, name: String!):      Image
+    getDynamicData(group: String!, type: String!): DynamicData
 }
 `, BuiltIn: false},
 }
@@ -496,6 +539,22 @@ func (ec *executionContext) field_Query_getAllImageSummaries_args(ctx context.Co
 		return nil, err
 	}
 	args["to"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_getDynamicData_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "group", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["group"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "type", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["type"] = arg1
 	return args, nil
 }
 
@@ -620,6 +679,64 @@ func (ec *executionContext) fieldContext_CachedObject_cacheKey(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DynamicData_fileSelectors(ctx context.Context, field graphql.CollectedField, obj *model.DynamicData) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DynamicData_fileSelectors,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.DynamicData().FileSelectors(ctx, obj)
+		},
+		nil,
+		ec.marshalNMap2map,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DynamicData_fileSelectors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DynamicData",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DynamicData_expressions(ctx context.Context, field graphql.CollectedField, obj *model.DynamicData) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DynamicData_expressions,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.DynamicData().Expressions(ctx, obj)
+		},
+		nil,
+		ec.marshalNMap2map,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DynamicData_expressions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DynamicData",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1475,6 +1592,53 @@ func (ec *executionContext) fieldContext_Query_getImage(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_getImage_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_getDynamicData(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_getDynamicData,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().GetDynamicData(ctx, fc.Args["group"].(string), fc.Args["type"].(string))
+		},
+		nil,
+		ec.marshalODynamicData2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋwebᚋgraphᚋmodelᚐDynamicData,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_getDynamicData(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "fileSelectors":
+				return ec.fieldContext_DynamicData_fileSelectors(ctx, field)
+			case "expressions":
+				return ec.fieldContext_DynamicData_expressions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type DynamicData", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_getDynamicData_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3087,6 +3251,112 @@ func (ec *executionContext) _CachedObject(ctx context.Context, sel ast.Selection
 	return out
 }
 
+var dynamicDataImplementors = []string{"DynamicData"}
+
+func (ec *executionContext) _DynamicData(ctx context.Context, sel ast.SelectionSet, obj *model.DynamicData) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, dynamicDataImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DynamicData")
+		case "fileSelectors":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DynamicData_fileSelectors(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "expressions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DynamicData_expressions(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var geonamesImplementors = []string{"Geonames"}
 
 func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet, obj *types.Geonames) graphql.Marshaler {
@@ -3503,6 +3773,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_getImage(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "getDynamicData":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_getDynamicData(ctx, field)
 				return res
 			}
 
@@ -4371,6 +4660,13 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	_ = ctx
 	res := graphql.MarshalBoolean(*v)
 	return res
+}
+
+func (ec *executionContext) marshalODynamicData2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋwebᚋgraphᚋmodelᚐDynamicData(ctx context.Context, sel ast.SelectionSet, v *model.DynamicData) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._DynamicData(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOGeonames2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐGeonames(ctx context.Context, sel ast.SelectionSet, v *types.Geonames) graphql.Marshaler {

@@ -7,10 +7,22 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph/model"
 )
+
+// FileSelectors is the resolver for the fileSelectors field.
+func (r *dynamicDataResolver) FileSelectors(ctx context.Context, obj *model.DynamicData) (map[string]any, error) {
+	return toMapStringAny(obj.FileSelectors), nil
+}
+
+// Expressions is the resolver for the expressions field.
+func (r *dynamicDataResolver) Expressions(ctx context.Context, obj *model.DynamicData) (map[string]any, error) {
+	return toMapStringAny(obj.Expressions), nil
+}
 
 // CachedFileLinks is the resolver for the cachedFileLinks field.
 func (r *imageResolver) CachedFileLinks(ctx context.Context, obj *types.Image) (map[string]any, error) {
@@ -56,11 +68,32 @@ func (r *queryResolver) GetImage(ctx context.Context, bucket string, name string
 	return &img, nil
 }
 
+// GetDynamicData is the resolver for the getDynamicData field.
+func (r *queryResolver) GetDynamicData(ctx context.Context, group string, typeArg string) (*model.DynamicData, error) {
+	for _, grp := range r.Config.Products.ImageGroups {
+		if grp.GroupName == group {
+			for _, typ := range grp.Types {
+				if typ.Name == typeArg {
+					return convertDynamicData(typ.DynamicData)
+				}
+			}
+
+			return nil, fmt.Errorf("image type %q %w in group %q", typeArg, errNotFound, group)
+		}
+	}
+
+	return nil, fmt.Errorf("image group %q %w", group, errNotFound)
+}
+
+// DynamicData returns DynamicDataResolver implementation.
+func (r *Resolver) DynamicData() DynamicDataResolver { return &dynamicDataResolver{r} }
+
 // Image returns ImageResolver implementation.
 func (r *Resolver) Image() ImageResolver { return &imageResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+type dynamicDataResolver struct{ *Resolver }
 type imageResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

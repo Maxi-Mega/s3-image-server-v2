@@ -1,17 +1,20 @@
 <script setup lang="ts">
+import { apolloClient } from "@/apollo.ts";
+import DynamicDataDisplay from "@/components/DynamicDataDisplay.vue";
 import Error from "@/components/ErrorBox.vue";
 import GeoMap from "@/components/GeoMap.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
 import RangeInput from "@/components/RangeInput.vue";
-import CloseIcon from "@/components/icons/CloseIcon.vue";
-import LeftIcon from "@/components/icons/LeftIcon.vue";
-import RightIcon from "@/components/icons/RightIcon.vue";
 import { base, formatGeonames, processImage, wbr } from "@/composables/images";
-import { useImageQuery } from "@/composables/queries";
+import { GET_DYNAMIC_DATA, useImageQuery } from "@/composables/queries";
 import { resolveBackendURL } from "@/composables/url";
+import type { DynamicData } from "@/models/dynamic_data.ts";
 import type { Image, ImageSummary } from "@/models/image";
 import type { Localization } from "@/models/localization";
 import { useImageStore } from "@/stores/images";
+import { useStaticInfoStore } from "@/stores/static_info.ts";
+import { provideApolloClient, useQuery } from "@vue/apollo-composable";
+import { ChevronLeft, ChevronRight, Settings, X } from "lucide-vue-next";
 import { HSTabs } from "preline/preline";
 import { nextTick, reactive, type Ref, ref, toRefs, watch } from "vue";
 
@@ -26,12 +29,17 @@ const emit = defineEmits<{
 }>();
 
 const imageStore = useImageStore();
+const staticStore = useStaticInfoStore();
 
 const { img } = toRefs(props);
 
 const image: Ref<Image | null> = ref(null);
 const hasTargets = ref(false);
 const hasMap = ref(false);
+
+const showDynamicData = ref(false);
+const dynamicDataLoading = ref(false);
+const dynamicData: Ref<DynamicData | null> = ref(null);
 
 const showingTargets = ref(true);
 const targetsFontSize = ref("13px");
@@ -49,6 +57,9 @@ watch(img, async (value) => {
   imageQueryVariables.name = "";
   enableQuery.value = false;
   loading.value = true;
+  showDynamicData.value = false;
+  dynamicDataLoading.value = false;
+  dynamicData.value = null;
 
   const summary = value;
   if (!summary) {
@@ -141,6 +152,42 @@ function targetName(target: string): string {
   target = target.slice(0, target.lastIndexOf("@"));
   return wbr(target);
 }
+
+function toggleDynamicData() {
+  showDynamicData.value = !showDynamicData.value;
+
+  if (showDynamicData.value && !dynamicData.value && img.value) {
+    const group = img.value?.group;
+    const type = img.value?.type;
+    if (!group || !type) {
+      return;
+    }
+
+    const dataFromStore = staticStore.getDynamicData(group, type);
+    if (dataFromStore) {
+      dynamicData.value = dataFromStore;
+      return;
+    }
+
+    dynamicDataLoading.value = true;
+    const { onResult, onError } = provideApolloClient(apolloClient)(() =>
+      useQuery(GET_DYNAMIC_DATA, { group: group, type: type })
+    );
+
+    onResult((result) => {
+      dynamicDataLoading.value = result.loading;
+
+      if (result.data && result.data.getDynamicData) {
+        dynamicData.value = result.data.getDynamicData;
+        staticStore.setDynamicData(group, type, result.data.getDynamicData);
+      }
+    });
+    onError((error) => {
+      console.error("Failed to retrieve dynamic data:", error);
+      dynamicDataLoading.value = false;
+    });
+  }
+}
 </script>
 
 <template>
@@ -153,8 +200,15 @@ function targetName(target: string): string {
       class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 m-3 mt-0 h-[calc(100%-3.5rem)] w-[calc(100%-3.5rem)] opacity-0 transition-all ease-out sm:mx-auto"
     >
       <div
-        class="pointer-events-auto flex h-full flex-col overflow-hidden rounded-xl border border-neutral-700 bg-gray-200 shadow-sm shadow-neutral-700/70"
+        class="pointer-events-auto relative flex h-full flex-col overflow-hidden rounded-xl border border-neutral-700 bg-gray-200 shadow-sm shadow-neutral-700/70"
       >
+        <button
+          class="absolute top-0.5 right-1 cursor-pointer text-transparent transition hover:text-gray-700"
+          title="Toggle effective dynamic data"
+          @click="toggleDynamicData"
+        >
+          <Settings :size="16" />
+        </button>
         <div
           class="flex items-stretch justify-between gap-x-4 border-b border-neutral-700 px-4 py-3"
         >
@@ -184,7 +238,7 @@ function targetName(target: string): string {
               :data-hs-overlay="'#' + id"
             >
               <span class="sr-only">Close</span>
-              <CloseIcon />
+              <X :size="16" />
             </button>
             <nav class="flex flex-row items-center gap-x-1">
               <button
@@ -193,7 +247,7 @@ function targetName(target: string): string {
                 class="inline-flex min-h-[32px] min-w-8 cursor-pointer items-center justify-center gap-x-2 rounded-full px-2 py-2 text-sm text-gray-700 transition duration-100 hover:bg-gray-300 focus:bg-gray-100 focus:bg-white/10 focus:outline-none active:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
                 @click="navigate('prev')"
               >
-                <LeftIcon />
+                <ChevronLeft :size="16" />
                 <span aria-hidden="true" class="sr-only">Previous</span>
               </button>
               <button
@@ -203,7 +257,7 @@ function targetName(target: string): string {
                 @click="navigate('next')"
               >
                 <span aria-hidden="true" class="sr-only">Next</span>
-                <RightIcon />
+                <ChevronRight :size="16" />
               </button>
             </nav>
           </div>
@@ -225,7 +279,17 @@ function targetName(target: string): string {
                 class="max-h-[80svh] rounded-md"
               />
             </a>
-            <div :key="image.imageSummary.key" class="col-span-3 flex flex-col gap-4">
+            <div v-if="showDynamicData" class="col-span-3">
+              <LoaderSpinner
+                v-if="dynamicDataLoading"
+                key="loading-dynamic-data-true"
+                :standalone="false"
+              >
+                Loading image info...
+              </LoaderSpinner>
+              <DynamicDataDisplay v-else-if="dynamicData" :data="dynamicData" />
+            </div>
+            <div v-else :key="image.imageSummary.key" class="col-span-3 flex flex-col gap-4">
               <div class="row-span-1 grid max-h-full grid-cols-5 gap-4">
                 <div
                   v-if="image._links.length > 0"

@@ -56,7 +56,7 @@ func main() {
 		log.Fatal("Failed to parse expr functions:", err)
 	}
 
-	err = os.WriteFile(markdownOutputRelativeFilePath, renderMarkdown(rawDocs), 0644) //nolint: gosec
+	err = os.WriteFile(markdownOutputRelativeFilePath, renderMarkdown(rawDocs), 0600)
 	if err != nil {
 		log.Fatal("Failed to write markdown doc to file:", err)
 	}

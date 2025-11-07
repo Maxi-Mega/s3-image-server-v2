@@ -1015,6 +1015,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@preline/layout-splitter@npm:^3.2.3":
+  version: 3.2.3
+  resolution: "@preline/layout-splitter@npm:3.2.3"
+  checksum: 10c0/e3d62e335cca943c30ab57ce363bcef58937ea0d332ba3afee08945206c10c1ec5ab1ed480e90b8337a83e31596f7ec390db53d3c0c42a463685e267c6c7e90e
+  languageName: node
+  linkType: hard
+
 "@preline/overlay@npm:^3.2.3":
   version: 3.2.3
   resolution: "@preline/overlay@npm:3.2.3"
@@ -3964,6 +3971,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"lucide-vue-next@npm:^0.552.0":
+  version: 0.552.0
+  resolution: "lucide-vue-next@npm:0.552.0"
+  peerDependencies:
+    vue: ">=3.0.1"
+  checksum: 10c0/b31ea622f7985ed2de3612b2e8a4a36214f556d2ad9813b976014c73632fa3926904e943702339b78f9f806f732d33fb91817ca0cb061a55381e7097161d146c
+  languageName: node
+  linkType: hard
+
 "magic-string@npm:^0.30.11, magic-string@npm:^0.30.4":
   version: 0.30.12
   resolution: "magic-string@npm:0.30.12"
@@ -5085,6 +5101,7 @@ __metadata:
     "@apollo/client": "npm:3.14.0"
     "@eslint/js": "npm:^9.39.0"
     "@preline/dropdown": "npm:^3.2.3"
+    "@preline/layout-splitter": "npm:^3.2.3"
     "@preline/overlay": "npm:^3.2.3"
     "@preline/tabs": "npm:^3.2.3"
     "@rushstack/eslint-patch": "npm:^1.14.1"
@@ -5105,6 +5122,7 @@ __metadata:
     globals: "npm:^16.5.0"
     graphql: "npm:^16.12.0"
     graphql-tag: "npm:^2.12.6"
+    lucide-vue-next: "npm:^0.552.0"
     npm-run-all2: "npm:^8.0.4"
     ol: "npm:^10.6.1"
     ol-mapbox-style: "npm:^13.1.0"

@@ -45,7 +45,7 @@ type ExprEnv struct {
 }
 
 var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
-	// Call another expr
+	// Call another expression with the current context and returns its result.
 	expr.Function(
 		"_call",
 		func(params ...any) (any, error) {
@@ -60,7 +60,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		new(func(exprName string) (any, error)), // env param will be injected at compile time
 		new(func(exprName string, env ExprEnv) (any, error)),
 	),
-	// Check whether a file exists in cache
+	// Returns whether a file matched by the given file selector has been cached.
 	expr.Function(
 		"_exist",
 		func(params ...any) (any, error) {
@@ -80,6 +80,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		new(func(fileSelector string) (bool, error)),
 		new(func(fileSelector string, env ExprEnv) (bool, error)),
 	),
+	// Returns the result of the given jq expression on the file matched by the given file selector.
 	expr.Function(
 		"_jq",
 		func(params ...any) (any, error) {
@@ -99,6 +100,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		new(func(ctx context.Context, fileSelector string, filter string) (any, error)),
 		new(func(ctx context.Context, fileSelector string, filter string, env ExprEnv) (any, error)),
 	),
+	// Loads the content of the file matched by the given file selector to a JSON object.
 	expr.Function(
 		"_loadJSON",
 		func(params ...any) (any, error) {
@@ -118,6 +120,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		new(func(fileSelector string) (any, error)),
 		new(func(fileSelector string, env ExprEnv) (any, error)),
 	),
+	// Merges the two given maps/objects into a new one, the second one overwriting the first one.
 	expr.Function(
 		"_merge",
 		func(params ...any) (any, error) {
@@ -126,11 +129,11 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 				logger.Tracef("[expr] _merge(...) took %s", time.Since(t0))
 			}()
 
-			res, err := ExprMerge(params[0].(map[string]any), params[1].(map[string]any)) //nolint: forcetypeassert // already validated
-			return res, wrapErr("_merge", err)
+			return ExprMerge(params[0].(map[string]any), params[1].(map[string]any)), nil //nolint: forcetypeassert // already validated
 		},
 		new(func(o1, o2 map[string]any) (map[string]any, error)),
 	),
+	// Returns the S3 path of the file matched by the given file selector.
 	expr.Function(
 		"_s3Key",
 		func(params ...any) (any, error) {
@@ -149,6 +152,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		new(func(fileSelector string) (string, error)),
 		new(func(fileSelector string, env ExprEnv) (string, error)),
 	),
+	// Returns the titled version of the given string (first letter uppercase, rest lowercase, spaces replaced by underscores).
 	expr.Function(
 		"_title",
 		func(params ...any) (any, error) {
@@ -160,6 +164,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			return ExprTitle(params[0].(string)), nil //nolint: forcetypeassert // already validated
 		},
 	),
+	// Returns the result of the given xpath expression on the file matched by the given file selector.
 	expr.Function(
 		"_xpath",
 		func(params ...any) (any, error) {
@@ -300,7 +305,7 @@ func ExprJQ(ctx context.Context, filePath string, jqExpression string) (any, err
 
 	err = json.NewDecoder(file).Decode(&input)
 	if err != nil {
-		return nil, err //nolint: wrapcheck // wrapped by caller
+		return nil, fmt.Errorf("json: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, evalTimeout)
@@ -325,6 +330,10 @@ func ExprJQ(ctx context.Context, filePath string, jqExpression string) (any, err
 }
 
 func ExprLoadJSON(filePath string) (any, error) {
+	if filePath == "" {
+		return nil, nil //nolint: nilnil
+	}
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err //nolint: wrapcheck // wrapped by caller
@@ -342,10 +351,14 @@ func ExprLoadJSON(filePath string) (any, error) {
 	return result, nil
 }
 
-func ExprMerge(o1, o2 map[string]any) (any, error) {
+func ExprMerge(o1, o2 map[string]any) any {
+	if o1 == nil { // avoid returning a nil map
+		o1 = make(map[string]any, len(o2))
+	}
+
 	maps.Insert(o1, maps.All(o2))
 
-	return o1, nil
+	return o1
 }
 
 func ExprTitle(value string) string {
@@ -353,13 +366,19 @@ func ExprTitle(value string) string {
 	return strings.ReplaceAll(value, "_", " ")
 }
 
-func ExprXPath(filePath string, xpathExpression string) (any, error) {
+func ExprXPath(filePath string, xpathExpression string) (res any, err error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err //nolint: wrapcheck // wrapped by caller
 	}
 
 	defer f.Close()
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
 
 	doc, err := xmlquery.Parse(f)
 	if err != nil {

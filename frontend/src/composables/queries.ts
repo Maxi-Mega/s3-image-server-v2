@@ -12,6 +12,15 @@ export const ALL_IMAGE_SUMMARIES = gql`
   }
 `;
 
+export const GET_DYNAMIC_DATA = gql`
+  query getDynamicData($group: String!, $type: String!) {
+    getDynamicData(group: $group, type: $type) {
+      fileSelectors
+      expressions
+    }
+  }
+`;
+
 const GET_IMAGE = gql`
   query getImage($bucket: String!, $name: String!) {
     getImage(bucket: $bucket, name: $name) {

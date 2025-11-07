@@ -1,6 +1,6 @@
 {
   "name": "s3-image-server-v2-front",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,6 +15,7 @@
   "dependencies": {
     "@apollo/client": "3.14.0",
     "@preline/dropdown": "^3.2.3",
+    "@preline/layout-splitter": "^3.2.3",
     "@preline/overlay": "^3.2.3",
     "@preline/tabs": "^3.2.3",
     "@tailwindcss/postcss": "^4.1.16",
@@ -23,6 +24,7 @@
     "class-transformer": "^0.5.1",
     "graphql": "^16.12.0",
     "graphql-tag": "^2.12.6",
+    "lucide-vue-next": "^0.552.0",
     "ol": "^10.6.1",
     "ol-mapbox-style": "^13.1.0",
     "ol-pmtiles": "^2.0.2",

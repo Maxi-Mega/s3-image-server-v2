@@ -56,7 +56,8 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 	}
 
 	graphResolver := &graph.Resolver{
-		Cache: cache,
+		Config: cfg,
+		Cache:  cache,
 	}
 
 	staticInfo := StaticInfo{

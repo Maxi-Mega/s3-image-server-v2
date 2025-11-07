@@ -55,7 +55,13 @@ type Image {
     targetFiles:      [String!]!
 }
 
+type DynamicData {
+    fileSelectors: Map!
+    expressions:   Map!
+}
+
 type Query {
-    getAllImageSummaries(from: Time, to: Time): AllImageSummaries!
-    getImage(bucket: String!, name: String!):   Image
+    getAllImageSummaries(from: Time, to: Time):    AllImageSummaries!
+    getImage(bucket: String!, name: String!):      Image
+    getDynamicData(group: String!, type: String!): DynamicData
 }

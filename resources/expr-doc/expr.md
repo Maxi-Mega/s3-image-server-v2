@@ -2,33 +2,43 @@
 
 ## _call
 
-_Call another expr_
+_Call another expression with the current context and returns its result._
 
 `_call(exprName string) (any, error)`
 
 ## _exist
 
-_Check whether a file exists in cache_
+_Returns whether a file matched by the given file selector has been cached._
 
 `_exist(fileSelector string) (bool, error)`
 
 ## _jq
 
+_Returns the result of the given jq expression on the file matched by the given file selector._
+
 `_jq(fileSelector string, filter string) (any, error)`
 
 ## _loadJSON
+
+_Loads the content of the file matched by the given file selector to a JSON object._
 
 `_loadJSON(fileSelector string) (any, error)`
 
 ## _merge
 
+_Merges the two given maps/objects into a new one, the second one overwriting the first one._
+
 `_merge(o1 map[string]any, o2 map[string]any) (map[string]any, error)`
 
 ## _s3Key
 
+_Returns the S3 path of the file matched by the given file selector._
+
 `_s3Key(fileSelector string) (string, error)`
 
 ## _xpath
+
+_Returns the result of the given xpath expression on the file matched by the given file selector._
 
 `_xpath(fileSelector string, xpath string) (any, error)`
 

@@ -97,3 +97,5 @@ models:
     model: github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.GeonamesObject
   LocalizationCorner:
     model: github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph.LocalizationCorner
+  DynamicData:
+    model: github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph/model.DynamicData
