@@ -16,7 +16,7 @@ import { useStaticInfoStore } from "@/stores/static_info.ts";
 import { provideApolloClient, useQuery } from "@vue/apollo-composable";
 import { ChevronLeft, ChevronRight, Settings, X } from "lucide-vue-next";
 import { HSTabs } from "preline/preline";
-import { nextTick, reactive, type Ref, ref, toRefs, watch } from "vue";
+import { getCurrentScope, nextTick, reactive, type Ref, ref, toRefs, watch } from "vue";
 
 const props = defineProps<{
   id: string;
@@ -84,7 +84,7 @@ watch(img, async (value) => {
   enableQuery.value = true;
 });
 
-const { loading, error, data } = useImageQuery(imageQueryVariables);
+const { loading, error, data } = useImageQuery(imageQueryVariables, getCurrentScope());
 
 watch(data, (gqlImage) => {
   if (!gqlImage || !gqlImage.getImage) {

@@ -72,7 +72,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 			}
 
 			if cachedFile.value.S3Path != event.ObjectKey {
-				logger.Errorf("Input file %q for image type %q/%q matches multiple objects; this should be fixed !", event.InputFile, event.imgGroup.GroupName, event.imgType.Name)
+				logger.Errorf("Input file %q for image type %q/%q matches multiple objects; this should be fixed ! (files found so far: %q, %q)", event.InputFile, event.imgGroup.GroupName, event.imgType.Name, cachedFile.value.S3Path, event.ObjectKey)
 
 				return nil
 			}

@@ -34,6 +34,11 @@ func (r *imageResolver) SignedURLs(ctx context.Context, obj *types.Image) (map[s
 	return toMapStringAny(obj.SignedURLs), nil
 }
 
+// DynamicFilters is the resolver for the dynamicFilters field.
+func (r *imageSummaryResolver) DynamicFilters(ctx context.Context, obj *types.ImageSummary) (map[string]any, error) {
+	return toMapStringAny(obj.DynamicFilters), nil
+}
+
 // GetAllImageSummaries is the resolver for the getAllImageSummaries field.
 func (r *queryResolver) GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error) {
 	start := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -91,9 +96,13 @@ func (r *Resolver) DynamicData() DynamicDataResolver { return &dynamicDataResolv
 // Image returns ImageResolver implementation.
 func (r *Resolver) Image() ImageResolver { return &imageResolver{r} }
 
+// ImageSummary returns ImageSummaryResolver implementation.
+func (r *Resolver) ImageSummary() ImageSummaryResolver { return &imageSummaryResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 type dynamicDataResolver struct{ *Resolver }
 type imageResolver struct{ *Resolver }
+type imageSummaryResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

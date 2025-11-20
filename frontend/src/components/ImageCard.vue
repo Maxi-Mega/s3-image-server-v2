@@ -5,7 +5,7 @@ import type { ImageSummary } from "@/models/image";
 import { useFilterStore } from "@/stores/filters";
 import { useImageStore } from "@/stores/images.ts";
 import { storeToRefs } from "pinia";
-import { computed } from "vue";
+import { computed, getCurrentScope } from "vue";
 
 const props = defineProps<{
   summary: ImageSummary;
@@ -15,6 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "openModal", img: ImageSummary): void;
 }>();
+
+const scope = getCurrentScope();
 
 const imageStore = useImageStore();
 const { globalFontSize } = storeToRefs(useFilterStore());
@@ -45,7 +47,7 @@ const imgSize = computed(() => {
       <img
         v-lazy-img="{
           src: resolveBackendURL('/api/cache/' + summary.cachedObject.cacheKey),
-          onLoaded: () => imageStore.requestImageDetails(summary.bucket, summary.key),
+          onLoaded: () => imageStore.requestImageDetails(summary.bucket, summary.key, scope),
         }"
         :alt="summary.cachedObject.cacheKey"
         :title="`${summary.type}\n${summary.key}\n${formatDate(summary._lastModified)}`"

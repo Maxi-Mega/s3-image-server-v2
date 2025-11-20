@@ -14,6 +14,7 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/vm"
 	"gopkg.in/yaml.v3"
 )
@@ -61,13 +62,29 @@ func (cfg *Config) validate() ([]string, error) {
 	warnings := make([]string, 0)
 	errs := make([]error, 0)
 
-	if len(cfg.Products.ImageGroups) == 0 {
-		errs = append(errs, errNoImageGroupsSpecified)
+	dynamicFilterNames := make(map[string]bool, len(cfg.Products.DynamicFilters))
+
+	for i, filter := range cfg.Products.DynamicFilters {
+		if filter.Name == "" { //nolint: gocritic
+			errs = append(errs, fmt.Errorf("empty name for dynamic filter n°%d", i+1))
+		} else if dynamicFilterNames[filter.Name] {
+			errs = append(errs, fmt.Errorf("duplicate dynamic filter name %q", filter.Name))
+		} else {
+			dynamicFilterNames[filter.Name] = true
+		}
+
+		if filter.Expression == "" {
+			errs = append(errs, fmt.Errorf("empty expression for dynamic filter n°%d", i+1))
+		}
 	}
 
 	err := validateFileSelectors(cfg.Products.DynamicData.FileSelectors)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("invalid products file selectors: %w", err))
+	}
+
+	if len(cfg.Products.ImageGroups) == 0 {
+		errs = append(errs, errNoImageGroupsSpecified)
 	}
 
 	imageGroupNames := make(map[string]bool)
@@ -265,8 +282,45 @@ func parseExpressions(expressions map[string]string) (map[string]*vm.Program, er
 			return nil, fmt.Errorf("expression %q: %w", name, err)
 		}
 
+		err = validateExpression(program.Node())
+		if err != nil {
+			return nil, fmt.Errorf("expression %q: %w", name, err)
+		}
+
 		result[name] = program
 	}
 
 	return result, nil
+}
+
+type exprValidator struct {
+	errs []error
+}
+
+func (ev *exprValidator) Visit(node *ast.Node) {
+	if callNode, ok := (*node).(*ast.CallNode); ok { //nolint: nestif
+		if callee, ok := callNode.Callee.(*ast.IdentifierNode); ok {
+			switch callee.Value { //nolint: gocritic
+			case "_replaceRegex":
+				regexParam, ok := callNode.Arguments[1].(*ast.StringNode)
+				if !ok {
+					ev.errs = append(ev.errs, fmt.Errorf("_replaceRegex: second argument must be a string, not %s", callNode.Arguments[1].Nature()))
+					return
+				}
+
+				if _, err := regexp.Compile(regexParam.Value); err != nil {
+					ev.errs = append(ev.errs, fmt.Errorf("_replaceRegex: %w", err))
+					return
+				}
+			}
+		}
+	}
+}
+
+func validateExpression(node ast.Node) error {
+	var v exprValidator
+
+	ast.Walk(&node, &v)
+
+	return errors.Join(v.errs...)
 }

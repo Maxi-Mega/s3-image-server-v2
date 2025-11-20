@@ -31,6 +31,7 @@ export class StaticInfo {
   pmtilesURL: string;
   pmtilesStyleURL: string;
   imageGroups: ImageGroup[];
+  dynamicFilters: string[];
 
   constructor(
     softwareVersion: string,
@@ -42,7 +43,8 @@ export class StaticInfo {
     maxImagesDisplayCount: number,
     pmtilesURL: string,
     pmtilesStyleURL: string,
-    imageGroups: ImageGroup[]
+    imageGroups: ImageGroup[],
+    dynamicFilters: string[]
   ) {
     this.softwareVersion = softwareVersion;
     this.windowTitle = windowTitle;
@@ -54,5 +56,6 @@ export class StaticInfo {
     this.pmtilesURL = pmtilesURL;
     this.pmtilesStyleURL = pmtilesStyleURL;
     this.imageGroups = imageGroups;
+    this.dynamicFilters = dynamicFilters;
   }
 }

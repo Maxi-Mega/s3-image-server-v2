@@ -25,13 +25,14 @@ type ImageSize struct {
 }
 
 type ImageSummary struct {
-	Bucket      string              `json:"bucket"`
-	Key         string              `json:"key"`
-	Name        string              `json:"name"`
-	Group       string              `json:"group"`
-	Type        string              `json:"type"`
-	Geonames    *Geonames           `json:"geonames"`
-	ProductInfo *ProductInformation `json:"productInfo"`
+	Bucket         string              `json:"bucket"`
+	Key            string              `json:"key"`
+	Name           string              `json:"name"`
+	Group          string              `json:"group"`
+	Type           string              `json:"type"`
+	Geonames       *Geonames           `json:"geonames"`
+	ProductInfo    *ProductInformation `json:"productInfo"`
+	DynamicFilters map[string]string   `json:"dynamicFilters"`
 	// Contains the cache key to the image preview.
 	CachedObject CachedObject `json:"cachedObject"`
 	Size         ImageSize    `json:"size"`

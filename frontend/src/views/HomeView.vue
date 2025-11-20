@@ -1,9 +1,10 @@
 <script lang="ts" setup>
+import DynamicFilterDropdown from "@/components/DynamicFilterDropdown.vue";
 import FiltersBar from "@/components/FiltersBar.vue";
 import GroupDropdown from "@/components/GroupDropdown.vue";
 import ImageGrid from "@/components/ImageGrid.vue";
 import LoaderSpinner from "@/components/LoaderSpinner.vue";
-import { parseEventData } from "@/composables/events";
+import { type EventData, parseEventData } from "@/composables/events";
 import { processSummaries } from "@/composables/images";
 import { ALL_IMAGE_SUMMARIES } from "@/composables/queries";
 import { wsURL } from "@/composables/url";
@@ -13,7 +14,7 @@ import { useImageStore } from "@/stores/images";
 import { useStaticInfoStore } from "@/stores/static_info";
 import { useQuery } from "@vue/apollo-composable";
 import { useWebSocket } from "@vueuse/core";
-import { computed, onBeforeUnmount, onMounted, watch } from "vue";
+import { computed, getCurrentScope, onBeforeUnmount, onMounted, watch } from "vue";
 
 const staticInfo = useStaticInfoStore();
 const imageStore = useImageStore();
@@ -37,7 +38,7 @@ const { open, close } = useWebSocket(wsURL, {
 });
 
 watch(groupsAndTypes, async (value: ImageGroup[]) => {
-  filterStore.reset();
+  filterStore.resetTypes();
 
   // Activate all types by default
   for (const group of value) {
@@ -67,7 +68,7 @@ function handleWSEvent(ws: WebSocket, event: MessageEvent) {
       .map((line: string) => line.trim())
       .filter((line: string) => line !== "")
       .map(parseEventData)
-      .forEach(imageStore.handleEvent);
+      .forEach((evt: EventData) => imageStore.handleEvent(evt, getCurrentScope()));
   } catch (e) {
     console.warn(`Error while handling WS event:\nerror=${e}\nevent data=${event.data}`);
     // TODO: emit error ?
@@ -111,11 +112,14 @@ window.onbeforeunload = () => close();
           <GroupDropdown v-for="group in groupsAndTypes" :key="group.name" :group="group" />
         </div>
       </div>
-      <div
-        class="mt-5 flex flex-row items-center gap-5 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:ps-5 sm:pb-0"
-      >
-        <FiltersBar />
+      <div v-if="staticInfo.staticInfo.dynamicFilters" class="flex flex-row items-center gap-5">
+        <DynamicFilterDropdown
+          v-for="filter in staticInfo.staticInfo.dynamicFilters"
+          :key="filter"
+          :filter="filter"
+        />
       </div>
+      <FiltersBar />
     </nav>
   </header>
   <main class="min-h-screen w-full bg-fixed">

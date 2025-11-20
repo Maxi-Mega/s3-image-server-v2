@@ -2,6 +2,7 @@
 import Error from "@/components/ErrorBox.vue";
 import { fetchStaticInfo } from "@/composables/requests";
 import { StaticInfo } from "@/models/static_info";
+import { useFilterStore } from "@/stores/filters.ts";
 import { useStaticInfoStore } from "@/stores/static_info";
 import { plainToInstance } from "class-transformer";
 import { type Ref, ref } from "vue";
@@ -22,6 +23,7 @@ fetchStaticInfo()
   .then((staticInfo) => {
     const info = plainToInstance(StaticInfo, staticInfo);
     useStaticInfoStore().setStaticInfo(info);
+    useFilterStore().initFilterModes(info.dynamicFilters);
 
     if (info.windowTitle) document.title = info.windowTitle;
     if (info.faviconBase64) setFavicon(info.faviconBase64);

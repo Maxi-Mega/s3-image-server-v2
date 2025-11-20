@@ -36,10 +36,10 @@ onMounted(() => {
 });
 
 watch(
-  [filterStore.checkedTypes, searchQuery, imageStore.allSummaries],
-  ([types, search, allSummaries]) => {
+  [filterStore.checkedFilters, filterStore.checkedTypes, searchQuery, imageStore.allSummaries],
+  ([filters, types, search, allSummaries]) => {
     filteredSummaries.value = limitDisplayedImages(
-      applyFilters(allSummaries, types, search),
+      applyFilters(allSummaries, filters, types, search),
       staticInfoStore.staticInfo
     );
     imageStore.filteredCount = filteredSummaries.value.length;

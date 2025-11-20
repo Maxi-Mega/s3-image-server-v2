@@ -33,7 +33,7 @@ func main() {
 	flag.Usage = func() {
 		fmt.Println("S3 Image Server", version, "- usage") //nolint:forbidigo
 		flag.PrintDefaults()
-		fmt.Println("\n- - Sample configuration - -") //nolint:forbidigo
+		fmt.Print("\n- - Sample configuration - -\n\n") //nolint:forbidigo
 
 		if err := printSampleConfig(os.Stdout); err != nil {
 			log.Fatalln("Failed to print sample config:", err)
@@ -57,7 +57,7 @@ func main() {
 		fmt.Printf("S3 Image Server %s, %s build / built at %s\n", version, build, buildTime) //nolint:forbidigo
 		os.Exit(0)
 	case *justPrintDocs:
-		fmt.Println("S3 Image Server", version, "- documentation") //nolint:forbidigo
+		fmt.Print("S3 Image Server", version, "- documentation\n\n") //nolint:forbidigo
 
 		if err := printDocumentation(os.Stdout); err != nil {
 			log.Fatalln("Failed to print documentation:", err)
@@ -86,6 +86,8 @@ func main() {
 }
 
 func start(cfg config.Config) {
+	logger.Info("Starting S3 Image Server ", version)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 	defer cancel()
 

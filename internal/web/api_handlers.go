@@ -36,6 +36,7 @@ type StaticInfo struct {
 			DisplayName string `json:"displayName"`
 		} `json:"types"`
 	} `json:"imageGroups"`
+	DynamicFilters []string `json:"dynamicFilters"`
 }
 
 func (srv *Server) infoHandler(c *gin.Context) {

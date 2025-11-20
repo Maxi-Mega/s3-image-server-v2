@@ -3,6 +3,7 @@ package types //nolint: revive,nolintlint
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -274,6 +275,64 @@ func TestExprMerge(t *testing.T) {
 			result := ExprMerge(tc.o1, tc.o2)
 			if diff := cmp.Diff(tc.expected, result); diff != "" {
 				t.Fatalf("Unexpected result (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestExprReplaceRegex(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		input       string
+		regex       string
+		replacement string
+		expected    string
+		expectedErr string
+	}{
+		{
+			input:       "",
+			regex:       ".*",
+			replacement: "$1",
+			expected:    "",
+		},
+		{
+			input:       "a b c",
+			regex:       `(\S+)\s(\S+)\s(\S+)`,
+			replacement: "$3 $2 $1",
+			expected:    "c b a",
+		},
+		{
+			input:       "a/",
+			regex:       `(\d+)/(.+)`,
+			replacement: "$1 $2",
+			expected:    "a/",
+		},
+		{
+			input:       "abc",
+			regex:       "(.+",
+			replacement: "$1",
+			expectedErr: "error parsing regexp: missing closing ): `(.+`",
+		},
+	}
+
+	for i, tc := range cases {
+		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
+			t.Parallel()
+
+			result, err := ExprReplaceRegex(tc.input, tc.regex, tc.replacement)
+			if err != nil {
+				if err.Error() != tc.expectedErr {
+					t.Fatalf("Unexpected error: want %q, got %q", tc.expectedErr, err)
+				}
+
+				return
+			} else if tc.expectedErr != "" {
+				t.Fatalf("Expected error %q, got none", tc.expectedErr)
+			}
+
+			if result != tc.expected {
+				t.Fatalf("Unexpected result:\nwant: %q\n got: %q", tc.expected, result)
 			}
 		})
 	}

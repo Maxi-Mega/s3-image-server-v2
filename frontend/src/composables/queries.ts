@@ -4,7 +4,7 @@ import type { ApolloError } from "@apollo/client";
 import { provideApolloClient, useQuery } from "@vue/apollo-composable";
 import { createEventHook, type EventHookOn } from "@vueuse/core";
 import gql from "graphql-tag";
-import { type Reactive, ref, type Ref, toRaw, watch, watchEffect } from "vue";
+import { type EffectScope, type Reactive, ref, type Ref, toRaw, watch, watchEffect } from "vue";
 
 export const ALL_IMAGE_SUMMARIES = gql`
   {
@@ -43,6 +43,7 @@ const GET_IMAGE = gql`
           entries
           summary
         }
+        dynamicFilters
         cachedObject {
           lastModified
           cacheKey
@@ -78,7 +79,10 @@ export type ImageQueryResult = {
   onResult: EventHookOn<GqlImage | null>;
 };
 
-export function useImageQuery(variables: Reactive<ImageQueryVariables>): ImageQueryResult {
+export function useImageQuery(
+  variables: Reactive<ImageQueryVariables>,
+  scope: EffectScope | undefined
+): ImageQueryResult {
   const loadingRet = ref(true);
   const errorRet = ref<ApolloError | null>(null);
   const dataRet = ref<GqlImage | null>(null);
@@ -103,7 +107,15 @@ export function useImageQuery(variables: Reactive<ImageQueryVariables>): ImageQu
     });
   };
 
-  watchEffect(() => variables.bucket && runQuery());
+  watchEffect(() => {
+    if (!variables.bucket) return;
+
+    if (scope) {
+      scope.run(runQuery);
+    } else {
+      runQuery();
+    }
+  });
 
   return {
     loading: loadingRet,

@@ -48,13 +48,14 @@ type (
 	}
 
 	Products struct {
-		TargetRelativeRegexp string         `yaml:"targetRelativeRegexp"`
-		TargetRelativeRgx    *regexp.Regexp `yaml:"-"`
-		FullProductProtocol  string         `yaml:"fullProductProtocol"`
-		FullProductRootURL   string         `yaml:"fullProductRootURL"`
-		MaxObjectsAge        time.Duration  `yaml:"maxObjectsAge"`
-		DynamicData          DynamicData    `yaml:"dynamicData"`
-		ImageGroups          []ImageGroup   `yaml:"imageGroups"`
+		TargetRelativeRegexp string          `yaml:"targetRelativeRegexp"`
+		TargetRelativeRgx    *regexp.Regexp  `yaml:"-"`
+		FullProductProtocol  string          `yaml:"fullProductProtocol"`
+		FullProductRootURL   string          `yaml:"fullProductRootURL"`
+		MaxObjectsAge        time.Duration   `yaml:"maxObjectsAge"`
+		DynamicData          DynamicData     `yaml:"dynamicData"`
+		DynamicFilters       []DynamicFilter `yaml:"dynamicFilters"`
+		ImageGroups          []ImageGroup    `yaml:"imageGroups"`
 	}
 
 	Cache struct {
@@ -91,6 +92,11 @@ type (
 		Kind       FileSelectorKind `yaml:"kind"`
 		KindParams []string         `yaml:"-"`
 		Link       bool             `yaml:"link"`
+	}
+
+	DynamicFilter struct {
+		Name       string `yaml:"name"`
+		Expression string `yaml:"expression"`
 	}
 
 	ImageGroup struct {

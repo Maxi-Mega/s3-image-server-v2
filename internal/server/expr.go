@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 
@@ -42,7 +43,8 @@ type exprCacheEntry struct {
 }
 
 type expressionManager struct {
-	cacheDir string
+	cacheDir   string
+	dynFilters map[string]string
 	// map[img group][img type][expr name] -> expr
 	exprs map[string]map[string]map[string]*vm.Program
 	// map[img group][img type] -> selectors
@@ -52,8 +54,13 @@ type expressionManager struct {
 }
 
 func newExpressionManager(cfg config.Config) *expressionManager {
+	dynamicFilters := make(map[string]string, len(cfg.Products.DynamicFilters))
 	exprs := make(map[string]map[string]map[string]*vm.Program)
 	selectors := make(map[string]map[string][]string)
+
+	for _, filter := range cfg.Products.DynamicFilters {
+		dynamicFilters[filter.Name] = filter.Expression
+	}
 
 	for _, group := range cfg.Products.ImageGroups {
 		exprs[group.GroupName] = make(map[string]map[string]*vm.Program)
@@ -67,6 +74,7 @@ func newExpressionManager(cfg config.Config) *expressionManager {
 
 	return &expressionManager{
 		cacheDir:      cfg.Cache.CacheDir,
+		dynFilters:    dynamicFilters,
 		exprs:         exprs,
 		fileSelectors: selectors,
 		cacheSums:     make(map[exprCacheKey]exprCacheEntry),
@@ -277,6 +285,53 @@ func (exprMan *expressionManager) productInfo(ctx context.Context, img image) (*
 	exprMan.updateCache(img.bucket, img.s3Key, types.ExprProductInfo, selectorsSum, &productInformation)
 
 	return &productInformation, nil
+}
+
+func (exprMan *expressionManager) dynamicFilters(ctx context.Context, img image) (map[string]string, error) {
+	dynFilters := make(map[string]string, len(exprMan.dynFilters))
+
+	env := types.ExprEnv{
+		Ctx:   ctx,
+		Files: exprMan.valueMap2FilesMap(img),
+		Exprs: exprMan.exprs[img.imgGroup][img.imgType],
+	}
+	selectorsSum := dynamicFilesChecksum(env.Files)
+
+	for name, exprName := range exprMan.dynFilters {
+		if value, ok := exprMan.getCache(img.bucket, img.s3Key, exprName, selectorsSum); ok {
+			valueStr, ok := value.(string)
+			if ok {
+				dynFilters[name] = valueStr
+			} else {
+				logger.Warnf("filter %q: expected a string result, got %T", name, value)
+
+				dynFilters[name] = fmt.Sprint(value)
+			}
+
+			continue
+		}
+
+		prgm, ok := exprMan.exprs[img.imgGroup][img.imgType][exprName]
+		if !ok {
+			continue
+		}
+
+		output, err := expr.Run(prgm, env)
+		if err != nil {
+			return nil, fmt.Errorf("filter %q: %w", name, err)
+		}
+
+		dynFilters[name], ok = output.(string)
+		if !ok {
+			logger.Warnf("filter %q: expected a string result, got %T", name, output)
+
+			dynFilters[name] = fmt.Sprint(output)
+		}
+
+		// Don't update the cache, since we don't decode the output to the right type.
+	}
+
+	return dynFilters, nil
 }
 
 func (exprMan *expressionManager) signedURLParams(ctx context.Context, img image, paramsExprName string) (map[string]any, error) {

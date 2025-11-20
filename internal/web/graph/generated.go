@@ -42,6 +42,7 @@ type Config struct {
 type ResolverRoot interface {
 	DynamicData() DynamicDataResolver
 	Image() ImageResolver
+	ImageSummary() ImageSummaryResolver
 	Query() QueryResolver
 }
 
@@ -78,15 +79,16 @@ type ComplexityRoot struct {
 	}
 
 	ImageSummary struct {
-		Bucket       func(childComplexity int) int
-		CachedObject func(childComplexity int) int
-		Geonames     func(childComplexity int) int
-		Group        func(childComplexity int) int
-		Key          func(childComplexity int) int
-		Name         func(childComplexity int) int
-		ProductInfo  func(childComplexity int) int
-		Size         func(childComplexity int) int
-		Type         func(childComplexity int) int
+		Bucket         func(childComplexity int) int
+		CachedObject   func(childComplexity int) int
+		DynamicFilters func(childComplexity int) int
+		Geonames       func(childComplexity int) int
+		Group          func(childComplexity int) int
+		Key            func(childComplexity int) int
+		Name           func(childComplexity int) int
+		ProductInfo    func(childComplexity int) int
+		Size           func(childComplexity int) int
+		Type           func(childComplexity int) int
 	}
 
 	Localization struct {
@@ -115,6 +117,9 @@ type DynamicDataResolver interface {
 type ImageResolver interface {
 	CachedFileLinks(ctx context.Context, obj *types.Image) (map[string]any, error)
 	SignedURLs(ctx context.Context, obj *types.Image) (map[string]any, error)
+}
+type ImageSummaryResolver interface {
+	DynamicFilters(ctx context.Context, obj *types.ImageSummary) (map[string]any, error)
 }
 type QueryResolver interface {
 	GetAllImageSummaries(ctx context.Context, from *time.Time, to *time.Time) (types.AllImageSummaries, error)
@@ -236,6 +241,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ImageSummary.CachedObject(childComplexity), true
+	case "ImageSummary.dynamicFilters":
+		if e.complexity.ImageSummary.DynamicFilters == nil {
+			break
+		}
+
+		return e.complexity.ImageSummary.DynamicFilters(childComplexity), true
 	case "ImageSummary.geonames":
 		if e.complexity.ImageSummary.Geonames == nil {
 			break
@@ -461,15 +472,16 @@ type ImageSize {
 }
 
 type ImageSummary {
-    bucket:       String!
-    key:          String!
-    name:         String!
-    group:        String!
-    type:         String!
-    geonames:     Geonames
-    productInfo:  ProductInformation
-    cachedObject: CachedObject!
-    size:         ImageSize!
+    bucket:         String!
+    key:            String!
+    name:           String!
+    group:          String!
+    type:           String!
+    geonames:       Geonames
+    productInfo:    ProductInformation
+    dynamicFilters: Map!
+    cachedObject:   CachedObject!
+    size:           ImageSize!
 }
 
 type Geonames {
@@ -844,6 +856,8 @@ func (ec *executionContext) fieldContext_Image_imageSummary(_ context.Context, f
 				return ec.fieldContext_ImageSummary_geonames(ctx, field)
 			case "productInfo":
 				return ec.fieldContext_ImageSummary_productInfo(ctx, field)
+			case "dynamicFilters":
+				return ec.fieldContext_ImageSummary_dynamicFilters(ctx, field)
 			case "cachedObject":
 				return ec.fieldContext_ImageSummary_cachedObject(ctx, field)
 			case "size":
@@ -1249,6 +1263,35 @@ func (ec *executionContext) fieldContext_ImageSummary_productInfo(_ context.Cont
 				return ec.fieldContext_ProductInformation_summary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProductInformation", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ImageSummary_dynamicFilters(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ImageSummary_dynamicFilters,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.ImageSummary().DynamicFilters(ctx, obj)
+		},
+		nil,
+		ec.marshalNMap2map,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ImageSummary_dynamicFilters(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ImageSummary",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3577,41 +3620,77 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 		case "bucket":
 			out.Values[i] = ec._ImageSummary_bucket(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "key":
 			out.Values[i] = ec._ImageSummary_key(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._ImageSummary_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "group":
 			out.Values[i] = ec._ImageSummary_group(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "type":
 			out.Values[i] = ec._ImageSummary_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "geonames":
 			out.Values[i] = ec._ImageSummary_geonames(ctx, field, obj)
 		case "productInfo":
 			out.Values[i] = ec._ImageSummary_productInfo(ctx, field, obj)
+		case "dynamicFilters":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ImageSummary_dynamicFilters(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "cachedObject":
 			out.Values[i] = ec._ImageSummary_cachedObject(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "size":
 			out.Values[i] = ec._ImageSummary_size(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

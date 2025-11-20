@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -132,6 +133,20 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			return ExprMerge(params[0].(map[string]any), params[1].(map[string]any)), nil //nolint: forcetypeassert // already validated
 		},
 		new(func(o1, o2 map[string]any) (map[string]any, error)),
+	),
+	// Replaces matches of the regex on str with the replacement string.
+	expr.Function(
+		"_replaceRegex",
+		func(params ...any) (any, error) {
+			t0 := time.Now()
+			defer func() {
+				logger.Tracef("[expr] _replaceRegex(%q, %s, %s) took %s", params[0], params[1], params[2], time.Since(t0))
+			}()
+
+			res, err := ExprReplaceRegex(params[0].(string), params[1].(string), params[2].(string)) //nolint: forcetypeassert // already validated
+			return res, wrapErr("_replaceRegex", err)
+		},
+		new(func(str string, regex string, replacement string) (string, error)),
 	),
 	// Returns the S3 path of the file matched by the given file selector.
 	expr.Function(
@@ -359,6 +374,15 @@ func ExprMerge(o1, o2 map[string]any) any {
 	maps.Insert(o1, maps.All(o2))
 
 	return o1
+}
+
+func ExprReplaceRegex(str, regex, replacement string) (string, error) {
+	re, err := regexp.Compile(regex)
+	if err != nil {
+		return "", err //nolint: wrapcheck // wrapped by caller
+	}
+
+	return re.ReplaceAllString(str, replacement), nil
 }
 
 func ExprTitle(value string) string {

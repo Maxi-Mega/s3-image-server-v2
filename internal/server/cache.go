@@ -70,19 +70,25 @@ func (img image) summary(ctx context.Context, name, cacheDir string, exprMan *ex
 		logger.Errorf("Failed to evaluate product information for %q: %v", img.name, err)
 	}
 
+	dynamicFilters, err := exprMan.dynamicFilters(ctx, img)
+	if err != nil {
+		logger.Errorf("Failed to evaluate dynamic filters for %q: %v", img.name, err)
+	}
+
 	imgSize, err := utils.GetImageSize(img.previewCacheKey, cacheDir)
 	if err != nil {
 		logger.Warnf("Failed to get image size of %q: %v", img.previewCacheKey, err)
 	}
 
 	return types.ImageSummary{
-		Bucket:      img.bucket,
-		Key:         name,
-		Name:        displayName,
-		Group:       img.imgGroup,
-		Type:        img.imgType,
-		Geonames:    geonames,
-		ProductInfo: productInfo,
+		Bucket:         img.bucket,
+		Key:            name,
+		Name:           displayName,
+		Group:          img.imgGroup,
+		Type:           img.imgType,
+		Geonames:       geonames,
+		ProductInfo:    productInfo,
+		DynamicFilters: dynamicFilters,
 		CachedObject: types.CachedObject{
 			LastModified: img.lastModified,
 			CacheKey:     img.previewCacheKey,

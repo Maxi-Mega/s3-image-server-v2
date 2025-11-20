@@ -15,6 +15,7 @@ import (
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/web/graph"
+	"github.com/Maxi-Mega/s3-image-server-v2/utils"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -70,6 +71,7 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),  //nolint: gosec
 		PMTilesURL:             cfg.UI.Map.PMTilesURL,
 		PMTilesStyleURL:        cfg.UI.Map.PMTilesStyleURL,
+		DynamicFilters:         utils.Map(cfg.Products.DynamicFilters, func(f config.DynamicFilter) string { return f.Name }),
 	}
 
 	err = mapstructure.Decode(cfg.Products.ImageGroups, &staticInfo.ImageGroups)

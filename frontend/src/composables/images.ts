@@ -93,7 +93,7 @@ export function formatGeonames(geonames: Geonames | null): string {
 
   let final = "";
 
-  if (geonames && geonames.objects) {
+  if (geonames && geonames.objects && geonames.objects.length > 0) {
     // @ts-expect-error no worries
     final += geonames.objects[0].name;
     // @ts-expect-error no worries

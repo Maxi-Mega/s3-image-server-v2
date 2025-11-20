@@ -2,9 +2,10 @@ import type { EventData } from "@/composables/events";
 import { compareSummaries, type GqlImage, processImage } from "@/composables/images";
 import { type ImageQueryResult, useImageQuery } from "@/composables/queries.ts";
 import type { Image, ImageSummary } from "@/models/image";
+import { useFilterStore } from "@/stores/filters.ts";
 import { useDebounceFn, type UseDebounceFnReturn } from "@vueuse/core";
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { type EffectScope, ref } from "vue";
 
 export const useImageStore = defineStore("images", {
   state: () => {
@@ -22,6 +23,9 @@ export const useImageStore = defineStore("images", {
     populateSummaries(summaries: ImageSummary[]): void {
       this.allSummaries = summaries.sort(compareSummaries);
       this.filteredCount = this.allSummaries.length;
+
+      const filterStore = useFilterStore();
+      summaries.forEach((summary) => filterStore.addFilterOptions(summary.dynamicFilters));
     },
     findImage(bucket: string, key: string): Image | undefined {
       return this.allImages.find(
@@ -50,6 +54,8 @@ export const useImageStore = defineStore("images", {
         this.allSummaries[summaryIdx] = image.imageSummary;
       }
 
+      useFilterStore().addFilterOptions(image.imageSummary.dynamicFilters);
+
       return this.allImages[idx] as Image;
     },
     handleImageDetailsResult(gqlImage: GqlImage | null, debounceID?: [string, string]): void {
@@ -63,15 +69,16 @@ export const useImageStore = defineStore("images", {
 
       this.updateImage(processImage(gqlImage));
     },
-    requestImageDetails(bucket: string, key: string): void {
-      const { onResult } = useImageQuery({ bucket: bucket, name: key });
+    requestImageDetails(bucket: string, key: string, scope: EffectScope | undefined): void {
+      const { onResult } = useImageQuery({ bucket: bucket, name: key }, scope);
       onResult((gqlImage: GqlImage | null) => this.handleImageDetailsResult(gqlImage));
     },
-    handleEvent(event: EventData): void {
+    handleEvent(event: EventData, scope: EffectScope | undefined): void {
       if (event.eventType === "ObjectCreated") {
         const { added, updated, needsDebounceUpdate } = handleCreateEvent(event, this.allSummaries);
         if (added) {
           this.allSummaries.push(added);
+          useFilterStore().addFilterOptions(added.dynamicFilters);
         } else if (updated) {
           this.allSummaries[
             findSummaryIndex(event.imageBucket, event.imageKey, this.allSummaries)
@@ -84,7 +91,7 @@ export const useImageStore = defineStore("images", {
             debouncingQuery();
           } else {
             const debouncedQuery = useDebounceFn(
-              () => useImageQuery({ bucket: event.imageBucket, name: event.imageKey }),
+              () => useImageQuery({ bucket: event.imageBucket, name: event.imageKey }, scope),
               1000
             );
             debouncedQuery().then((result: ImageQueryResult) => {

@@ -16,6 +16,7 @@ export class ImageSummary {
   type: string;
   geonames: Geonames | null;
   productInfo: ProductInformation | null;
+  dynamicFilters: Record<string, string>;
   cachedObject: CachedObject;
   size: ImageSize;
 
@@ -30,6 +31,7 @@ export class ImageSummary {
     type: string,
     geonames: Geonames | null,
     productInfo: ProductInformation | null,
+    dynamicFilters: Record<string, string>,
     cachedObject: CachedObject,
     size: ImageSize,
     hasBeenUpdated: boolean,
@@ -42,6 +44,7 @@ export class ImageSummary {
     this.type = type;
     this.geonames = geonames;
     this.productInfo = productInfo;
+    this.dynamicFilters = dynamicFilters;
     this.cachedObject = cachedObject;
     this.size = size;
     this._hasBeenUpdated = hasBeenUpdated;

@@ -67,7 +67,7 @@ function handleToggle(ev: Event, group: string, type?: string): void {
     </button>
     <!-- Group's types -->
     <div
-      class="hs-dropdown-menu duration hs-dropdown-open:opacity-100 mt-2 hidden min-w-60 divide-neutral-700 rounded-lg border border-neutral-700 bg-neutral-800 p-2 opacity-0 shadow-md transition-[opacity,margin] before:absolute before:start-0 before:-top-4 before:h-4 before:w-full after:absolute after:start-0 after:-bottom-4 after:h-4 after:w-full"
+      class="hs-dropdown-menu duration hs-dropdown-open:opacity-100 mt-2 hidden max-h-full min-w-60 divide-neutral-700 overflow-auto rounded-lg border border-neutral-700 bg-neutral-800 p-2 opacity-0 shadow-md transition-[opacity,margin] before:absolute before:start-0 before:-top-4 before:h-4 before:w-full"
     >
       <div
         v-for="type in group.types"

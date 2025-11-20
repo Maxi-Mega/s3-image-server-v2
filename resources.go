@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"io"
@@ -21,6 +22,8 @@ func printSampleConfig(w io.Writer) error {
 }
 
 func printDocumentation(w io.Writer) error {
-	_, err := fmt.Fprintln(w, string(exprDoc))
+	docStart := bytes.IndexByte(exprDoc, '\n') + 2 // skip the first two lines (comment)
+	_, err := fmt.Fprintln(w, string(exprDoc[docStart:]))
+
 	return err //nolint:wrapcheck
 }

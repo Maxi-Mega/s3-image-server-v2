@@ -44,6 +44,9 @@ products:
         {
           "title": _call("productTitle"),
         }
+  dynamicFilters:
+    - name: "Title"
+      expression: "productTitle"
   imageGroups:
     - groupName: "Group 1"
       bucket: "group-1"

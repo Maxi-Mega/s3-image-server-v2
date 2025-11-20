@@ -78,7 +78,7 @@ func (op *objectTemporizer) goTemporize(ctx context.Context) {
 func (op *objectTemporizer) handleEvent(ctx context.Context, event s3Event) {
 	objDir := path.Dir(event.ObjectKey)
 
-	if match, baseDir := op.cache.matchesEntry(event.Bucket, objDir); match {
+	if match, baseDir := op.cache.matchesEntry(event.Bucket, objDir+"/"); match {
 		evt, ok := op.computeEvent(event, baseDir)
 		if ok {
 			go op.cache.handleEvent(ctx, evt)
