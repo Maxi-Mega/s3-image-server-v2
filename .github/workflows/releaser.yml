@@ -55,5 +55,5 @@ jobs:
         with:
           name: "Version ${{ github.ref_name }}"
           draft: true
-          artifacts: "${{ env.ARCHIVE }}.xz"
+          artifacts: "${{ env.ARCHIVE }}"
           makeLatest: true

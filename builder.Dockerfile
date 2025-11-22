@@ -22,7 +22,8 @@ RUN apk update && apk add --no-cache \
     nodejs \
     npm \
     git \
-    bash
+    bash \
+    upx
 
 RUN npm install -g corepack
 RUN corepack enable
