@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:    # allow manual runs
+
+permissions:
+  contents: write
+
+env:
+  IMAGE_NAME: s3-image-server-builder
+  REGISTRY: ghcr.io
 
 jobs:
   draft-release:
@@ -13,36 +21,39 @@ jobs:
       contents: write
 
     steps:
-      - name: Setup env
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "BINARY_FILENAME=S3ImageServerV2-${VERSION}" >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      - uses: actions/checkout@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Build image (linux/amd64) and load to local docker
+        uses: docker/build-push-action@v6
         with:
-          go-version: "1.25"
+          context: .
+          file: ./builder.Dockerfile
+          platforms: linux/amd64
+          load: true
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 25
-
-      - name: Build
-        env:
-          BASE_URL: "/"
+      - name: Save Docker image to tar
         run: |
-          yarn install
-          ./build.sh ${{ env.VERSION }}
-          strip ${{ env.BINARY_FILENAME }}
-          xz ${{ env.BINARY_FILENAME }}
+          IMAGE="${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          TAR="${{ env.IMAGE_NAME }}-${{ github.ref_name }}.tar"
+          docker image save "$IMAGE" -o "$TAR"
+          gzip -9 "$TAR"
+          echo "ARCHIVE=${TAR}.gz" >> $GITHUB_ENV
 
       - name: Create release draft
         uses: ncipollo/release-action@v1
         with:
-          name: "Version ${{ env.VERSION }}"
+          name: "Version ${{ github.ref_name }}"
           draft: true
-          artifacts: "${{ env.BINARY_FILENAME }}.xz"
+          artifacts: "${{ env.ARCHIVE }}.xz"
           makeLatest: true

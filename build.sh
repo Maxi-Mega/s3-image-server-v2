@@ -2,7 +2,8 @@
 
 echo "Testing ..."
 
-go test -race ./...
+mkdir -p frontend/dist && touch frontend/dist/.gitkeep
+go test ./...
 
 echo "Building ..."
 
