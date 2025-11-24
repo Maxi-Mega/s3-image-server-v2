@@ -1,6 +1,6 @@
 {
   "name": "s3-image-server-v2-front",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,7 +32,7 @@
     "postcss-import": "^16.1.1",
     "preline": "3.2.3",
     "reflect-metadata": "^0.2.2",
-    "vue": "^3.5.24",
+    "vue": "^3.5.25",
     "vue-router": "^4.6.3"
   },
   "devDependencies": {
@@ -59,7 +59,7 @@
     "typescript-eslint": "^8.47.0",
     "vite": "^7.2.4",
     "vite-plugin-vue-devtools": "^8.0.5",
-    "vue-tsc": "^3.1.4"
+    "vue-tsc": "^3.1.5"
   },
   "packageManager": "yarn@4.11.0"
 }

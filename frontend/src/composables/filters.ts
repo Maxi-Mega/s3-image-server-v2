@@ -1,4 +1,4 @@
-import { compareSummaries } from "@/composables/images";
+import { compareSummaries, formatDate } from "@/composables/images";
 import type { ImageSummary } from "@/models/image";
 
 export function applyFilters(
@@ -26,7 +26,10 @@ export function applyFilters(
   if (search) {
     search = search.toLowerCase();
     filtered = filtered.filter(
-      (img) => img.name.toLowerCase().includes(search) || img.key.toLowerCase().includes(search)
+      (img) =>
+        img.name.toLowerCase().includes(search) ||
+        img.key.toLowerCase().includes(search) ||
+        formatDate(img._lastModified).includes(search)
     );
   }
 
