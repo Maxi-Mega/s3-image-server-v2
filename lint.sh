@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-LINTER_VERSION=v2.6.2-alpine
+LINTER_VERSION=v2.7.2-alpine
 
 if docker volume ls | grep -q s3-image-server-pkg-cache; then
     GO_PKG_CACHE="-v s3-image-server-pkg-cache:/go/pkg"

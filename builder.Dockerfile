@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.19
 
-FROM golang:1.25-alpine3.22 AS backend-builder
+FROM golang:1.25-alpine3.23 AS backend-builder
 
 WORKDIR /go/src/app
 
@@ -9,7 +9,7 @@ COPY --exclude=frontend . .
 RUN go mod download
 RUN go generate ./...
 
-FROM golang:1.25-alpine3.22
+FROM golang:1.25-alpine3.23
 
 COPY --from=backend-builder /go/pkg /go/pkg
 
