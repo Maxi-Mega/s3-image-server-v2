@@ -15,10 +15,44 @@ const filterValues = computed(() =>
 onMounted(() => {
   window.HSStaticMethods.autoInit("dropdown");
 });
+
+function toggleAll(ev: Event) {
+  const checked = (ev.target as HTMLInputElement).checked;
+  filterStore.setAllFilterValues(props.filter, checked);
+  document
+    .querySelectorAll(`input[type=checkbox][filter='${props.filter}']`)
+    .forEach((el: HTMLInputElement) => (el.checked = checked));
+}
+
+function toggleOne(ev: Event, value: string) {
+  filterStore.toggleFilterValue(props.filter, value);
+  const mainCheckbox = document.getElementById(
+    `hs-checked-checkbox-filter-${props.filter}`
+  ) as HTMLInputElement;
+  const subCheckboxes = Array.from(
+    document.querySelectorAll("input[type=checkbox][filter]")
+  ) as Array<HTMLInputElement>;
+  if (subCheckboxes.every((input) => input.checked)) {
+    mainCheckbox.indeterminate = false;
+    mainCheckbox.checked = true;
+  } else if (subCheckboxes.every((input) => !input.checked)) {
+    mainCheckbox.indeterminate = false;
+    mainCheckbox.checked = false;
+  } else {
+    mainCheckbox.indeterminate = true;
+  }
+}
 </script>
 
 <template>
   <div class="hs-dropdown relative inline-flex flex-nowrap items-center [--auto-close:inside]">
+    <input
+      :id="`hs-checked-checkbox-filter-${filter}`"
+      type="checkbox"
+      class="img-group mt-0.5 shrink-0 rounded border-neutral-700 bg-neutral-800 text-blue-600 checked:border-blue-500 checked:bg-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800 disabled:pointer-events-none disabled:opacity-50"
+      :checked="true"
+      @click="toggleAll($event)"
+    />
     <button
       class="hs-dropdown-toggle ml-1 flex w-full cursor-pointer items-center text-lg font-medium text-gray-200 hover:text-gray-100 focus:text-gray-100"
       type="button"
@@ -39,7 +73,8 @@ onMounted(() => {
           type="checkbox"
           class="img-type mt-0.5 shrink-0 rounded border-neutral-700 bg-neutral-800 text-blue-600 checked:border-blue-500 checked:bg-blue-500 focus:ring-blue-500 focus:ring-offset-gray-800 disabled:pointer-events-none disabled:opacity-50"
           :checked="true"
-          @click="filterStore.toggleFilterValue(filter, value)"
+          :filter="filter"
+          @click="toggleOne($event, value)"
         />
         <label :for="`hs-filter-checkbox-${value}`" class="ms-3 text-base text-gray-400">
           {{ value }}

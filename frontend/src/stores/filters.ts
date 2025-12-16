@@ -44,6 +44,13 @@ export const useFilterStore = defineStore("filters", {
         }
       }
     },
+    setAllFilterValues(filter: string, checked: boolean) {
+      if (this.checkedFilters[filter]) {
+        Object.keys(this.checkedFilters[filter]).forEach(
+          (value) => (this.checkedFilters[filter][value] = checked)
+        );
+      }
+    },
     toggleFilterValue(filter: string, value: string) {
       if (this.checkedFilters[filter]) {
         this.checkedFilters[filter][value] = !this.checkedFilters[filter][value];
