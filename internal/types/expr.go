@@ -236,9 +236,26 @@ func (ExprEnvInjector) Visit(node *ast.Node) {
 
 	if callNode, ok := (*node).(*ast.CallNode); ok {
 		if callee, ok := callNode.Callee.(*ast.IdentifierNode); ok && funcsWithEnv[callee.Value] {
-			arity := callee.Type().NumIn()
-			if arity == 0 || callee.Type().In(arity-1) != reflect.TypeFor[ExprEnv]() {
+			calleeType := callee.Type()
+			arity := calleeType.NumIn()
+
+			if arity == 0 || calleeType.In(arity-1) != reflect.TypeFor[ExprEnv]() {
 				callNode.Arguments = append(callNode.Arguments, &ast.IdentifierNode{Value: "$env"})
+				// Update the function signature to take the new ExprEnv parameter
+				newIn := make([]reflect.Type, arity+1)
+				newOut := make([]reflect.Type, calleeType.NumOut())
+
+				for i := range arity {
+					newIn[i] = calleeType.In(i)
+				}
+
+				newIn[arity] = reflect.TypeFor[ExprEnv]()
+
+				for o := range calleeType.NumOut() {
+					newOut[o] = calleeType.Out(o)
+				}
+
+				callee.SetType(reflect.FuncOf(newIn, newOut, calleeType.IsVariadic()))
 			}
 		}
 	}
