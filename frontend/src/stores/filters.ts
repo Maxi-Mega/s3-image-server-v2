@@ -47,7 +47,8 @@ export const useFilterStore = defineStore("filters", {
     setAllFilterValues(filter: string, checked: boolean) {
       if (this.checkedFilters[filter]) {
         Object.keys(this.checkedFilters[filter]).forEach(
-          (value) => (this.checkedFilters[filter][value] = checked)
+          //@ts-expect-error we are setting the value so we don't care it's undefined
+          (value: string) => (this.checkedFilters[filter][value] = checked)
         );
       }
     },

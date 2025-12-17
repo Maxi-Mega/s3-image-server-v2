@@ -1,6 +1,6 @@
 {
   "name": "s3-image-server-v2-front",
-  "version": "2.2.4",
+  "version": "2.2.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -40,7 +40,7 @@
     "@rushstack/eslint-patch": "^1.15.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tsconfig/node20": "^20.1.8",
-    "@types/node": "^25.0.2",
+    "@types/node": "^25.0.3",
     "@vitejs/plugin-vue": "^6.0.3",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",

@@ -140,7 +140,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		func(params ...any) (any, error) {
 			t0 := time.Now()
 			defer func() {
-				logger.Tracef("[expr] _replaceRegex(%q, %s, %s) took %s", params[0], params[1], params[2], time.Since(t0))
+				logger.Tracef("[expr] _replaceRegex(%q, %q, %q) took %s", params[0], params[1], params[2], time.Since(t0))
 			}()
 
 			res, err := ExprReplaceRegex(params[0].(string), params[1].(string), params[2].(string)) //nolint: forcetypeassert // already validated
@@ -188,7 +188,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 				logger.Tracef("[expr] _xpath(%q, ...) took %s", params[0], time.Since(t0))
 			}()
 
-			file, err := fileFromSelector(params[0], params[1])
+			file, err := fileFromSelector(params[0], params[2])
 			if err != nil {
 				return nil, wrapErr("_xpath", err)
 			}

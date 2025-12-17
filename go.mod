@@ -3,7 +3,7 @@ module github.com/Maxi-Mega/s3-image-server-v2
 go 1.25
 
 require (
-	github.com/99designs/gqlgen v0.17.84
+	github.com/99designs/gqlgen v0.17.85
 	github.com/antchfx/xmlquery v1.5.0
 	github.com/expr-lang/expr v1.17.7
 	github.com/gin-contrib/cors v1.7.6
@@ -72,11 +72,11 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/tools v0.39.0 // indirect
+	golang.org/x/tools v0.40.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 

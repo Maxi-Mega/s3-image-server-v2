@@ -21,7 +21,7 @@ function toggleAll(ev: Event) {
   filterStore.setAllFilterValues(props.filter, checked);
   document
     .querySelectorAll(`input[type=checkbox][filter='${props.filter}']`)
-    .forEach((el: HTMLInputElement) => (el.checked = checked));
+    .forEach((el: Element) => ((el as HTMLInputElement).checked = checked));
 }
 
 function toggleOne(ev: Event, value: string) {

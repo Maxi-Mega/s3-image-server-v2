@@ -23,6 +23,9 @@ jobs:
       - name: Test
         run: go test -v ./...
 
+      - name: Test with race detection
+        run: go test -race -v ./...
+
   lint:
     runs-on: ubuntu-latest
     steps:
