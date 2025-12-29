@@ -1,4 +1,5 @@
 package utils //nolint: revive,nolintlint
+
 import "slices"
 
 func Map[I, O any](s []I, fn func(I) O) []O {

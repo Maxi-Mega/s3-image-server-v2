@@ -42,7 +42,7 @@ func TestExprFunctions(t *testing.T) {
 	slices.Sort(exprFuncNames)
 
 	if diff := cmp.Diff(expectedFuncNames, exprFuncNames); diff != "" {
-		t.Errorf("Expr functions don't match test cases (-want +got):\n%s", diff)
+		t.Errorf("Tested expr functions don't match declared ones (-want +got):\n%s", diff)
 	}
 
 	expressions, err := parseExpressions(exprByFunc)
@@ -92,7 +92,7 @@ func TestExprFunctions(t *testing.T) {
 			t.Fatalf("expr %q: %v", name, err)
 		}
 
-		if diff := cmp.Diff(output, expectedOutputs[name]); diff != "" {
+		if diff := cmp.Diff(expectedOutputs[name], output); diff != "" {
 			t.Errorf("expr %q: unexpected output (-want +got):\n%s", name, diff)
 		}
 	}

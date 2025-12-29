@@ -178,6 +178,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 
 			return ExprTitle(params[0].(string)), nil //nolint: forcetypeassert // already validated
 		},
+		new(func(str string) (string, error)),
 	),
 	// Returns the result of the given xpath expression on the file matched by the given file selector.
 	expr.Function(

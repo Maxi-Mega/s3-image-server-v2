@@ -44,6 +44,12 @@ _Returns the S3 path of the file matched by the given file selector._
 
 `_s3Key(fileSelector string) (string, error)`
 
+## _title
+
+_Returns the titled version of the given string (first letter uppercase, rest lowercase, spaces replaced by underscores)._
+
+`_title(str string) (string, error)`
+
 ## _xpath
 
 _Returns the result of the given xpath expression on the file matched by the given file selector._
