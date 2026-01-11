@@ -34,13 +34,17 @@ if [[ -z $BASE_URL ]]; then
 fi
 set -u
 
+echo "Generating ..."
+
+go generate ./...
+cp resources/*.md frontend/doc
+
 echo "Building front-end with base URL '$BASE_URL' ..."
 
 (cd frontend && yarn build --base="$BASE_URL" --minify="$MINIFY" && touch dist/.gitkeep)
 
 echo "Building binary ..."
 
-go generate ./...
 go build -ldflags="-X 'main.version=$VERSION' -X 'main.buildTime=$BUILD_TIME' -X 'main.prod=$PROD' -extldflags=-static" -tags osusergo,netgo -o "$BINARY_FILENAME" .
 
 $PROD && echo "Compressing binary ..." && upx --best "$BINARY_FILENAME" # Only compress when building for prod

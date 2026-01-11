@@ -35,6 +35,7 @@ func (srv *Server) defineRoutes(prod bool) error {
 	// Frontend
 	front := r.Use(metricsMiddleware(srv.gatherer, endpointFront))
 	front.GET("/", srv.frontHandler)
+	front.GET("/doc", srv.frontHandler)
 	front.GET("/favicon.ico", srv.frontHandler)
 	front.StaticFS("/assets", http.FS(srv.assetsFS))
 

@@ -1,6 +1,6 @@
 {
   "name": "s3-image-server-v2-front",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "private": true,
   "type": "module",
   "scripts": {
@@ -32,6 +32,7 @@
     "postcss-import": "^16.1.1",
     "preline": "3.2.3",
     "reflect-metadata": "^0.2.2",
+    "unplugin-vue-markdown": "^29.2.0",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4"
   },

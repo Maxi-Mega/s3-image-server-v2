@@ -49,9 +49,14 @@ const filterStore = useFilterStore();
         @change="filterStore.setGlobalSizes"
       />
     </div>
-    <p class="min-w-fit pl-2 text-center text-base text-gray-200">
+    <a
+      class="min-w-fit pl-2 text-center text-base text-gray-200"
+      href="doc"
+      target="_blank"
+      title="Click to open the documentation"
+    >
       {{ staticInfo.staticInfo.softwareVersion }}
-    </p>
+    </a>
   </div>
 </template>
 
