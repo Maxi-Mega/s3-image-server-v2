@@ -48,7 +48,9 @@ function handleToggle(ev: Event, group: string, type?: string): void {
 </script>
 
 <template>
-  <div class="hs-dropdown relative inline-flex flex-nowrap items-center [--auto-close:inside]">
+  <div
+    class="hs-dropdown relative inline-flex flex-nowrap items-center gap-x-1 [--auto-close:inside]"
+  >
     <input
       :id="`hs-checked-checkbox-${group.name}`"
       type="checkbox"

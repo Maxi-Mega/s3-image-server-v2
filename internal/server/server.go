@@ -105,7 +105,7 @@ func (srv *Server) startPollingS3(ctx context.Context) error {
 	for _, bucket := range srv.buckets {
 		logger.Tracef("Starting to poll bucket %q", bucket)
 
-		err := srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan)
+		err := srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan, pollingPeriod)
 		if err != nil {
 			return err //nolint:wrapcheck
 		}
@@ -114,7 +114,7 @@ func (srv *Server) startPollingS3(ctx context.Context) error {
 			for {
 				select {
 				case <-time.After(pollingPeriod):
-					err := srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan)
+					err := srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan, pollingPeriod)
 					if err != nil {
 						logger.Errorf("Failed to poll bucket %q: %v", bucket, err)
 					}
@@ -137,7 +137,7 @@ func (srv *Server) subscribeToS3(ctx context.Context) error {
 			return err //nolint:wrapcheck
 		}
 
-		err = srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan)
+		err = srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan, time.Minute)
 		if err != nil {
 			return err //nolint:wrapcheck
 		}

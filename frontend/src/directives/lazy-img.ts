@@ -1,4 +1,3 @@
-// src/directives/lazy-img.ts
 import type { Directive } from "vue";
 
 type Value = {

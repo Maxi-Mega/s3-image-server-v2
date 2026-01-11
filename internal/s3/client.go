@@ -23,7 +23,7 @@ import (
 
 const (
 	healthCheckTimeout    = 5 * time.Second
-	pollBucketTimeout     = 2 * time.Minute
+	maxPollBucketTimeout  = 2 * time.Minute
 	downloadObjectTimeout = 30 * time.Second
 	SignedURLLifetime     = 7 * 24 * time.Hour
 )
@@ -35,7 +35,7 @@ var (
 type Client interface {
 	BucketExists(ctx context.Context, bucket string) (bool, error)
 	SubscribeToBucket(ctx context.Context, bucket string, s3Chan chan Event) error
-	PollOnce(ctx context.Context, bucket string, s3Chan chan Event) error
+	PollOnce(ctx context.Context, bucket string, s3Chan chan Event, timeout time.Duration) error
 	DownloadObject(ctx context.Context, bucket, objectKey, destPath string) error
 	GenerateSignedURL(ctx context.Context, bucket, objectKey string) (*url.URL, error)
 }
@@ -165,10 +165,10 @@ func (s3 s3Client) SubscribeToBucket(ctx context.Context, bucket string, s3Chan 
 	return nil
 }
 
-func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Event) error {
+func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Event, timeout time.Duration) error {
 	logger.Debugf("Polling bucket %q ...", bucket)
 
-	ctx, cancel := context.WithTimeout(ctx, pollBucketTimeout)
+	ctx, cancel := context.WithTimeout(ctx, min(timeout, maxPollBucketTimeout))
 	defer cancel()
 
 	commonPrefix := s3.specificInfoPerBucket[bucket].commonPrefix

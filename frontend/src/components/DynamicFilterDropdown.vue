@@ -45,7 +45,9 @@ function toggleOne(ev: Event, value: string) {
 </script>
 
 <template>
-  <div class="hs-dropdown relative inline-flex flex-nowrap items-center [--auto-close:inside]">
+  <div
+    class="hs-dropdown relative inline-flex flex-nowrap items-center gap-x-1 [--auto-close:inside]"
+  >
     <input
       :id="`hs-checked-checkbox-filter-${filter}`"
       type="checkbox"
