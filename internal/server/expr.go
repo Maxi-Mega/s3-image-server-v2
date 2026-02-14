@@ -53,6 +53,11 @@ type expressionManager struct {
 	cacheSums     map[exprCacheKey]exprCacheEntry
 }
 
+type envFilesPrecomputed struct {
+	checksum string
+	files    map[string]types.DynamicInputFile
+}
+
 func newExpressionManager(cfg config.Config) *expressionManager {
 	dynamicFilters := make(map[string]string, len(cfg.Products.DynamicFilters))
 	exprs := make(map[string]map[string]map[string]*vm.Program)
@@ -141,18 +146,26 @@ func (exprMan *expressionManager) productBasePath(ctx context.Context, imgGroup,
 	return basePath, nil
 }
 
-func (exprMan *expressionManager) imageGeonames(ctx context.Context, img image) (*types.Geonames, error) {
+func (exprMan *expressionManager) imageGeonames(ctx context.Context, img image, precomputedFiles *envFilesPrecomputed) (*types.Geonames, error) {
 	geoExpr, found := exprMan.exprs[img.imgGroup][img.imgType][types.ExprGeonames]
 	if !found {
 		return nil, nil //nolint: nilnil
 	}
 
+	var selectorsSum string
+
 	env := types.ExprEnv{
 		Ctx:   ctx,
-		Files: exprMan.valueMap2FilesMap(img),
 		Exprs: exprMan.exprs[img.imgGroup][img.imgType],
 	}
-	selectorsSum := dynamicFilesChecksum(env.Files)
+
+	if precomputedFiles != nil {
+		env.Files = precomputedFiles.files
+		selectorsSum = precomputedFiles.checksum
+	} else {
+		env.Files = exprMan.valueMap2FilesMap(img)
+		selectorsSum = dynamicFilesChecksum(env.Files)
+	}
 
 	if value, ok := exprMan.getCache(img.bucket, img.s3Key, types.ExprGeonames, selectorsSum); ok {
 		return value.(*types.Geonames), nil //nolint: forcetypeassert
@@ -241,18 +254,26 @@ func (exprMan *expressionManager) imageLocalization(ctx context.Context, img ima
 	return &localization, nil
 }
 
-func (exprMan *expressionManager) productInfo(ctx context.Context, img image) (*types.ProductInformation, error) {
+func (exprMan *expressionManager) productInfo(ctx context.Context, img image, precomputedFiles *envFilesPrecomputed) (*types.ProductInformation, error) {
 	locExpr, found := exprMan.exprs[img.imgGroup][img.imgType][types.ExprProductInfo]
 	if !found {
 		return nil, nil //nolint: nilnil
 	}
 
+	var selectorsSum string
+
 	env := types.ExprEnv{
 		Ctx:   ctx,
-		Files: exprMan.valueMap2FilesMap(img),
 		Exprs: exprMan.exprs[img.imgGroup][img.imgType],
 	}
-	selectorsSum := dynamicFilesChecksum(env.Files)
+
+	if precomputedFiles != nil {
+		env.Files = precomputedFiles.files
+		selectorsSum = precomputedFiles.checksum
+	} else {
+		env.Files = exprMan.valueMap2FilesMap(img)
+		selectorsSum = dynamicFilesChecksum(env.Files)
+	}
 
 	if value, ok := exprMan.getCache(img.bucket, img.s3Key, types.ExprProductInfo, selectorsSum); ok {
 		return value.(*types.ProductInformation), nil //nolint: forcetypeassert
@@ -287,15 +308,23 @@ func (exprMan *expressionManager) productInfo(ctx context.Context, img image) (*
 	return &productInformation, nil
 }
 
-func (exprMan *expressionManager) dynamicFilters(ctx context.Context, img image) (map[string]string, error) {
+func (exprMan *expressionManager) dynamicFilters(ctx context.Context, img image, precomputedFiles *envFilesPrecomputed) (map[string]string, error) {
 	dynFilters := make(map[string]string, len(exprMan.dynFilters))
+
+	var selectorsSum string
 
 	env := types.ExprEnv{
 		Ctx:   ctx,
-		Files: exprMan.valueMap2FilesMap(img),
 		Exprs: exprMan.exprs[img.imgGroup][img.imgType],
 	}
-	selectorsSum := dynamicFilesChecksum(env.Files)
+
+	if precomputedFiles != nil {
+		env.Files = precomputedFiles.files
+		selectorsSum = precomputedFiles.checksum
+	} else {
+		env.Files = exprMan.valueMap2FilesMap(img)
+		selectorsSum = dynamicFilesChecksum(env.Files)
+	}
 
 	for name, exprName := range exprMan.dynFilters {
 		if value, ok := exprMan.getCache(img.bucket, img.s3Key, exprName, selectorsSum); ok {
@@ -364,6 +393,16 @@ func (exprMan *expressionManager) signedURLParams(ctx context.Context, img image
 	exprMan.updateCache(img.bucket, img.s3Key, paramsExprName, selectorsSum, outputMap)
 
 	return outputMap, nil
+}
+
+func (exprMan *expressionManager) precomputeDynamicFiles(img image) envFilesPrecomputed {
+	files := exprMan.valueMap2FilesMap(img)
+	checksum := dynamicFilesChecksum(files)
+
+	return envFilesPrecomputed{
+		checksum: checksum,
+		files:    files,
+	}
 }
 
 func (exprMan *expressionManager) valueMap2FilesMap(img image) map[string]types.DynamicInputFile {

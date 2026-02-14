@@ -93,14 +93,20 @@ func NewClient(cfg config.Config) (Client, error) {
 		}
 	}
 
+	specificInfoPerBucket := make(map[string]bucketSpecificInfo, len(prefixesPerBucket))
 	commonPrefixPerBucket := make(map[string]string, len(prefixesPerBucket))
 
 	for bucket, prefixes := range prefixesPerBucket {
-		commonPrefixPerBucket[bucket] = utils.CommonPrefix(prefixes...)
+		commonPrefix := utils.CommonPrefix(prefixes...)
+		specificInfoPerBucket[bucket] = bucketSpecificInfo{
+			commonPrefix: commonPrefix,
+		}
+		commonPrefixPerBucket[bucket] = commonPrefix
 	}
 
 	return s3Client{
 		productsCfg:             cfg.Products,
+		specificInfoPerBucket:   specificInfoPerBucket,
 		commonPrefixesPerBucket: commonPrefixPerBucket,
 		client:                  client,
 	}, nil

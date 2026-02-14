@@ -13,7 +13,7 @@ export const useImageStore = defineStore("images", {
       allSummaries: ref<ImageSummary[]>([]),
       allImages: ref<Image[]>([]),
       filteredCount: 0,
-      bouncingQueries: new Map<[string, string], UseDebounceFnReturn<() => ImageQueryResult>>(),
+      bouncingQueries: new Map<string, UseDebounceFnReturn<() => ImageQueryResult>>(),
     };
   },
   getters: {
@@ -58,13 +58,13 @@ export const useImageStore = defineStore("images", {
 
       return this.allImages[idx] as Image;
     },
-    handleImageDetailsResult(gqlImage: GqlImage | null, debounceID?: [string, string]): void {
+    handleImageDetailsResult(gqlImage: GqlImage | null, debounceKey?: string): void {
       if (!gqlImage || !gqlImage.getImage) {
         return;
       }
 
-      if (debounceID) {
-        this.bouncingQueries.delete(debounceID);
+      if (debounceKey) {
+        this.bouncingQueries.delete(debounceKey);
       }
 
       this.updateImage(processImage(gqlImage));
@@ -86,7 +86,9 @@ export const useImageStore = defineStore("images", {
         }
 
         if (needsDebounceUpdate) {
-          const debouncingQuery = this.bouncingQueries.get([event.imageBucket, event.imageKey]);
+          const debouncingQuery = this.bouncingQueries.get(
+            bouncingQueryKey(event.imageBucket, event.imageKey)
+          );
           if (debouncingQuery) {
             debouncingQuery();
           } else {
@@ -95,11 +97,19 @@ export const useImageStore = defineStore("images", {
               1000
             );
             debouncedQuery().then((result: ImageQueryResult) => {
-              result.onResult((gqlImage: GqlImage | null) =>
-                this.handleImageDetailsResult(gqlImage, [event.imageBucket, event.imageKey])
-              );
+              if (result) {
+                result.onResult((gqlImage: GqlImage | null) =>
+                  this.handleImageDetailsResult(
+                    gqlImage,
+                    bouncingQueryKey(event.imageBucket, event.imageKey)
+                  )
+                );
+              }
             });
-            this.bouncingQueries.set([event.imageBucket, event.imageKey], debouncedQuery);
+            this.bouncingQueries.set(
+              bouncingQueryKey(event.imageBucket, event.imageKey),
+              debouncedQuery
+            );
           }
         }
       } else if (event.eventType === "ObjectRemoved") {
@@ -184,4 +194,8 @@ function handleRemoveEvent(
 
   // @ts-expect-error no worries
   return { updated: summaries[summaryIdx], remove: false };
+}
+
+function bouncingQueryKey(bucket: string, key: string): string {
+  return `${bucket}\\${key}`;
 }

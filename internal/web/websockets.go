@@ -110,7 +110,7 @@ func (hub *wsHub) serveWs(c *gin.Context) {
 
 	// Allow collection of memory referenced by the caller
 	// by doing all work in new goroutines.
-	go client.writer()
+	go client.writer(hub.unregister)
 }
 
 type wsClient struct {
@@ -121,7 +121,7 @@ type wsClient struct {
 	send chan []byte
 }
 
-func (c *wsClient) writer() {
+func (c *wsClient) writer(unregister chan *wsClient) {
 	ticker := time.NewTicker(pingPeriod)
 
 	defer func() {
@@ -129,6 +129,7 @@ func (c *wsClient) writer() {
 		logger.Trace("Closing WS connection from ", c.conn.RemoteAddr())
 
 		_ = c.conn.Close()
+		unregister <- c
 	}()
 
 	for {

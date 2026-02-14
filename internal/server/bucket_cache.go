@@ -115,7 +115,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.linksFromCache = make(map[string]valueWithLastUpdate[string])
 		img.signedURLs = make(map[string]valueWithLastUpdate[signedURL])
 
-		bc.setDropTimer(event.baseDir, event.Time)
+		bc.setDropTimer(imgName, event.Time)
 	}
 
 	fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, event.baseDirRelativePath())
@@ -342,7 +342,7 @@ func (bc *bucketCache) setDropTimer(baseDir string, cacheAddTime time.Time) {
 
 func (bc *bucketCache) dropImage(imgBaseDir string) {
 	imgDirPath := filepath.Join(bc.dirPath, imgBaseDir)
-	if err := os.Remove(imgDirPath); err != nil && !os.IsNotExist(err) {
+	if err := os.RemoveAll(imgDirPath); err != nil && !os.IsNotExist(err) {
 		logger.Errorf("Failed to delete %q: %v", imgDirPath, err)
 	} else {
 		delete(bc.images, imgBaseDir)

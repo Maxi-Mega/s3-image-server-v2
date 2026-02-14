@@ -30,7 +30,7 @@ function toggleOne(ev: Event, value: string) {
     `hs-checked-checkbox-filter-${props.filter}`
   ) as HTMLInputElement;
   const subCheckboxes = Array.from(
-    document.querySelectorAll("input[type=checkbox][filter]")
+    document.querySelectorAll(`input[type=checkbox][filter='${props.filter}']`)
   ) as Array<HTMLInputElement>;
   if (subCheckboxes.every((input) => input.checked)) {
     mainCheckbox.indeterminate = false;

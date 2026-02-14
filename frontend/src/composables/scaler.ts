@@ -6,6 +6,9 @@ export class Scaler {
   private readonly scalerMaxValue: number;
   private currentFontSize: string;
 
+  private onInput = () => this.updateScale();
+  private onAuxClick = () => this.reset();
+
   public onUpdateScale: ((fontSize: string, rawValue: number) => void) | undefined;
 
   public constructor(scaler: HTMLInputElement, scalerInitialPercentage: number, baseScale: number) {
@@ -19,8 +22,8 @@ export class Scaler {
 
     this.reset();
 
-    this.scaler.addEventListener("input", () => this.updateScale());
-    this.scaler.addEventListener("auxclick", () => this.reset());
+    this.scaler.addEventListener("input", this.onInput);
+    this.scaler.addEventListener("auxclick", this.onAuxClick);
   }
 
   public reset(): void {
@@ -29,8 +32,8 @@ export class Scaler {
   }
 
   public dispose(): void {
-    this.scaler.removeEventListener("input", this.updateScale);
-    this.scaler.removeEventListener("auxclick", this.reset);
+    this.scaler.removeEventListener("input", this.onInput);
+    this.scaler.removeEventListener("auxclick", this.onAuxClick);
   }
 
   private evalInitialValue(): number {

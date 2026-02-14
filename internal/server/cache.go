@@ -56,7 +56,9 @@ type image struct {
 func (img image) summary(ctx context.Context, name, cacheDir string, exprMan *expressionManager) types.ImageSummary {
 	var displayName string
 
-	geonames, err := exprMan.imageGeonames(ctx, img)
+	envFiles := exprMan.precomputeDynamicFiles(img)
+
+	geonames, err := exprMan.imageGeonames(ctx, img, &envFiles)
 	if err != nil {
 		logger.Errorf("Failed to evaluate image geonames for %q: %v", img.name, err)
 
@@ -65,12 +67,12 @@ func (img image) summary(ctx context.Context, name, cacheDir string, exprMan *ex
 		displayName = geonames.GetTopLevel()
 	}
 
-	productInfo, err := exprMan.productInfo(ctx, img)
+	productInfo, err := exprMan.productInfo(ctx, img, &envFiles)
 	if err != nil {
 		logger.Errorf("Failed to evaluate product information for %q: %v", img.name, err)
 	}
 
-	dynamicFilters, err := exprMan.dynamicFilters(ctx, img)
+	dynamicFilters, err := exprMan.dynamicFilters(ctx, img, &envFiles)
 	if err != nil {
 		logger.Errorf("Failed to evaluate dynamic filters for %q: %v", img.name, err)
 	}

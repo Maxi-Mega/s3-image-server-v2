@@ -62,7 +62,7 @@ func (srv *Server) cacheHandler(c *gin.Context) {
 		if errors.Is(err, syscall.ENOENT) {
 			c.AbortWithStatusJSON(http.StatusNotFound, Error{fmt.Errorf("cache key %q not found", cacheKey)})
 		} else {
-			logger.Infof("Unexpected error while serving cache key %q: %v", cacheKey, err)
+			logger.Warnf("Unexpected error while serving cache object with key %q: %v", cacheKey, err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, Error{errUnexpected})
 		}
 

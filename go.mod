@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/99designs/gqlgen v0.17.86
 	github.com/antchfx/xmlquery v1.5.0
-	github.com/expr-lang/expr v1.17.7
+	github.com/expr-lang/expr v1.17.8
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-viper/mapstructure/v2 v2.5.0

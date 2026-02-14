@@ -234,6 +234,8 @@ func ParseDynamicData(imgGroup, imgType string, dynData *DynamicData) error {
 
 			selector.Link = true
 		}
+
+		dynData.FileSelectors[name] = selector
 	}
 
 	return nil
