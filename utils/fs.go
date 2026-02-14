@@ -10,7 +10,7 @@ import (
 
 // CreateDir creates a directory at the given path.
 // If it already exists, its content is cleared.
-// If a file exists at this path, is it overridden.
+// If a file exists at this path, it is overridden.
 func CreateDir(dirPath string) error {
 	stat, err := os.Stat(dirPath)
 	if err != nil {
