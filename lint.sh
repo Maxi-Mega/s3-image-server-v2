@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-LINTER_VERSION=v2.8.0-alpine
+LINTER_VERSION=v2.9.0-alpine
 
 if docker volume ls | grep -q s3-image-server-pkg-cache; then
     GO_PKG_CACHE="-v s3-image-server-pkg-cache:/go/pkg"
@@ -25,6 +25,5 @@ docker run --rm -v "$(pwd)":/app ${GO_PKG_CACHE} -e HOME=/go/pkg \
     git config --global --add safe.directory /app
     golangci-lint run
     "
-
 
 echo "Done !"

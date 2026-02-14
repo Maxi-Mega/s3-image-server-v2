@@ -51,11 +51,13 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_call",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _call(%q) took %s", params[0], time.Since(t0))
 			}()
 
 			res, err := ExprCall(params[0].(string), params[1].(ExprEnv)) //nolint: forcetypeassert // already validated
+
 			return res, wrapErr("_call", err)
 		},
 		new(func(exprName string) (any, error)), // env param will be injected at compile time
@@ -66,6 +68,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_exist",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _exist(%q) took %s", params[0], time.Since(t0))
 			}()
@@ -76,6 +79,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			}
 
 			res, err := ExprExist(file.CacheKey)
+
 			return res, wrapErr("_exist", err)
 		},
 		new(func(fileSelector string) (bool, error)),
@@ -86,6 +90,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_jq",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _jq(%q, ...) took %s", params[1], time.Since(t0))
 			}()
@@ -96,6 +101,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			}
 
 			res, err := ExprJQ(params[0].(context.Context), file.CacheKey, params[2].(string)) //nolint: forcetypeassert // already validated
+
 			return res, wrapErr("_jq", err)
 		},
 		new(func(ctx context.Context, fileSelector string, filter string) (any, error)),
@@ -106,6 +112,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_loadJSON",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _loadJSON(%q) took %s", params[0], time.Since(t0))
 			}()
@@ -116,6 +123,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			}
 
 			res, err := ExprLoadJSON(file.CacheKey)
+
 			return res, wrapErr("_loadJSON", err)
 		},
 		new(func(fileSelector string) (any, error)),
@@ -126,6 +134,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_merge",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _merge(...) took %s", time.Since(t0))
 			}()
@@ -139,11 +148,13 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_replaceRegex",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _replaceRegex(%q, %q, %q) took %s", params[0], params[1], params[2], time.Since(t0))
 			}()
 
 			res, err := ExprReplaceRegex(params[0].(string), params[1].(string), params[2].(string)) //nolint: forcetypeassert // already validated
+
 			return res, wrapErr("_replaceRegex", err)
 		},
 		new(func(str string, regex string, replacement string) (string, error)),
@@ -153,6 +164,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_s3Key",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _merge(...) took %s", time.Since(t0))
 			}()
@@ -172,6 +184,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_title",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _title(%q) took %s", params[0], time.Since(t0))
 			}()
@@ -185,6 +198,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		"_xpath",
 		func(params ...any) (any, error) {
 			t0 := time.Now()
+
 			defer func() {
 				logger.Tracef("[expr] _xpath(%q, ...) took %s", params[0], time.Since(t0))
 			}()
@@ -195,6 +209,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			}
 
 			res, err := ExprXPath(file.CacheKey, params[1].(string)) //nolint: forcetypeassert // already validated
+
 			return res, wrapErr("_xpath", err)
 		},
 		new(func(fileSelector string, xpath string) (any, error)),

@@ -2,14 +2,13 @@
 
 ## Expr-lang
 
-Some parts of the configuration leverage the use of [Expr](https://expr-lang.org),
-a Go-centric expression language allowing for powerful transformation of data.
+Some configuration fields are evaluated with [Expr](https://expr-lang.org),
+a Go-centric expression language for transforming data.
 
 ### Custom Functions
 
-These additional functions don't belong to Expr's builtin library
-and are meant to address behaviors that are specific to this project.
-They can be distinguished from the standard ones by their `_` prefix.
+The functions below extend Expr's standard library with project-specific helpers.
+These custom functions are prefixed with `_`.
 
 {{ range .Functions -}}
 #### {{ .Name }}
