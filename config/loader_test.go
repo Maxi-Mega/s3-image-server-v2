@@ -220,7 +220,7 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			filePath:      "invalid_yaml.yml",
-			expectedError: "failed to parse config: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `invalid...` into config.Config",
+			expectedError: "failed to parse config: yaml: construct errors:\n  line 1: cannot construct !!str `invalid...` into config.Config",
 		},
 		{
 			filePath: "invalid_cfg.yml",
