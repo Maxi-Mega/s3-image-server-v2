@@ -1,0 +1,61 @@
+name: QA / Frontend
+
+on:
+  push:
+    branches:
+      - "*"
+    paths:
+      - "frontend/**"
+      - ".github/workflows/qa-frontend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "frontend"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: "frontend/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "frontend/yarn.lock"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run tests
+        run: yarn test
+
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "frontend"
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: "frontend/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "frontend/yarn.lock"
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - uses: sibiraj-s/action-eslint@v4
+        with:
+          eslint-args: "--ignore-pattern=/.gitignore"
+          extensions: "vue,js,jsx,cjs,mjs,ts,tsx,cts,mts"
+          all-files: true
+          annotations: true
