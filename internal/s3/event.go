@@ -1,4 +1,4 @@
-//nolint: unused,gci,godoclint,gofmt,goimports
+//nolint: gci,godoclint,gofmt,goimports
 package s3
 
 import (

@@ -2,11 +2,12 @@
 
 ### `products.dynamicData`
 
-This section is used to describe data that is evaluated at runtime and can use data from S3 buckets.
+This section describes configuration fields that are evaluated at runtime.
+For example, they can access data from S3 buckets.
 
 ### `products.dynamicData.fileSelectors`
 
-File selectors describe the way files are retrieved with a regular expression.
+File selectors describe how files are retrieved using a regular expression.
 The `kind` field can be:
 - _cached_: the file will be cached to disk for faster access from the UI
 - _signedURL_: an S3 signed URL will be generated to access the file directly from the UI
@@ -25,20 +26,20 @@ The `kind` field can be:
   https://external-viewer?key=value&url=https%3A//s3-server%3A9000/bucket/product.tif
   ``` 
 
-If the link field is set to true, an HTTP link pointing to the cached file will be displayed in the UI's image modal files list.
+If the `link` field is set to true, the UI's image modal files list will display an HTTP link to the cached file.
 These file selectors can be referenced in `expressions` (see below).
 
 ### `products.dynamicData.expressions`
 
 > For more information on expressions, see the Expr Documentation.
 
-Expressions are used to compute values at runtime, based on data such as files from S3 buckets (through `fileSelectors`, see above).
-Functions starting with an `_` are custom utility functions and not part of Expr-lang.
+Expressions compute values at runtime based on data such as files from S3 buckets (via `fileSelectors`, see above).
+Functions starting with an `_` are custom utility functions and are not part of Expr's standard library.
 
-The following expressions are considered as "well-known", and are mandatory for the UI to display information correctly:
+The following expressions are "well-known" and are required for the UI to display information correctly:
 - `productBasePath`: dir name of the preview file in S3
-- `geonames`: geoname data as JSON object
-- `localization`: localization data as JSON object
+- `geonames`: geoname data as a JSON object
+- `localization`: localization data as a JSON object
 - `productInfo`: JSON object containing the following fields:
   - `title`: preview image title
   - `subtitle`: preview image subtitle
@@ -47,20 +48,20 @@ The following expressions are considered as "well-known", and are mandatory for 
 
 ### `products.dynamicFilters`
 
-Dynamic filters are an additional way to show or hide images in the UI, based on arbitrary values produced by expressions.
+Dynamic filters let the UI show or hide images based on values produced by expressions.
 
 The name of each filter is used as the dropdown title.
-The dropdown entries are computed from the referenced expression, processed for each image.
+The dropdown entries are computed from the referenced expression and evaluated per image.
 
 ### `products.imageGroups`
 
 Image groups represent the main categories of images, each coming from a single bucket.
 
-Dynamic data defined in groups override data defined in the root `products` section.
+Dynamic data defined in a group overrides data defined in the root `products` section.
 
 ### `products.imageGroups[].types`
 
-Each group is composed of one or more `types`, allowing to separate images based on their product prefix.
+Each group is composed of one or more `types`, which separate images based on their product prefix.
 On the UI, these types can be filtered in their parent-group dropdown menu.
 
-Image types inherit and override dynamic data from the parent group.
+Image types inherit dynamic data from the parent group and can override it.

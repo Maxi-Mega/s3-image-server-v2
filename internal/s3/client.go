@@ -13,6 +13,7 @@ import (
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/observability"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 	"github.com/Maxi-Mega/s3-image-server-v2/utils"
 
@@ -44,6 +45,7 @@ type s3Client struct {
 	productsCfg             config.Products
 	specificInfoPerBucket   map[string]bucketSpecificInfo
 	commonPrefixesPerBucket map[string]string
+	gatherer                *observability.Metrics
 	client                  *minio.Client
 }
 
@@ -52,7 +54,7 @@ type bucketSpecificInfo struct {
 	notDefaultPreviewSuffixes []string
 }
 
-func NewClient(cfg config.Config) (Client, error) {
+func NewClient(cfg config.Config, gatherer *observability.Metrics) (Client, error) {
 	var (
 		transport http.RoundTripper
 		err       error
@@ -108,6 +110,7 @@ func NewClient(cfg config.Config) (Client, error) {
 		productsCfg:             cfg.Products,
 		specificInfoPerBucket:   specificInfoPerBucket,
 		commonPrefixesPerBucket: commonPrefixPerBucket,
+		gatherer:                gatherer,
 		client:                  client,
 	}, nil
 }
@@ -176,6 +179,18 @@ func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Even
 
 	ctx, cancel := context.WithTimeout(ctx, min(timeout, maxPollBucketTimeout))
 	defer cancel()
+
+	t0 := time.Now()
+
+	defer func() {
+		total := time.Since(t0)
+
+		logger.Infof("Polling bucket %q took %v", bucket, total)
+
+		if s3.gatherer != nil {
+			s3.gatherer.S3ListDuration.WithLabelValues(bucket).Observe(total.Seconds())
+		}
+	}()
 
 	commonPrefix := s3.specificInfoPerBucket[bucket].commonPrefix
 	currentTime := time.Now()

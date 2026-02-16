@@ -31,7 +31,7 @@ type Server struct {
 }
 
 func New(cfg config.Config, gatherer *observability.Metrics) (*Server, error) {
-	s3Client, err := s3.NewClient(cfg)
+	s3Client, err := s3.NewClient(cfg, gatherer)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -114,9 +114,15 @@ func (srv *Server) startPollingS3(ctx context.Context) error {
 			for {
 				select {
 				case <-time.After(pollingPeriod):
+					t0 := time.Now()
+
 					err := srv.s3Client.PollOnce(ctx, bucket, srv.s3Chan, pollingPeriod)
 					if err != nil {
 						logger.Errorf("Failed to poll bucket %q: %v", bucket, err)
+					}
+
+					if total := time.Since(t0); total > pollingPeriod {
+						logger.Warnf("Polling bucket %q took longer than the polling period", bucket)
 					}
 				case <-ctx.Done():
 					logger.Debugf("Context expired, stopping to poll bucket %q", bucket)
