@@ -4,6 +4,7 @@ echo "Testing ..."
 
 mkdir -p frontend/dist && touch frontend/dist/.gitkeep
 go test ./...
+(cd frontend && yarn test)
 
 echo "Building ..."
 

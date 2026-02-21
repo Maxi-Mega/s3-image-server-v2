@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,20 +23,10 @@ import (
 
 // NewExecutableSchema creates an ExecutableSchema from the ResolverRoot interface.
 func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
-	return &executableSchema{
-		schema:     cfg.Schema,
-		resolvers:  cfg.Resolvers,
-		directives: cfg.Directives,
-		complexity: cfg.Complexity,
-	}
+	return &executableSchema{SchemaData: cfg.Schema, Resolvers: cfg.Resolvers, Directives: cfg.Directives, ComplexityRoot: cfg.Complexity}
 }
 
-type Config struct {
-	Schema     *ast.Schema
-	Resolvers  ResolverRoot
-	Directives DirectiveRoot
-	Complexity ComplexityRoot
-}
+type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
 	DynamicData() DynamicDataResolver
@@ -127,209 +116,204 @@ type QueryResolver interface {
 	GetDynamicData(ctx context.Context, group string, typeArg string) (*model.DynamicData, error)
 }
 
-type executableSchema struct {
-	schema     *ast.Schema
-	resolvers  ResolverRoot
-	directives DirectiveRoot
-	complexity ComplexityRoot
-}
+type executableSchema graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 func (e *executableSchema) Schema() *ast.Schema {
-	if e.schema != nil {
-		return e.schema
+	if e.SchemaData != nil {
+		return e.SchemaData
 	}
 	return parsedSchema
 }
 
 func (e *executableSchema) Complexity(ctx context.Context, typeName, field string, childComplexity int, rawArgs map[string]any) (int, bool) {
-	ec := executionContext{nil, e, 0, 0, nil}
+	ec := newExecutionContext(nil, e, nil)
 	_ = ec
 	switch typeName + "." + field {
 
 	case "CachedObject.cacheKey":
-		if e.complexity.CachedObject.CacheKey == nil {
+		if e.ComplexityRoot.CachedObject.CacheKey == nil {
 			break
 		}
 
-		return e.complexity.CachedObject.CacheKey(childComplexity), true
+		return e.ComplexityRoot.CachedObject.CacheKey(childComplexity), true
 	case "CachedObject.lastModified":
-		if e.complexity.CachedObject.LastModified == nil {
+		if e.ComplexityRoot.CachedObject.LastModified == nil {
 			break
 		}
 
-		return e.complexity.CachedObject.LastModified(childComplexity), true
+		return e.ComplexityRoot.CachedObject.LastModified(childComplexity), true
 
 	case "DynamicData.expressions":
-		if e.complexity.DynamicData.Expressions == nil {
+		if e.ComplexityRoot.DynamicData.Expressions == nil {
 			break
 		}
 
-		return e.complexity.DynamicData.Expressions(childComplexity), true
+		return e.ComplexityRoot.DynamicData.Expressions(childComplexity), true
 	case "DynamicData.fileSelectors":
-		if e.complexity.DynamicData.FileSelectors == nil {
+		if e.ComplexityRoot.DynamicData.FileSelectors == nil {
 			break
 		}
 
-		return e.complexity.DynamicData.FileSelectors(childComplexity), true
+		return e.ComplexityRoot.DynamicData.FileSelectors(childComplexity), true
 
 	case "Geonames.cachedObject":
-		if e.complexity.Geonames.CachedObject == nil {
+		if e.ComplexityRoot.Geonames.CachedObject == nil {
 			break
 		}
 
-		return e.complexity.Geonames.CachedObject(childComplexity), true
+		return e.ComplexityRoot.Geonames.CachedObject(childComplexity), true
 	case "Geonames.objects":
-		if e.complexity.Geonames.Objects == nil {
+		if e.ComplexityRoot.Geonames.Objects == nil {
 			break
 		}
 
-		return e.complexity.Geonames.Objects(childComplexity), true
+		return e.ComplexityRoot.Geonames.Objects(childComplexity), true
 
 	case "Image.cachedFileLinks":
-		if e.complexity.Image.CachedFileLinks == nil {
+		if e.ComplexityRoot.Image.CachedFileLinks == nil {
 			break
 		}
 
-		return e.complexity.Image.CachedFileLinks(childComplexity), true
+		return e.ComplexityRoot.Image.CachedFileLinks(childComplexity), true
 	case "Image.imageSummary":
-		if e.complexity.Image.ImageSummary == nil {
+		if e.ComplexityRoot.Image.ImageSummary == nil {
 			break
 		}
 
-		return e.complexity.Image.ImageSummary(childComplexity), true
+		return e.ComplexityRoot.Image.ImageSummary(childComplexity), true
 	case "Image.localization":
-		if e.complexity.Image.Localization == nil {
+		if e.ComplexityRoot.Image.Localization == nil {
 			break
 		}
 
-		return e.complexity.Image.Localization(childComplexity), true
+		return e.ComplexityRoot.Image.Localization(childComplexity), true
 	case "Image.signedURLs":
-		if e.complexity.Image.SignedURLs == nil {
+		if e.ComplexityRoot.Image.SignedURLs == nil {
 			break
 		}
 
-		return e.complexity.Image.SignedURLs(childComplexity), true
+		return e.ComplexityRoot.Image.SignedURLs(childComplexity), true
 	case "Image.targetFiles":
-		if e.complexity.Image.TargetFiles == nil {
+		if e.ComplexityRoot.Image.TargetFiles == nil {
 			break
 		}
 
-		return e.complexity.Image.TargetFiles(childComplexity), true
+		return e.ComplexityRoot.Image.TargetFiles(childComplexity), true
 
 	case "ImageSize.height":
-		if e.complexity.ImageSize.Height == nil {
+		if e.ComplexityRoot.ImageSize.Height == nil {
 			break
 		}
 
-		return e.complexity.ImageSize.Height(childComplexity), true
+		return e.ComplexityRoot.ImageSize.Height(childComplexity), true
 	case "ImageSize.width":
-		if e.complexity.ImageSize.Width == nil {
+		if e.ComplexityRoot.ImageSize.Width == nil {
 			break
 		}
 
-		return e.complexity.ImageSize.Width(childComplexity), true
+		return e.ComplexityRoot.ImageSize.Width(childComplexity), true
 
 	case "ImageSummary.bucket":
-		if e.complexity.ImageSummary.Bucket == nil {
+		if e.ComplexityRoot.ImageSummary.Bucket == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Bucket(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Bucket(childComplexity), true
 	case "ImageSummary.cachedObject":
-		if e.complexity.ImageSummary.CachedObject == nil {
+		if e.ComplexityRoot.ImageSummary.CachedObject == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.CachedObject(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.CachedObject(childComplexity), true
 	case "ImageSummary.dynamicFilters":
-		if e.complexity.ImageSummary.DynamicFilters == nil {
+		if e.ComplexityRoot.ImageSummary.DynamicFilters == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.DynamicFilters(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.DynamicFilters(childComplexity), true
 	case "ImageSummary.geonames":
-		if e.complexity.ImageSummary.Geonames == nil {
+		if e.ComplexityRoot.ImageSummary.Geonames == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Geonames(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Geonames(childComplexity), true
 	case "ImageSummary.group":
-		if e.complexity.ImageSummary.Group == nil {
+		if e.ComplexityRoot.ImageSummary.Group == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Group(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Group(childComplexity), true
 	case "ImageSummary.key":
-		if e.complexity.ImageSummary.Key == nil {
+		if e.ComplexityRoot.ImageSummary.Key == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Key(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Key(childComplexity), true
 	case "ImageSummary.name":
-		if e.complexity.ImageSummary.Name == nil {
+		if e.ComplexityRoot.ImageSummary.Name == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Name(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Name(childComplexity), true
 	case "ImageSummary.productInfo":
-		if e.complexity.ImageSummary.ProductInfo == nil {
+		if e.ComplexityRoot.ImageSummary.ProductInfo == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.ProductInfo(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.ProductInfo(childComplexity), true
 	case "ImageSummary.size":
-		if e.complexity.ImageSummary.Size == nil {
+		if e.ComplexityRoot.ImageSummary.Size == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Size(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Size(childComplexity), true
 	case "ImageSummary.type":
-		if e.complexity.ImageSummary.Type == nil {
+		if e.ComplexityRoot.ImageSummary.Type == nil {
 			break
 		}
 
-		return e.complexity.ImageSummary.Type(childComplexity), true
+		return e.ComplexityRoot.ImageSummary.Type(childComplexity), true
 
 	case "Localization.cachedObject":
-		if e.complexity.Localization.CachedObject == nil {
+		if e.ComplexityRoot.Localization.CachedObject == nil {
 			break
 		}
 
-		return e.complexity.Localization.CachedObject(childComplexity), true
+		return e.ComplexityRoot.Localization.CachedObject(childComplexity), true
 	case "Localization.corner":
-		if e.complexity.Localization.Corner == nil {
+		if e.ComplexityRoot.Localization.Corner == nil {
 			break
 		}
 
-		return e.complexity.Localization.Corner(childComplexity), true
+		return e.ComplexityRoot.Localization.Corner(childComplexity), true
 
 	case "ProductInformation.entries":
-		if e.complexity.ProductInformation.Entries == nil {
+		if e.ComplexityRoot.ProductInformation.Entries == nil {
 			break
 		}
 
-		return e.complexity.ProductInformation.Entries(childComplexity), true
+		return e.ComplexityRoot.ProductInformation.Entries(childComplexity), true
 	case "ProductInformation.subtitle":
-		if e.complexity.ProductInformation.Subtitle == nil {
+		if e.ComplexityRoot.ProductInformation.Subtitle == nil {
 			break
 		}
 
-		return e.complexity.ProductInformation.Subtitle(childComplexity), true
+		return e.ComplexityRoot.ProductInformation.Subtitle(childComplexity), true
 	case "ProductInformation.summary":
-		if e.complexity.ProductInformation.Summary == nil {
+		if e.ComplexityRoot.ProductInformation.Summary == nil {
 			break
 		}
 
-		return e.complexity.ProductInformation.Summary(childComplexity), true
+		return e.ComplexityRoot.ProductInformation.Summary(childComplexity), true
 	case "ProductInformation.title":
-		if e.complexity.ProductInformation.Title == nil {
+		if e.ComplexityRoot.ProductInformation.Title == nil {
 			break
 		}
 
-		return e.complexity.ProductInformation.Title(childComplexity), true
+		return e.ComplexityRoot.ProductInformation.Title(childComplexity), true
 
 	case "Query.getAllImageSummaries":
-		if e.complexity.Query.GetAllImageSummaries == nil {
+		if e.ComplexityRoot.Query.GetAllImageSummaries == nil {
 			break
 		}
 
@@ -338,9 +322,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.GetAllImageSummaries(childComplexity, args["from"].(*time.Time), args["to"].(*time.Time)), true
+		return e.ComplexityRoot.Query.GetAllImageSummaries(childComplexity, args["from"].(*time.Time), args["to"].(*time.Time)), true
 	case "Query.getDynamicData":
-		if e.complexity.Query.GetDynamicData == nil {
+		if e.ComplexityRoot.Query.GetDynamicData == nil {
 			break
 		}
 
@@ -349,9 +333,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.GetDynamicData(childComplexity, args["group"].(string), args["type"].(string)), true
+		return e.ComplexityRoot.Query.GetDynamicData(childComplexity, args["group"].(string), args["type"].(string)), true
 	case "Query.getImage":
-		if e.complexity.Query.GetImage == nil {
+		if e.ComplexityRoot.Query.GetImage == nil {
 			break
 		}
 
@@ -360,7 +344,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.GetImage(childComplexity, args["bucket"].(string), args["name"].(string)), true
+		return e.ComplexityRoot.Query.GetImage(childComplexity, args["bucket"].(string), args["name"].(string)), true
 
 	}
 	return 0, false
@@ -368,7 +352,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
-	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
+	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
 	first := true
 
@@ -382,9 +366,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
 				data = ec._Query(ctx, opCtx.Operation.SelectionSet)
 			} else {
-				if atomic.LoadInt32(&ec.pendingDeferred) > 0 {
-					result := <-ec.deferredResults
-					atomic.AddInt32(&ec.pendingDeferred, -1)
+				if atomic.LoadInt32(&ec.PendingDeferred) > 0 {
+					result := <-ec.DeferredResults
+					atomic.AddInt32(&ec.PendingDeferred, -1)
 					data = result.Result
 					response.Path = result.Path
 					response.Label = result.Label
@@ -396,8 +380,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
 			response.Data = buf.Bytes()
-			if atomic.LoadInt32(&ec.deferred) > 0 {
-				hasNext := atomic.LoadInt32(&ec.pendingDeferred) > 0
+			if atomic.LoadInt32(&ec.Deferred) > 0 {
+				hasNext := atomic.LoadInt32(&ec.PendingDeferred) > 0
 				response.HasNext = &hasNext
 			}
 
@@ -410,44 +394,22 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 }
 
 type executionContext struct {
-	*graphql.OperationContext
-	*executableSchema
-	deferred        int32
-	pendingDeferred int32
-	deferredResults chan graphql.DeferredResult
+	*graphql.ExecutionContextState[ResolverRoot, DirectiveRoot, ComplexityRoot]
 }
 
-func (ec *executionContext) processDeferredGroup(dg graphql.DeferredGroup) {
-	atomic.AddInt32(&ec.pendingDeferred, 1)
-	go func() {
-		ctx := graphql.WithFreshResponseContext(dg.Context)
-		dg.FieldSet.Dispatch(ctx)
-		ds := graphql.DeferredResult{
-			Path:   dg.Path,
-			Label:  dg.Label,
-			Result: dg.FieldSet,
-			Errors: graphql.GetErrors(ctx),
-		}
-		// null fields should bubble up
-		if dg.FieldSet.Invalids > 0 {
-			ds.Result = graphql.Null
-		}
-		ec.deferredResults <- ds
-	}()
-}
-
-func (ec *executionContext) introspectSchema() (*introspection.Schema, error) {
-	if ec.DisableIntrospection {
-		return nil, errors.New("introspection disabled")
+func newExecutionContext(
+	opCtx *graphql.OperationContext,
+	execSchema *executableSchema,
+	deferredResults chan graphql.DeferredResult,
+) executionContext {
+	return executionContext{
+		ExecutionContextState: graphql.NewExecutionContextState[ResolverRoot, DirectiveRoot, ComplexityRoot](
+			opCtx,
+			(*graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot])(execSchema),
+			parsedSchema,
+			deferredResults,
+		),
 	}
-	return introspection.WrapSchema(ec.Schema()), nil
-}
-
-func (ec *executionContext) introspectType(name string) (*introspection.Type, error) {
-	if ec.DisableIntrospection {
-		return nil, errors.New("introspection disabled")
-	}
-	return introspection.WrapTypeFromDef(ec.Schema(), ec.Schema().Types[name]), nil
 }
 
 var sources = []*ast.Source{
@@ -703,7 +665,7 @@ func (ec *executionContext) _DynamicData_fileSelectors(ctx context.Context, fiel
 		field,
 		ec.fieldContext_DynamicData_fileSelectors,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.DynamicData().FileSelectors(ctx, obj)
+			return ec.Resolvers.DynamicData().FileSelectors(ctx, obj)
 		},
 		nil,
 		ec.marshalNMap2map,
@@ -732,7 +694,7 @@ func (ec *executionContext) _DynamicData_expressions(ctx context.Context, field 
 		field,
 		ec.fieldContext_DynamicData_expressions,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.DynamicData().Expressions(ctx, obj)
+			return ec.Resolvers.DynamicData().Expressions(ctx, obj)
 		},
 		nil,
 		ec.marshalNMap2map,
@@ -911,7 +873,7 @@ func (ec *executionContext) _Image_cachedFileLinks(ctx context.Context, field gr
 		field,
 		ec.fieldContext_Image_cachedFileLinks,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Image().CachedFileLinks(ctx, obj)
+			return ec.Resolvers.Image().CachedFileLinks(ctx, obj)
 		},
 		nil,
 		ec.marshalNMap2map,
@@ -940,7 +902,7 @@ func (ec *executionContext) _Image_signedURLs(ctx context.Context, field graphql
 		field,
 		ec.fieldContext_Image_signedURLs,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Image().SignedURLs(ctx, obj)
+			return ec.Resolvers.Image().SignedURLs(ctx, obj)
 		},
 		nil,
 		ec.marshalNMap2map,
@@ -1275,7 +1237,7 @@ func (ec *executionContext) _ImageSummary_dynamicFilters(ctx context.Context, fi
 		field,
 		ec.fieldContext_ImageSummary_dynamicFilters,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.ImageSummary().DynamicFilters(ctx, obj)
+			return ec.Resolvers.ImageSummary().DynamicFilters(ctx, obj)
 		},
 		nil,
 		ec.marshalNMap2map,
@@ -1555,7 +1517,7 @@ func (ec *executionContext) _Query_getAllImageSummaries(ctx context.Context, fie
 		ec.fieldContext_Query_getAllImageSummaries,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().GetAllImageSummaries(ctx, fc.Args["from"].(*time.Time), fc.Args["to"].(*time.Time))
+			return ec.Resolvers.Query().GetAllImageSummaries(ctx, fc.Args["from"].(*time.Time), fc.Args["to"].(*time.Time))
 		},
 		nil,
 		ec.marshalNAllImageSummaries2githubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐAllImageSummaries,
@@ -1596,7 +1558,7 @@ func (ec *executionContext) _Query_getImage(ctx context.Context, field graphql.C
 		ec.fieldContext_Query_getImage,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().GetImage(ctx, fc.Args["bucket"].(string), fc.Args["name"].(string))
+			return ec.Resolvers.Query().GetImage(ctx, fc.Args["bucket"].(string), fc.Args["name"].(string))
 		},
 		nil,
 		ec.marshalOImage2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋtypesᚐImage,
@@ -1649,7 +1611,7 @@ func (ec *executionContext) _Query_getDynamicData(ctx context.Context, field gra
 		ec.fieldContext_Query_getDynamicData,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().GetDynamicData(ctx, fc.Args["group"].(string), fc.Args["type"].(string))
+			return ec.Resolvers.Query().GetDynamicData(ctx, fc.Args["group"].(string), fc.Args["type"].(string))
 		},
 		nil,
 		ec.marshalODynamicData2ᚖgithubᚗcomᚋMaxiᚑMegaᚋs3ᚑimageᚑserverᚑv2ᚋinternalᚋwebᚋgraphᚋmodelᚐDynamicData,
@@ -1696,7 +1658,7 @@ func (ec *executionContext) _Query___type(ctx context.Context, field graphql.Col
 		ec.fieldContext_Query___type,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.introspectType(fc.Args["name"].(string))
+			return ec.IntrospectType(fc.Args["name"].(string))
 		},
 		nil,
 		ec.marshalO__Type2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType,
@@ -1760,7 +1722,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 		field,
 		ec.fieldContext_Query___schema,
 		func(ctx context.Context) (any, error) {
-			return ec.introspectSchema()
+			return ec.IntrospectSchema()
 		},
 		nil,
 		ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema,
@@ -3280,10 +3242,10 @@ func (ec *executionContext) _CachedObject(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3386,10 +3348,10 @@ func (ec *executionContext) _DynamicData(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3430,10 +3392,10 @@ func (ec *executionContext) _Geonames(ctx context.Context, sel ast.SelectionSet,
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3548,10 +3510,10 @@ func (ec *executionContext) _Image(ctx context.Context, sel ast.SelectionSet, ob
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3592,10 +3554,10 @@ func (ec *executionContext) _ImageSize(ctx context.Context, sel ast.SelectionSet
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3701,10 +3663,10 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3745,10 +3707,10 @@ func (ec *executionContext) _Localization(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3787,10 +3749,10 @@ func (ec *executionContext) _ProductInformation(ctx context.Context, sel ast.Sel
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3897,10 +3859,10 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -3953,10 +3915,10 @@ func (ec *executionContext) ___Directive(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -4001,10 +3963,10 @@ func (ec *executionContext) ___EnumValue(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -4059,10 +4021,10 @@ func (ec *executionContext) ___Field(ctx context.Context, sel ast.SelectionSet, 
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -4114,10 +4076,10 @@ func (ec *executionContext) ___InputValue(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -4169,10 +4131,10 @@ func (ec *executionContext) ___Schema(ctx context.Context, sel ast.SelectionSet,
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -4228,10 +4190,10 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -4463,39 +4425,11 @@ func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlge
 }
 
 func (ec *executionContext) marshalN__Directive2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirectiveᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.Directive) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -4538,39 +4472,11 @@ func (ec *executionContext) unmarshalN__DirectiveLocation2ᚕstringᚄ(ctx conte
 }
 
 func (ec *executionContext) marshalN__DirectiveLocation2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__DirectiveLocation2string(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__DirectiveLocation2string(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -4594,39 +4500,11 @@ func (ec *executionContext) marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlg
 }
 
 func (ec *executionContext) marshalN__InputValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.InputValue) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -4642,39 +4520,11 @@ func (ec *executionContext) marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋg
 }
 
 func (ec *executionContext) marshalN__Type2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.Type) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -4858,39 +4708,11 @@ func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgq
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__EnumValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__EnumValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValue(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -4905,39 +4727,11 @@ func (ec *executionContext) marshalO__Field2ᚕgithubᚗcomᚋ99designsᚋgqlgen
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Field2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐField(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Field2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐField(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -4952,39 +4746,11 @@ func (ec *executionContext) marshalO__InputValue2ᚕgithubᚗcomᚋ99designsᚋg
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -5006,39 +4772,11 @@ func (ec *executionContext) marshalO__Type2ᚕgithubᚗcomᚋ99designsᚋgqlgen�
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {

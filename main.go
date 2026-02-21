@@ -57,7 +57,7 @@ func main() {
 		fmt.Printf("S3 Image Server %s, %s build / built at %s\n", version, build, buildTime) //nolint:forbidigo
 		os.Exit(0)
 	case *justPrintDocs:
-		fmt.Print("S3 Image Server", version, "- documentation\n\n") //nolint:forbidigo
+		fmt.Print("S3 Image Server", version, " - documentation\n\n") //nolint:forbidigo
 
 		if err := printDocumentation(os.Stdout); err != nil {
 			log.Fatalln("Failed to print documentation:", err)
