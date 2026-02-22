@@ -45,8 +45,7 @@ func New(cfg config.Monitoring) *Metrics {
 			Name:        "s3_list_duration_seconds",
 			Help:        "The duration spent listing objects from S3",
 			ConstLabels: constLabels,
-			// Buckets:     prometheus.ExponentialBucketsRange((100 * time.Millisecond).Seconds(), (20 * time.Second).Seconds(), 10), // TODO: remove
-			Buckets: prometheus.ExponentialBucketsRange(cfg.S3ListDurationBuckets.Min.Seconds(), cfg.S3ListDurationBuckets.Max.Seconds(), cfg.S3ListDurationBuckets.Count),
+			Buckets:     prometheus.ExponentialBucketsRange(cfg.S3ListDurationBuckets.Min.Seconds(), cfg.S3ListDurationBuckets.Max.Seconds(), cfg.S3ListDurationBuckets.Count),
 		}, []string{"bucket"}),
 		CacheImagesPerBucket: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name:        "cache_images_number",
