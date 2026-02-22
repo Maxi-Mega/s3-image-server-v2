@@ -1,9 +1,7 @@
 name: QA / Backend
 
 on:
-  push:
-    branches:
-      - "*"
+  workflow_call:
 
 permissions:
   contents: read

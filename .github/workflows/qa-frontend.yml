@@ -1,12 +1,7 @@
 name: QA / Frontend
 
 on:
-  push:
-    branches:
-      - "*"
-    paths:
-      - "frontend/**"
-      - ".github/workflows/qa-frontend.yml"
+  workflow_call:
 
 permissions:
   contents: read

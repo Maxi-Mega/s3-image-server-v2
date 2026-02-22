@@ -1,0 +1,19 @@
+name: QA
+
+on:
+  push:
+    branches:
+      - "*"
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  qa-backend:
+    name: QA Backend
+    uses: ./.github/workflows/qa-backend.yml
+
+  qa-frontend:
+    name: QA Frontend
+    uses: ./.github/workflows/qa-frontend.yml
