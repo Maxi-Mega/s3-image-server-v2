@@ -11,6 +11,7 @@ const props = defineProps<{
   initialScalePercentage: number;
   baseScale: number;
   widthCls: string;
+  localStorageKey?: string;
 }>();
 
 const emit = defineEmits<{
@@ -28,12 +29,17 @@ onMounted(() => {
   scaler.value = new Scaler(
     rangeInput as HTMLInputElement,
     props.initialScalePercentage,
-    props.baseScale
+    props.baseScale,
+    props.localStorageKey
   );
 
   scaler.value.onUpdateScale = (fontSize: string, rawValue: number) => {
     emit("change", fontSize, rawValue);
   };
+
+  if (scaler.value.usesStoredInitialValue()) {
+    scaler.value.updateScale();
+  }
 });
 
 onUnmounted(() => {

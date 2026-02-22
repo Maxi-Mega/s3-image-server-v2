@@ -46,6 +46,7 @@ const filterStore = useFilterStore();
         :initial-scale-percentage="staticInfo.staticInfo.scaleInitialPercentage"
         :base-scale="16"
         width-cls="max-w-32"
+        local-storage-key="main-scaler"
         @change="filterStore.setGlobalSizes"
       />
     </div>
