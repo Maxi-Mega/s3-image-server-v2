@@ -48,9 +48,5 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - uses: sibiraj-s/action-eslint@v4
-        with:
-          eslint-args: "--ignore-pattern=/.gitignore"
-          extensions: "vue,js,jsx,cjs,mjs,ts,tsx,cts,mts"
-          all-files: true
-          annotations: true
+      - name: Run ESLint
+        run: yarn lint
