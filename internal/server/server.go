@@ -110,6 +110,8 @@ func (srv *Server) startPollingS3(ctx context.Context) error {
 			return err //nolint:wrapcheck
 		}
 
+		time.AfterFunc(5*time.Second, func() { srv.cache.updateMetrics(ctx, bucket) })
+
 		go func(bucket string) {
 			for {
 				select {
@@ -124,6 +126,8 @@ func (srv *Server) startPollingS3(ctx context.Context) error {
 					if total := time.Since(t0); total > pollingPeriod {
 						logger.Warnf("Polling bucket %q took longer than the polling period", bucket)
 					}
+
+					go srv.cache.updateMetrics(ctx, bucket)
 				case <-ctx.Done():
 					logger.Debugf("Context expired, stopping to poll bucket %q", bucket)
 
@@ -147,7 +151,22 @@ func (srv *Server) subscribeToS3(ctx context.Context) error {
 		if err != nil {
 			return err //nolint:wrapcheck
 		}
+
+		time.AfterFunc(5*time.Second, func() { srv.cache.updateMetrics(ctx, bucket) })
 	}
+
+	go func() {
+		for ctx.Err() == nil {
+			select {
+			case <-time.After(time.Minute):
+				for _, bucket := range srv.buckets {
+					srv.cache.updateMetrics(ctx, bucket)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	return nil
 }

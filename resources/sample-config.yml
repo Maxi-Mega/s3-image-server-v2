@@ -117,3 +117,14 @@ log:
 
 monitoring:
   prometheusInstanceLabel: "s3_image_server"
+  productLabels:
+    - "property_1"
+    - "property_2"
+  requestDurationBuckets:
+    min: 100µs
+    max: 10ms
+    count: 10
+  s3ListDurationBuckets:
+    min: 5ms
+    max: 500ms
+    # count defaults to 10

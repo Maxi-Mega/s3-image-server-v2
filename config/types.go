@@ -30,7 +30,7 @@ type (
 		PollingPeriod time.Duration `yaml:"pollingPeriod"`
 		Endpoint      string        `yaml:"endpoint"`
 		AccessID      string        `yaml:"accessID"`
-		AccessSecret  string        `yaml:"accessSecret"`
+		AccessSecret  string        `yaml:"accessSecret"` //nolint: gosec
 		UseSSL        bool          `yaml:"useSSL"`
 	}
 
@@ -72,7 +72,16 @@ type (
 	}
 
 	Monitoring struct {
-		PrometheusInstanceLabel string `yaml:"prometheusInstanceLabel"`
+		PrometheusInstanceLabel string            `yaml:"prometheusInstanceLabel"`
+		ProductLabels           []string          `yaml:"productLabels"`
+		RequestDurationBuckets  HistogramsBuckets `yaml:"requestDurationBuckets"`
+		S3ListDurationBuckets   HistogramsBuckets `yaml:"s3ListDurationBuckets"`
+	}
+
+	HistogramsBuckets struct {
+		Min   time.Duration `yaml:"min"`
+		Max   time.Duration `yaml:"max"`
+		Count int           `yaml:"count"`
 	}
 
 	UIMap struct {

@@ -29,6 +29,7 @@ const (
 	ExprGeonames        = "geonames"
 	ExprLocalization    = "localization"
 	ExprProductInfo     = "productInfo"
+	ExprProductLabels   = "productLabels"
 )
 
 const evalTimeout = 5 * time.Second

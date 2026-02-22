@@ -60,3 +60,13 @@ log:
   JSONLogFields:
     f1: "field"
     f2: 7
+
+monitoring:
+  prometheusInstanceLabel: "instance"
+  requestDurationBuckets:
+    min: 10ms
+    max: 5s
+  s3ListDurationBuckets:
+    min: 100ms
+    max: 1s
+    count: 5

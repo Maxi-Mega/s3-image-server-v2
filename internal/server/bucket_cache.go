@@ -379,6 +379,77 @@ func (bc *bucketCache) injectFullProductURLParamsFromExpr(ctx context.Context, s
 	return su.String()
 }
 
-func (bc *bucketCache) updateMetrics(gatherer *observability.Metrics) {
-	gatherer.CacheImagesPerBucket.WithLabelValues(bc.bucket).Set(float64(len(bc.images)))
+func (bc *bucketCache) updateMetrics(ctx context.Context, gatherer *observability.Metrics) {
+	entries := make(map[string]int, len(bc.images))
+	entryLabels := make(map[string][]string, len(bc.images))
+
+	var ok bool
+
+	func() {
+		bc.l.RLock()
+		defer bc.l.RUnlock()
+
+		for _, img := range bc.images {
+			labels, err := bc.exprManager.promLabels(ctx, img)
+			if err != nil {
+				logger.Warnf("Failed to get Prometheus labels for image %q: %v", img.name, err)
+
+				continue
+			}
+
+			labelValues := make([]string, len(bc.cfg.Monitoring.ProductLabels)+1)
+			labelValues[0] = bc.bucket
+
+			for i, label := range bc.cfg.Monitoring.ProductLabels {
+				labelValues[i+1], ok = labels[label].(string)
+				if !ok {
+					logger.Warnf("Unexpected type for Prometheus label %q of image %q: want string, got %T", label, img.name, labels[label])
+				}
+			}
+
+			entries[strings.Join(labelValues, "+")]++
+			entryLabels[strings.Join(labelValues, "+")] = labelValues
+		}
+	}()
+
+	for entry, count := range entries {
+		gatherer.CacheImagesPerBucket.WithLabelValues(entryLabels[entry]...).Set(float64(count))
+	}
+
+	var (
+		cacheFilesCount     int
+		cacheFilesSizeBytes int64
+	)
+
+	t0 := time.Now()
+
+	err := filepath.WalkDir(bc.dirPath, func(_ string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return fmt.Errorf("can't get info: %w", err)
+		}
+
+		cacheFilesCount++
+		cacheFilesSizeBytes += info.Size()
+
+		return nil
+	})
+	if err != nil {
+		logger.Warnf("Failed to gather cache files stats in %q: %v", bc.dirPath, err)
+
+		return
+	}
+
+	logger.Tracef("Gathered cache stats for bucket %s in %v: %d files, %d bytes", bc.bucket, time.Since(t0), cacheFilesCount, cacheFilesSizeBytes)
+
+	gatherer.CacheFilesPerBucket.WithLabelValues(bc.bucket).Set(float64(cacheFilesCount))
+	gatherer.CacheSizePerBucket.WithLabelValues(bc.bucket).Set(float64(cacheFilesSizeBytes))
 }

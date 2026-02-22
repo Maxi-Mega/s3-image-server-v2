@@ -168,7 +168,17 @@ func TestLoad(t *testing.T) {
 					},
 				},
 				Monitoring: Monitoring{
-					PrometheusInstanceLabel: "s3_image_server",
+					PrometheusInstanceLabel: "instance",
+					RequestDurationBuckets: HistogramsBuckets{
+						Min:   10 * time.Millisecond,
+						Max:   5 * time.Second,
+						Count: 10,
+					},
+					S3ListDurationBuckets: HistogramsBuckets{
+						Min:   100 * time.Millisecond,
+						Max:   1 * time.Second,
+						Count: 5,
+					},
 				},
 			},
 			expectedWarnings: []string{
@@ -214,6 +224,16 @@ func TestLoad(t *testing.T) {
 				},
 				Monitoring: Monitoring{
 					PrometheusInstanceLabel: "s3_image_server",
+					RequestDurationBuckets: HistogramsBuckets{
+						Min:   1 * time.Millisecond,
+						Max:   1 * time.Second,
+						Count: 10,
+					},
+					S3ListDurationBuckets: HistogramsBuckets{
+						Min:   100 * time.Millisecond,
+						Max:   20 * time.Second,
+						Count: 10,
+					},
 				},
 			},
 			expectedError: "",

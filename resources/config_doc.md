@@ -9,6 +9,7 @@ For example, they can access data from S3 buckets.
 
 File selectors describe how files are retrieved using a regular expression.
 The `kind` field can be:
+
 - _cached_: the file will be cached to disk for faster access from the UI
 - _signedURL_: an S3 signed URL will be generated to access the file directly from the UI
 - _fullProductSignedURL_: an S3 signed URL will be generated and transformed as follows:
@@ -37,14 +38,17 @@ Expressions compute values at runtime based on data such as files from S3 bucket
 Functions starting with an `_` are custom utility functions and are not part of Expr's standard library.
 
 The following expressions are "well-known" and are required for the UI to display information correctly:
+
 - `productBasePath`: dir name of the preview file in S3
 - `geonames`: geoname data as a JSON object
 - `localization`: localization data as a JSON object
 - `productInfo`: JSON object containing the following fields:
-  - `title`: preview image title
-  - `subtitle`: preview image subtitle
-  - `entries`: list of image features (e.g., targets counts)
-  - `summary`: specific information displayed in the top panel of the modal window
+    - `title`: preview image title
+    - `subtitle`: preview image subtitle
+    - `entries`: list of image features (e.g., targets counts)
+    - `summary`: specific information displayed in the top panel of the modal window
+- `productLabels`: JSON object defining the name and value used to define the cache_images_number metrics. Each label
+  must be listed in the `monitoring.productLabels` section.
 
 ### `products.dynamicFilters`
 
@@ -65,3 +69,8 @@ Each group is composed of one or more `types`, which separate images based on th
 On the UI, these types can be filtered in their parent-group dropdown menu.
 
 Image types inherit dynamic data from the parent group and can override it.
+
+### `monitoring.productLabels`
+
+List of product label names defined in the `productLabels` expression,
+which must be defined for each image type.

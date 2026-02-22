@@ -395,6 +395,38 @@ func (exprMan *expressionManager) signedURLParams(ctx context.Context, img image
 	return outputMap, nil
 }
 
+func (exprMan *expressionManager) promLabels(ctx context.Context, img image) (map[string]any, error) {
+	labelsExpr, found := exprMan.exprs[img.imgGroup][img.imgType][types.ExprProductLabels]
+	if !found {
+		return nil, nil //nolint: nilnil
+	}
+
+	env := types.ExprEnv{
+		Ctx:   ctx,
+		Files: exprMan.valueMap2FilesMap(img),
+		Exprs: exprMan.exprs[img.imgGroup][img.imgType],
+	}
+	selectorsSum := dynamicFilesChecksum(env.Files)
+
+	if value, ok := exprMan.getCache(img.bucket, img.s3Key, types.ExprProductLabels, selectorsSum); ok {
+		return value.(map[string]any), nil //nolint: forcetypeassert
+	}
+
+	output, err := expr.Run(labelsExpr, env)
+	if err != nil {
+		return nil, fmt.Errorf("expr: %w", err)
+	}
+
+	outputMap, ok := output.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("%w: want map[string]any, got %T", errUnexpectedOutputType, output)
+	}
+
+	exprMan.updateCache(img.bucket, img.s3Key, types.ExprProductLabels, selectorsSum, outputMap)
+
+	return outputMap, nil
+}
+
 func (exprMan *expressionManager) precomputeDynamicFiles(img image) envFilesPrecomputed {
 	files := exprMan.valueMap2FilesMap(img)
 	checksum := dynamicFilesChecksum(files)
@@ -446,7 +478,7 @@ func dynamicFilesChecksum(selectors map[string]types.DynamicInputFile) string {
 		h.Write([]byte{0})
 
 		var buf [8]byte
-		binary.BigEndian.PutUint64(buf[:], uint64(t.UnixNano())) //nolint: gosec // time won't ever be negative
+		binary.BigEndian.PutUint64(buf[:], uint64(t.UnixNano()))
 		h.Write(buf[:])
 
 		h.Write([]byte{0xFF}) // entry delimiter

@@ -34,6 +34,16 @@ func defaultConfig() Config {
 		},
 		Monitoring: Monitoring{
 			PrometheusInstanceLabel: "s3_image_server",
+			RequestDurationBuckets: HistogramsBuckets{
+				Min:   1 * time.Millisecond,
+				Max:   1 * time.Second,
+				Count: 10,
+			},
+			S3ListDurationBuckets: HistogramsBuckets{
+				Min:   100 * time.Millisecond,
+				Max:   20 * time.Second,
+				Count: 10,
+			},
 		},
 	}
 }

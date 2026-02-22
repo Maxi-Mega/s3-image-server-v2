@@ -267,8 +267,6 @@ func (c *cache) handleEvent(ctx context.Context, event s3Event) {
 
 	if outEvent != nil {
 		c.outEvents <- *outEvent
-
-		bucket.updateMetrics(c.gatherer)
 	}
 }
 
@@ -288,6 +286,14 @@ func (c *cache) matchesEntry(bucketName string, entry string) (match bool, baseD
 	}
 
 	return false, ""
+}
+
+func (c *cache) updateMetrics(ctx context.Context, bucket string) {
+	t0 := time.Now()
+
+	c.buckets[bucket].updateMetrics(ctx, c.gatherer)
+
+	logger.Debugf("Updating metrics for bucket %q took %v", bucket, time.Since(t0))
 }
 
 func toFilenameValueMap[T any](m map[string]valueWithLastUpdate[T]) map[string]string {
