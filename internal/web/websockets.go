@@ -42,6 +42,8 @@ type wsHub struct {
 
 	// Unregister requests from clients.
 	unregister chan *wsClient
+
+	ctx context.Context //nolint: containedctx
 }
 
 func newWSHub() *wsHub {
@@ -53,6 +55,8 @@ func newWSHub() *wsHub {
 }
 
 func (hub *wsHub) goRun(ctx context.Context, eventChan <-chan types.OutEvent) {
+	hub.ctx = ctx
+
 	go func() {
 		for ctx.Err() == nil {
 			select {
@@ -64,7 +68,7 @@ func (hub *wsHub) goRun(ctx context.Context, eventChan <-chan types.OutEvent) {
 					close(client.send)
 				}
 			case evt := <-eventChan:
-				logger.Trace("Sending WS event: ", evt.String())
+				logger.Trace("[ws] Sending WS event: ", evt.String())
 
 				eventMsg, err := evt.JSON()
 				if err != nil {
@@ -96,7 +100,7 @@ func (hub *wsHub) serveWs(c *gin.Context) {
 		return
 	}
 
-	logger.Tracef("Registering new WS client from %s", c.Request.RemoteAddr)
+	logger.Tracef("[ws] Registering new WS client from %s", c.Request.RemoteAddr)
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -110,7 +114,8 @@ func (hub *wsHub) serveWs(c *gin.Context) {
 
 	// Allow collection of memory referenced by the caller
 	// by doing all work in new goroutines.
-	go client.writer(hub.unregister)
+	go client.writer(hub.ctx, hub.unregister)
+	go client.reader(hub.ctx, hub.unregister)
 }
 
 type wsClient struct {
@@ -121,15 +126,18 @@ type wsClient struct {
 	send chan []byte
 }
 
-func (c *wsClient) writer(unregister chan *wsClient) {
+func (c *wsClient) writer(ctx context.Context, unregister chan *wsClient) {
 	ticker := time.NewTicker(pingPeriod)
 
 	defer func() {
 		ticker.Stop()
-		logger.Trace("Closing WS connection from ", c.conn.RemoteAddr())
+		logger.Trace("[ws] Closing WS connection from ", c.conn.RemoteAddr())
 
 		_ = c.conn.Close()
-		unregister <- c
+		select {
+		case unregister <- c:
+		case <-ctx.Done():
+		}
 	}()
 
 	for {
@@ -169,6 +177,29 @@ func (c *wsClient) writer(unregister chan *wsClient) {
 			if err = c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+		}
+	}
+}
+
+func (c *wsClient) reader(ctx context.Context, unregister chan *wsClient) {
+	defer func() {
+		logger.Trace("[ws] Closing WS reader from ", c.conn.RemoteAddr())
+
+		_ = c.conn.Close()
+		select {
+		case unregister <- c:
+		case <-ctx.Done():
+		}
+	}()
+
+	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error {
+		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
+	for {
+		if _, _, err := c.conn.ReadMessage(); err != nil {
+			return
 		}
 	}
 }
