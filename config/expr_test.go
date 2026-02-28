@@ -17,9 +17,12 @@ import (
 func TestExprFunctions(t *testing.T) {
 	t.Parallel()
 
+	date := time.Date(2026, 2, 26, 11, 34, 0, 0, time.Local) //nolint: gosmopolitan
+
 	exprByFunc := map[string]string{
 		"_call":         `_call("__dummyFn__")`,
 		"_exist":        `_exist("jsonFile")`,
+		"_fileDate":     `_fileDate("jsonFile", "2006-01-02 15:04:05")`,
 		"_jq":           `_jq("jsonFile", ".key")`,
 		"_loadJSON":     `_loadJSON("jsonFile")`,
 		"_merge":        `_merge({"a": 1}, {"b": 2})`,
@@ -53,6 +56,7 @@ func TestExprFunctions(t *testing.T) {
 	expectedOutputs := map[string]any{
 		"_call":         7,
 		"_exist":        true,
+		"_fileDate":     "2026-02-26 11:34:00",
 		"_jq":           "value",
 		"_loadJSON":     map[string]any{"key": "value"},
 		"_merge":        map[string]any{"a": 1, "b": 2},
@@ -73,12 +77,12 @@ func TestExprFunctions(t *testing.T) {
 			"jsonFile": {
 				S3Path:   "path/to/file.json",
 				CacheKey: "./testdata/file.json",
-				Date:     time.Now(),
+				Date:     date,
 			},
 			"xmlFile": {
 				S3Path:   "path/to/file.xml",
 				CacheKey: "./testdata/file.xml",
-				Date:     time.Now(),
+				Date:     date,
 			},
 		},
 		Exprs: map[string]*vm.Program{

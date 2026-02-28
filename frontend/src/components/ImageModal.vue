@@ -209,9 +209,7 @@ function toggleDynamicData() {
         >
           <Settings :size="16" />
         </button>
-        <div
-          class="flex items-stretch justify-between gap-x-4 border-b border-neutral-700 px-4 py-3"
-        >
+        <div class="flex items-stretch justify-between gap-x-4 px-4 py-3">
           <div v-if="image" class="grid w-full grid-cols-4 gap-x-2 text-white">
             <div
               class="bg-blue col-span-3 grid grid-cols-12 gap-x-4 gap-y-1 rounded-md p-2 text-sm"
@@ -220,11 +218,11 @@ function toggleDynamicData() {
               <span class="col-span-11 font-bold">{{ base(image.imageSummary.key) }}</span>
               <span>Type: </span>
               <span class="col-span-3 font-bold">{{ image.imageSummary.type }}</span>
-              <span class="col-span-2 text-end">Generation date: </span>
-              <span class="col-span-4 font-bold">{{ image._lastModified }}</span>
-              <span v-if="image.imageSummary.productInfo?.summary" class="col-span-2 text-center">{{
-                image.imageSummary.productInfo.summary
-              }}</span>
+              <span
+                v-if="image.imageSummary.productInfo?.summary"
+                class="col-span-8"
+                v-html="image.imageSummary.productInfo.summary"
+              ></span>
             </div>
             <div class="bg-blue col-span-1 flex grow items-center justify-center rounded-md p-2">
               {{ formatGeonames(image.imageSummary.geonames) }}

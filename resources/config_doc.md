@@ -46,7 +46,7 @@ The following expressions are "well-known" and are required for the UI to displa
     - `title`: preview image title
     - `subtitle`: preview image subtitle
     - `entries`: list of image features (e.g., targets counts)
-    - `summary`: specific information displayed in the top panel of the modal window
+    - `summary`: specific information displayed in the top panel of the modal window (can be HTML)
 - `productLabels`: JSON object defining the name and value used to define the cache_images_number metrics. Each label
   must be listed in the `monitoring.productLabels` section.
 

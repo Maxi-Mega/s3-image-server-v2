@@ -86,6 +86,46 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		new(func(fileSelector string) (bool, error)),
 		new(func(fileSelector string, env ExprEnv) (bool, error)),
 	),
+	// Returns the date of the file matched by the given file selector.
+	// It optionally takes a date format argument (using Golang syntax).
+	expr.Function(
+		"_fileDate",
+		func(params ...any) (any, error) {
+			t0 := time.Now()
+
+			defer func() {
+				logger.Tracef("[expr] _fileDate(...) took %s", time.Since(t0))
+			}()
+
+			var (
+				selector = params[0].(string) //nolint: forcetypeassert // already validated
+				format   string
+				env      ExprEnv
+			)
+
+			if len(params) == 3 {
+				format = params[1].(string) //nolint: forcetypeassert // already validated
+				env = params[2].(ExprEnv)   //nolint: forcetypeassert // already validated
+			} else {
+				env = params[1].(ExprEnv) //nolint: forcetypeassert // already validated
+			}
+
+			file, err := fileFromSelector(selector, env)
+			if err != nil {
+				return "", wrapErr("_fileDate", err)
+			}
+
+			if format != "" {
+				return file.Date.Format(format), nil
+			}
+
+			return file.Date.String(), nil
+		},
+		new(func(fileSelector string) (string, error)),
+		new(func(fileSelector string, env ExprEnv) (string, error)),
+		new(func(fileSelector string, format string) (string, error)),
+		new(func(fileSelector string, format string, env ExprEnv) (string, error)),
+	),
 	// Returns the result of the given jq expression on the file matched by the given file selector.
 	expr.Function(
 		"_jq",
@@ -167,7 +207,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			t0 := time.Now()
 
 			defer func() {
-				logger.Tracef("[expr] _merge(...) took %s", time.Since(t0))
+				logger.Tracef("[expr] _s3Key(...) took %s", time.Since(t0))
 			}()
 
 			file, err := fileFromSelector(params[0], params[1])
@@ -245,6 +285,7 @@ func (ExprEnvInjector) Visit(node *ast.Node) {
 	funcsWithEnv := map[string]bool{
 		"_call":     true,
 		"_exist":    true,
+		"_fileDate": true,
 		"_jq":       true,
 		"_loadJSON": true,
 		"_s3Key":    true,

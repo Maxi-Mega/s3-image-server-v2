@@ -22,6 +22,15 @@ _Returns whether a file matched by the given file selector has been cached._
 
 `_exist(fileSelector string) (bool, error)`
 
+#### _fileDate
+
+_Returns the date of the file matched by the given file selector.
+It optionally takes a date format argument (using Golang syntax)._
+
+`_fileDate(fileSelector string) (string, error)`
+
+`_fileDate(fileSelector string, format string) (string, error)`
+
 #### _jq
 
 _Returns the result of the given jq expression on the file matched by the given file selector._
