@@ -1,6 +1,6 @@
 module github.com/Maxi-Mega/s3-image-server-v2
 
-go 1.25
+go 1.26
 
 require (
 	github.com/99designs/gqlgen v0.17.87
