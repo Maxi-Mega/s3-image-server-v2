@@ -79,6 +79,9 @@ fabric.properties
 # Android studio 3.1+ serialized cache file
 .idea/caches/build_file_checksums.ser
 
+# VSCode
+.vscode
+
 ### Go template
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
@@ -106,6 +109,5 @@ go.work
 ### Local files
 
 local
-/*-dev
 build-*.env
 S3ImageServer-*
