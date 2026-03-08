@@ -115,7 +115,7 @@ func (srv *Server) Start(ctx context.Context, eventsChan chan types.OutEvent) er
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	go func() {
+	go func() { //nolint: gosec
 		<-ctx.Done()
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)

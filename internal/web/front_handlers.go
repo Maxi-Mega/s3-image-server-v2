@@ -40,6 +40,8 @@ func (srv *Server) serveFrontendResource(c *gin.Context, name, contentType strin
 		logger.Fatalf("Can't read frontend resource %q: %v", name, err)
 	}
 
+	defer rawFile.Close()
+
 	stat, err := rawFile.Stat()
 	if err != nil {
 		logger.Fatalf("Can't stat frontend resource %q: %v", name, err)

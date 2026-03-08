@@ -197,6 +197,12 @@ func (s3 s3Client) PollOnce(ctx context.Context, bucket string, s3Chan chan Even
 
 	objects := s3.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{Prefix: commonPrefix, Recursive: true})
 	for object := range objects {
+		if object.Err != nil {
+			logger.Errorf("Failed to list objects in bucket %q: %v", bucket, object.Err)
+
+			continue
+		}
+
 		event := Event{
 			Time:               currentTime,
 			Bucket:             bucket,

@@ -30,7 +30,7 @@ type (
 		PollingPeriod time.Duration `yaml:"pollingPeriod"`
 		Endpoint      string        `yaml:"endpoint"`
 		AccessID      string        `yaml:"accessID"`
-		AccessSecret  string        `yaml:"accessSecret"` //nolint: gosec
+		AccessSecret  string        `yaml:"accessSecret"`
 		UseSSL        bool          `yaml:"useSSL"`
 	}
 

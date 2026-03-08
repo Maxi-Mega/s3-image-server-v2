@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 
@@ -61,6 +62,10 @@ func Load(configPath string) (Config, []string, error) {
 func (cfg *Config) validate() ([]string, error) {
 	warnings := make([]string, 0)
 	errs := make([]error, 0)
+
+	if cfg.S3.PollingPeriod < time.Second {
+		errs = append(errs, fmt.Errorf("polling period must be at least one second, not %s", cfg.S3.PollingPeriod))
+	}
 
 	dynamicFilterNames := make(map[string]bool, len(cfg.Products.DynamicFilters))
 

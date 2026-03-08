@@ -24,7 +24,7 @@ func Init(logLevel string, colorLogs, jsonLogFormat bool, jsonLogFields map[stri
 	zerolog.TimeFieldFormat = logTimeFormat
 
 	if jsonLogFormat {
-		logCtx := zerolog.New(os.Stdout).With().Timestamp()
+		logCtx := zerolog.New(os.Stdout).Level(level).With().Timestamp()
 
 		for field, value := range jsonLogFields {
 			logCtx = logCtx.Any(field, value)

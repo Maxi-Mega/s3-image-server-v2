@@ -93,10 +93,6 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 		func(params ...any) (any, error) {
 			t0 := time.Now()
 
-			defer func() {
-				logger.Tracef("[expr] _fileDate(...) took %s", time.Since(t0))
-			}()
-
 			var (
 				selector = params[0].(string) //nolint: forcetypeassert // already validated
 				format   string
@@ -109,6 +105,10 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			} else {
 				env = params[1].(ExprEnv) //nolint: forcetypeassert // already validated
 			}
+
+			defer func() {
+				logger.Tracef("[expr] _fileDate(%q, %s) took %s", selector, format, time.Since(t0))
+			}()
 
 			file, err := fileFromSelector(selector, env)
 			if err != nil {
@@ -281,17 +281,17 @@ var ExprTestingFunctions = []expr.Option{ //nolint: gochecknoglobals
 
 type ExprEnvInjector struct{}
 
-func (ExprEnvInjector) Visit(node *ast.Node) {
-	funcsWithEnv := map[string]bool{
-		"_call":     true,
-		"_exist":    true,
-		"_fileDate": true,
-		"_jq":       true,
-		"_loadJSON": true,
-		"_s3Key":    true,
-		"_xpath":    true,
-	}
+var funcsWithEnv = map[string]bool{ //nolint: gochecknoglobals
+	"_call":     true,
+	"_exist":    true,
+	"_fileDate": true,
+	"_jq":       true,
+	"_loadJSON": true,
+	"_s3Key":    true,
+	"_xpath":    true,
+}
 
+func (ExprEnvInjector) Visit(node *ast.Node) {
 	if callNode, ok := (*node).(*ast.CallNode); ok {
 		if callee, ok := callNode.Callee.(*ast.IdentifierNode); ok && funcsWithEnv[callee.Value] {
 			calleeType := callee.Type()
