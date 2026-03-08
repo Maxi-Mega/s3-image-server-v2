@@ -115,9 +115,19 @@ export const useImageStore = defineStore("images", {
       } else if (event.eventType === "ObjectRemoved") {
         const { updated, remove } = handleRemoveEvent(event, this.allSummaries);
         if (remove) {
-          this.allSummaries = this.allSummaries.filter(
-            (s) => s.bucket != event.imageBucket || s.key != event.imageKey
+          const summaryIdx = findSummaryIndex(event.imageBucket, event.imageKey, this.allSummaries);
+          if (summaryIdx >= 0) {
+            this.allSummaries.splice(summaryIdx, 1);
+          }
+
+          const imageIdx = this.allImages.findIndex(
+            (img) =>
+              img.imageSummary.bucket === event.imageBucket &&
+              img.imageSummary.key === event.imageKey
           );
+          if (imageIdx >= 0) {
+            this.allImages.splice(imageIdx, 1);
+          }
         } else if (updated) {
           // TODO
         }

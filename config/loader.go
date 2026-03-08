@@ -63,8 +63,17 @@ func (cfg *Config) validate() ([]string, error) {
 	warnings := make([]string, 0)
 	errs := make([]error, 0)
 
-	if cfg.S3.PollingPeriod < time.Second {
-		errs = append(errs, fmt.Errorf("polling period must be at least one second, not %s", cfg.S3.PollingPeriod))
+	switch cfg.S3.Mode {
+	case S3ModePolling:
+		if cfg.S3.PollingPeriod < time.Second {
+			errs = append(errs, fmt.Errorf("polling period must be at least one second, not %q", cfg.S3.PollingPeriod))
+		}
+	case S3ModeEvent:
+		if cfg.S3.PollingPeriod > 0 {
+			warnings = append(warnings, "polling period is ignored when in event mode")
+		}
+	default:
+		errs = append(errs, fmt.Errorf("unknown S3 mode %q (allowed values are '%s' / '%s')", cfg.S3.Mode, S3ModePolling, S3ModeEvent))
 	}
 
 	dynamicFilterNames := make(map[string]bool, len(cfg.Products.DynamicFilters))

@@ -9,10 +9,7 @@ import (
 
 func defaultConfig() Config {
 	return Config{
-		S3: S3{
-			PollingMode:   true,
-			PollingPeriod: 30 * time.Second,
-		},
+		S3: S3{},
 		UI: UI{
 			BaseURL:                "/",
 			WindowTitle:            "S3 Image Viewer",

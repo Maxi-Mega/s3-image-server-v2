@@ -1,6 +1,6 @@
 s3:
-  pollingMode: true # Can be set to false for MinIO servers
-  pollingPeriod: 30s
+  mode: polling # Can be set to 'event' for MinIO servers
+  pollingPeriod: 30s # Only used if mode is 'polling'
   endpoint: "127.0.0.1:9000"
   accessID: "admin"
   accessSecret: "password"

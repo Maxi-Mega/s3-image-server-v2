@@ -84,7 +84,7 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 		return
 	}
 
-	if event.ObjectType == "" { // event comes from polling
+	if event.ObjectType == "" {
 		event.ObjectType, event.InputFile = consumer.getObjectType(event.ObjectKey, imgType)
 	}
 

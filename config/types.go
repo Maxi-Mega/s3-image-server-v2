@@ -7,6 +7,13 @@ import (
 	"github.com/expr-lang/expr/vm"
 )
 
+type S3Mode = string
+
+const (
+	S3ModePolling = "polling"
+	S3ModeEvent   = "event"
+)
+
 type FileSelectorKind = string
 
 const (
@@ -26,7 +33,7 @@ type (
 	}
 
 	S3 struct {
-		PollingMode   bool          `yaml:"pollingMode"`
+		Mode          S3Mode        `yaml:"mode"`
 		PollingPeriod time.Duration `yaml:"pollingPeriod"`
 		Endpoint      string        `yaml:"endpoint"`
 		AccessID      string        `yaml:"accessID"`

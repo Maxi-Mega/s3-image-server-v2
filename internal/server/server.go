@@ -83,12 +83,12 @@ func (srv *Server) Start(ctx context.Context) (types.Cache, chan types.OutEvent,
 
 	var err error
 
-	if srv.cfg.S3.PollingMode {
+	switch srv.cfg.S3.Mode {
+	case config.S3ModePolling:
 		logger.Trace("Starting server in polling mode ...")
 
 		err = srv.startPollingS3(ctx)
-	} else {
-		logger.Fatal("S3 notification mode is not available at the moment.")
+	case config.S3ModeEvent:
 		logger.Trace("Starting server in notification mode ...")
 
 		err = srv.subscribeToS3(ctx)
@@ -163,6 +163,10 @@ func (srv *Server) subscribeToS3(ctx context.Context) error {
 					srv.cache.updateMetrics(ctx, bucket)
 				}
 			case <-ctx.Done():
+				logger.Debug("Context expired, closing event channel")
+
+				close(srv.s3Chan)
+
 				return
 			}
 		}

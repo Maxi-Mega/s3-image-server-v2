@@ -31,7 +31,7 @@ func TestLoad(t *testing.T) {
 			filePath: "valid_cfg.yml",
 			expectedConfig: Config{
 				S3: S3{
-					PollingMode:   true,
+					Mode:          S3ModePolling,
 					PollingPeriod: 30 * time.Second,
 					Endpoint:      "localhost:9000",
 				},
@@ -190,9 +190,8 @@ func TestLoad(t *testing.T) {
 			filePath: "s3_endpoint_transform.yml",
 			expectedConfig: Config{
 				S3: S3{
-					PollingMode:   true,
-					PollingPeriod: 30 * time.Second,
-					Endpoint:      "localhost:9000", // without "https://"
+					Mode:     S3ModeEvent,
+					Endpoint: "localhost:9000", // without "https://"
 				},
 				UI: UI{
 					BaseURL:                "/",

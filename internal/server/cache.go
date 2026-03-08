@@ -38,7 +38,7 @@ type cache struct {
 type image struct {
 	lastModified      time.Time
 	bucket, s3Key     string
-	name              string
+	name, baseDir     string
 	imgGroup, imgType string
 	// map[s3 key] -> cache key & last update
 	targets map[string]valueWithLastUpdate[string]

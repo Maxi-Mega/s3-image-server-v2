@@ -106,6 +106,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		}
 
 		img.name = imgName
+		img.baseDir = event.baseDir
 		img.bucket = event.Bucket
 		img.imgGroup = event.imgGroup.GroupName
 		img.imgType = event.imgType.Name
@@ -115,7 +116,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.linksFromCache = make(map[string]valueWithLastUpdate[string])
 		img.signedURLs = make(map[string]valueWithLastUpdate[signedURL])
 
-		bc.setDropTimer(imgName, event.Time)
+		bc.setDropTimer(event.baseDir, event.Time)
 	}
 
 	fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, event.baseDirRelativePath())
@@ -263,8 +264,9 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 
 func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img image) *types.OutEvent {
 	var (
-		subDir     string
-		deleteFile = true
+		subDir       string
+		deleteFile   = true
+		updateImages = true
 	)
 
 	switch event.ObjectType {
@@ -275,9 +277,10 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 			}
 		}
 
-		bc.dropImage(img.name)
+		bc.dropImage(img.baseDir)
 
-		return nil
+		deleteFile = false // the whole dir has just been deleted
+		updateImages = false
 	case types.ObjectTarget:
 		delete(img.targets, event.ObjectKey)
 
@@ -311,7 +314,9 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 		}
 	}
 
-	bc.images[event.baseDir] = img
+	if updateImages {
+		bc.images[event.baseDir] = img
+	}
 
 	return &types.OutEvent{
 		EventType:   types.EventRemoved,

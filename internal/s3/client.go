@@ -1,4 +1,4 @@
-//nolint: unused,revive,gci,godoclint,gofmt,goimports
+//nolint: unused,gci,godoclint,gofmt,goimports
 package s3
 
 import (
@@ -128,49 +128,33 @@ func (s3 s3Client) BucketExists(ctx context.Context, bucket string) (bool, error
 }
 
 func (s3 s3Client) SubscribeToBucket(ctx context.Context, bucket string, s3Chan chan Event) error {
-	/*var (
-	  	previewEvents      = []string{"s3:ObjectCreated:*", "s3:ObjectRemoved:*"}
-	  	geonameEvents      = []string{"s3:ObjectCreated:*"}
-	  	localizationEvents = []string{"s3:ObjectCreated:*"}
-	  	fullProductEvents  = []string{"s3:ObjectCreated:*"}
-	  )
+	notifs := s3.client.ListenBucketNotification(
+		ctx,
+		bucket,
+		s3.specificInfoPerBucket[bucket].commonPrefix, "",
+		[]string{"s3:ObjectCreated:*", "s3:ObjectRemoved:*"},
+	)
 
-	  specificInfo := s3.specificInfoPerBucket[bucket]
+	time.Sleep(10 * time.Millisecond) // Let the time for errors to occur
 
-	  previewNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.DefaultPreviewSuffix, previewEvents)
-	  geonameNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.GeonamesFilename, geonameEvents)
-	  localizationNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.LocalizationFilename, localizationEvents)
-	  fullProductNotifs := s3.client.ListenBucketNotification(ctx, bucket, specificInfo.commonPrefix, s3.productsCfg.FullProductExtension, fullProductEvents)
+	err := ensureNoError(notifs)
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to notifications of bucket %q: %w", bucket, err)
+	}
 
-	  time.Sleep(10 * time.Millisecond) // Let the time for errors to occur
+	go func() {
+		logger.Debugf("Starting to listen for notifications from bucket %q", bucket)
 
-	  err := ensureNoError(previewNotifs, geonameNotifs, localizationNotifs, fullProductNotifs)
-	  if err != nil {
-	  	return fmt.Errorf("failed to subscribe to notifications of bucket %q: %w", bucket, err)
-	  }
+		for {
+			select {
+			case notif := <-notifs:
+				s3.handleEvent(bucket, notif, s3Chan)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
-	  go func() {
-	  	logger.Debugf("Starting to listen for notifications from bucket %q", bucket)
-
-	  	for {
-	  		select {
-	  		case notif := <-previewNotifs:
-	  			s3.handleEvent(bucket, types.ObjectPreview, notif, s3Chan)
-	  		case notif := <-geonameNotifs:
-	  			s3.handleEvent(bucket, types.ObjectGeonames, notif, s3Chan)
-	  		case notif := <-localizationNotifs:
-	  			s3.handleEvent(bucket, types.ObjectLocalization, notif, s3Chan)
-	  		case notif := <-fullProductNotifs:
-	  			s3.handleEvent(bucket, types.ObjectFullProduct, notif, s3Chan)
-	  case <-ctx.Done():
-	  logger.Info("Context expired, closing event channel")
-
-	  close(s3Chan)
-
-	  return
-	  }
-	  }
-	  }()*/
 	return nil
 }
 
@@ -235,26 +219,19 @@ func (s3 s3Client) GenerateSignedURL(ctx context.Context, bucket, objectKey stri
 	return signedURL, nil
 }
 
-func (s3 s3Client) handleEvent(bucket string, objectType types.ObjectType, notif notification.Info, eventChan chan Event) {
+func (s3 s3Client) handleEvent(bucket string, notif notification.Info, eventChan chan Event) {
 	if notif.Err != nil {
 		logger.Errorf("Received error from bucket %q: %v", bucket, notif.Err)
 
 		return
 	}
 
-	logger.Debugf("Handling S3 event from bucket %q on %s object", bucket, objectType)
-
 	for _, e := range notif.Records {
-		if !s3.matchesPreviewFilename(bucket, e.S3.Object.Key) {
-			continue
-		}
-
 		eventTime := parseEventTime(e.EventTime)
 		event := Event{
 			Time:               eventTime,
 			Bucket:             e.S3.Bucket.Name,
 			EventType:          parseEventType(e.EventName),
-			ObjectType:         objectType,
 			Size:               e.S3.Object.Size,
 			ObjectKey:          e.S3.Object.Key,
 			ObjectLastModified: eventTime,

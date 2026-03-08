@@ -1,3 +1,7 @@
+s3:
+  mode: "polling"
+  pollingPeriod: 10s
+
 products:
   imageGroups:
     - groupName: "grp"
