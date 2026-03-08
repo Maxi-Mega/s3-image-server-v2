@@ -19,7 +19,6 @@ export function applyFilters(
   });
 
   filtered = filtered.filter(
-    // @ts-expect-error it can't be undefined
     (img) => img.group in groupsAndTypes && groupsAndTypes[img.group].includes(img.type)
   );
 

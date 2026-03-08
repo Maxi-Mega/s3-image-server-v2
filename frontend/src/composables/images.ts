@@ -17,7 +17,6 @@ export function processSummaries(summaries: GqlAllSummaries): ImageSummary[] {
 
   for (const group in summaries) {
     for (const type in summaries[group]) {
-      // @ts-expect-error no worries
       flattened.push(...summaries[group][type].map((s) => plainToInstance(ImageSummary, s)));
     }
   }
@@ -62,7 +61,6 @@ function makeLinks(img: Image): Array<[string, string]> {
 
   for (const key in img.signedURLs) {
     // The URL of full product files already has its own host
-    // @ts-expect-error no worries
     links.push([base(key), img.signedURLs[key]]);
   }
 
@@ -94,15 +92,10 @@ export function formatGeonames(geonames: Geonames | null): string {
   let final = "";
 
   if (geonames && geonames.objects && geonames.objects.length > 0) {
-    // @ts-expect-error no worries
     final += geonames.objects[0].name;
-    // @ts-expect-error no worries
     if (geonames.objects[0].states) {
-      // @ts-expect-error no worries
       final += " / " + geonames.objects[0].states[0].name;
-      // @ts-expect-error no worries
       if (geonames.objects[0].states[0].counties) {
-        // @ts-expect-error no worries
         final += " / " + geonames.objects[0].states[0].counties[0].name;
       }
     }

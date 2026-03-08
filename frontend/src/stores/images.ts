@@ -157,7 +157,6 @@ function handleCreateEvent(
       _lastModified: event.objectTime,
     };
   } else {
-    // @ts-expect-error no worries
     updated = summaries[summaryIdx];
     switch (event.objectType) {
       case "preview":
@@ -170,7 +169,6 @@ function handleCreateEvent(
         }
         break;
       default:
-        // @ts-expect-error no worries
         updated._hasBeenUpdated = true; // will be fetched on next modal open
     }
     // @ts-expect-error updated is not null
@@ -192,7 +190,6 @@ function handleRemoveEvent(
     return { updated: null, remove: true };
   }
 
-  // @ts-expect-error no worries
   return { updated: summaries[summaryIdx], remove: false };
 }
 
