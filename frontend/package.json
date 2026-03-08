@@ -1,6 +1,6 @@
 {
   "name": "s3-image-server-v2-front",
-  "version": "2.2.8",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "scripts": {
