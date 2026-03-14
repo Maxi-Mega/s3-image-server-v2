@@ -3,7 +3,7 @@ name: QA
 on:
   push:
     branches:
-      - "*"
+      - "**"
   workflow_call:
 
 permissions:
