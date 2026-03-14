@@ -16,6 +16,7 @@ permissions:
 env:
   IMAGE_NAME: s3-image-server-builder
   REGISTRY: ghcr.io
+  IMAGE_PLATFORMS: linux/amd64 linux/arm64
 
 jobs:
   draft-release:
@@ -52,30 +53,34 @@ jobs:
         if: steps.resolve-tag.outputs.has_tag == 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image (linux/amd64) and load to local docker
+      - name: Set up QEMU
         if: steps.resolve-tag.outputs.has_tag == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./builder.Dockerfile
-          platforms: linux/amd64
-          load: true
-          build-args: |
-            VERSION=${{ steps.resolve-tag.outputs.tag }}
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ steps.resolve-tag.outputs.tag }}
-            ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        uses: docker/setup-qemu-action@v4
 
-      - name: Save Docker image to tar
+      - name: Build amd64 and arm64 Docker image archives
         if: steps.resolve-tag.outputs.has_tag == 'true'
         run: |
-          IMAGE="${{ env.IMAGE_NAME }}:${{ steps.resolve-tag.outputs.tag }}"
-          TAR="${{ env.IMAGE_NAME }}-${{ steps.resolve-tag.outputs.tag }}.tar"
-          docker image save "$IMAGE" -o "$TAR"
-          gzip -9 "$TAR"
-          echo "ARCHIVE=${TAR}.gz" >> $GITHUB_ENV
+          TAG="${{ steps.resolve-tag.outputs.tag }}"
+
+          for PLATFORM in ${{ env.IMAGE_PLATFORMS }}; do
+            ARCH="${PLATFORM#linux/}"
+            TAR="${{ env.IMAGE_NAME }}-${TAG}-linux-${ARCH}.tar"
+
+            docker buildx build \
+              --file ./builder.Dockerfile \
+              --platform "${PLATFORM}" \
+              --build-arg "VERSION=${TAG}" \
+              --tag "${{ env.IMAGE_NAME }}:${TAG}-${ARCH}" \
+              --tag "${{ env.IMAGE_NAME }}:latest-${ARCH}" \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              --output "type=docker,dest=${TAR}" \
+              .
+
+            gzip -9 "${TAR}"
+          done
+
+          echo "ARCHIVE_GLOB=${{ env.IMAGE_NAME }}-${TAG}-linux-*.tar.gz" >> "$GITHUB_ENV"
 
       - name: Create release draft
         if: steps.resolve-tag.outputs.has_tag == 'true'
@@ -84,5 +89,5 @@ jobs:
           name: "${{ steps.resolve-tag.outputs.tag }}"
           tag: "${{ steps.resolve-tag.outputs.tag }}"
           draft: true
-          artifacts: "${{ env.ARCHIVE }}"
+          artifacts: "${{ env.ARCHIVE_GLOB }}"
           makeLatest: true
