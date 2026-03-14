@@ -18,12 +18,10 @@ const filterStore = useFilterStore();
 const filteredSummaries = ref<ImageSummary[]>([]);
 const { searchQuery, globalScaleValue } = storeToRefs(filterStore);
 
-const modalOverlay = ref<HSOverlay | undefined>();
-
 onMounted(() => {
   const modalEl = document.getElementById("image-modal");
   if (modalEl) {
-    modalOverlay.value = new HSOverlay(modalEl);
+    HSOverlay.autoInit();
   } else {
     console.warn("Modal element not found");
   }
@@ -69,10 +67,9 @@ function openModal(img: ImageSummary, reset = true) {
     return;
   }
 
-  if (modalOverlay.value) {
-    if (modalOverlay.value.el.classList.contains("hidden")) {
-      modalOverlay.value.open();
-    }
+  const modalEl = document.getElementById("image-modal");
+  if (modalEl?.classList.contains("hidden")) {
+    HSOverlay.open(modalEl as HTMLElement);
   }
 
   // Let the time for the modal to realize that the selected image is possibly undefined

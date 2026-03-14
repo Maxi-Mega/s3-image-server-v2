@@ -1060,33 +1060,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@preline/dropdown@npm:^3.2.3":
-  version: 3.2.3
-  resolution: "@preline/dropdown@npm:3.2.3"
+"@preline/dropdown@npm:^4.1.2":
+  version: 4.1.2
+  resolution: "@preline/dropdown@npm:4.1.2"
   dependencies:
     "@floating-ui/dom": "npm:^1.6.13"
-  checksum: 10c0/3920f89098285eb380c7b04ee9deb058eb0b9c052b5634fe8ce54059a976a8f1296a5c891b8ebcf78440600916298ae0a531f9580cc4978820f6eb1a7555b3a6
+  checksum: 10c0/291ab9f4e1e75db5cb106916778d3514ba93dc9571aa0d971a6888519a9c8d7baa95752dffe00227fe1d8421ce9e9f54691709cbe3f65907b43800d4d659f74d
   languageName: node
   linkType: hard
 
-"@preline/layout-splitter@npm:^3.2.3":
-  version: 3.2.3
-  resolution: "@preline/layout-splitter@npm:3.2.3"
-  checksum: 10c0/e3d62e335cca943c30ab57ce363bcef58937ea0d332ba3afee08945206c10c1ec5ab1ed480e90b8337a83e31596f7ec390db53d3c0c42a463685e267c6c7e90e
+"@preline/layout-splitter@npm:^4.1.2":
+  version: 4.1.2
+  resolution: "@preline/layout-splitter@npm:4.1.2"
+  checksum: 10c0/24ee7699c3674296c869e227372c606b1ae148e9f01396d44d72c208d043757293bc19ed4881fb60d40663e970afd2d35d2d565c33ef831e797f772b19f7dc98
   languageName: node
   linkType: hard
 
-"@preline/overlay@npm:^3.2.3":
-  version: 3.2.3
-  resolution: "@preline/overlay@npm:3.2.3"
-  checksum: 10c0/0ce282ce9b5d7562d74b6b0db3c20a504456c75d0308ef00436bdfe03b2e24723a02788d9dc18967f169b56427e18f109ff59d848e2f8cbafb110a830c7e0f3e
+"@preline/overlay@npm:^4.1.2":
+  version: 4.1.2
+  resolution: "@preline/overlay@npm:4.1.2"
+  checksum: 10c0/400dc245a9e5b5e3ec5d23605a3f78e3cb5dafc1116aecf669d20c9bfc8da691d552ef3520fca3fa3e00afd418cc609ad1eff8ca4626d5e898b8b32fabff3ba4
   languageName: node
   linkType: hard
 
-"@preline/tabs@npm:^3.2.3":
-  version: 3.2.3
-  resolution: "@preline/tabs@npm:3.2.3"
-  checksum: 10c0/017fa8243ad60266eb3b3cf4d9fd721c10f43600c980b079b82eca8ab5688e4df8351ba0b2ce6e9464a9b053d68f542f88ab73861f3cbc4d5618c9d36660cea9
+"@preline/tabs@npm:^4.1.2":
+  version: 4.1.2
+  resolution: "@preline/tabs@npm:4.1.2"
+  checksum: 10c0/f0a05dac1348faf81700fae960eecac9b2fbcbbadd0582697d24bb19c8a374ef6ef141a68e982b2ac451ed85c28e2fd5104af6e476de633015a4b14cecbd1f74
   languageName: node
   linkType: hard
 
@@ -1474,6 +1474,13 @@ __metadata:
     "@types/deep-eql": "npm:*"
     assertion-error: "npm:^2.0.1"
   checksum: 10c0/e0ef1de3b6f8045a5e473e867c8565788c444271409d155588504840ad1a53611011f85072188c2833941189400228c1745d78323dac13fcede9c2b28bacfb2f
+  languageName: node
+  linkType: hard
+
+"@types/culori@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "@types/culori@npm:4.0.1"
+  checksum: 10c0/f25fcf01fe709d2fce569892eae71a268b19cf85a7c8f6bf6b041f02f232e5a7d1218e8213349d6b2a458be9f61158ed1e1893e7b81e2ee4a7cebc2a172b7ebb
   languageName: node
   linkType: hard
 
@@ -2987,6 +2994,13 @@ __metadata:
   version: 3.2.3
   resolution: "csstype@npm:3.2.3"
   checksum: 10c0/cd29c51e70fa822f1cecd8641a1445bed7063697469d35633b516e60fe8c1bde04b08f6c5b6022136bb669b64c63d4173af54864510fbb4ee23281801841a3ce
+  languageName: node
+  linkType: hard
+
+"culori@npm:^4.0.2":
+  version: 4.0.2
+  resolution: "culori@npm:4.0.2"
+  checksum: 10c0/5d3c952b947ac5915409bab513e1d2e8bd813caa491af8ded0c769fdc1186a5ff61fb3c59fc8edf5393237d92074dbc54a492e6e99cb039dd6535d5d96106bfe
   languageName: node
   linkType: hard
 
@@ -5327,17 +5341,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"preline@npm:3.2.3":
-  version: 3.2.3
-  resolution: "preline@npm:3.2.3"
+"preline@npm:4.1.2":
+  version: 4.1.2
+  resolution: "preline@npm:4.1.2"
   dependencies:
     "@floating-ui/dom": "npm:^1.6.13"
+    "@types/culori": "npm:^4.0.1"
     apexcharts: "npm:^4.5.0"
+    culori: "npm:^4.0.2"
     datatables.net-dt: "npm:^2.2.2"
     dropzone: "npm:^6.0.0-beta.2"
     nouislider: "npm:^15.8.1"
     vanilla-calendar-pro: "npm:^3.0.4"
-  checksum: 10c0/d37f17df635ac305b92439554e35b061114e19302054dc0a1e34d388c738a28d37a4f6a1daff99803e31d06c40de10ee379b7e016041a0aa18ed9d58b22e619e
+  bin:
+    preline-theme-generator: skills/theme-generator/scripts/generate-theme.js
+  checksum: 10c0/bae183c906f6d201885ec701c284a83159a02fc53400e4ac7e85c22d5649a3912ef67f19db43d387a85e319c659422f359f7e27b5ea6739754acc21caa0bde1c
   languageName: node
   linkType: hard
 
@@ -5736,10 +5754,10 @@ __metadata:
   dependencies:
     "@apollo/client": "npm:3.14.0"
     "@eslint/js": "npm:^10.0.1"
-    "@preline/dropdown": "npm:^3.2.3"
-    "@preline/layout-splitter": "npm:^3.2.3"
-    "@preline/overlay": "npm:^3.2.3"
-    "@preline/tabs": "npm:^3.2.3"
+    "@preline/dropdown": "npm:^4.1.2"
+    "@preline/layout-splitter": "npm:^4.1.2"
+    "@preline/overlay": "npm:^4.1.2"
+    "@preline/tabs": "npm:^4.1.2"
     "@rushstack/eslint-patch": "npm:^1.16.1"
     "@tailwindcss/forms": "npm:^0.5.11"
     "@tailwindcss/postcss": "npm:^4.2.1"
@@ -5767,7 +5785,7 @@ __metadata:
     pinia: "npm:^3.0.4"
     postcss: "npm:^8.5.8"
     postcss-import: "npm:^16.1.1"
-    preline: "npm:3.2.3"
+    preline: "npm:4.1.2"
     prettier: "npm:^3.8.1"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     prettier-plugin-tailwindcss: "npm:^0.7.2"

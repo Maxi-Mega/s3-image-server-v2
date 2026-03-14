@@ -15,7 +15,7 @@ import { useImageStore } from "@/stores/images";
 import { useStaticInfoStore } from "@/stores/static_info.ts";
 import { provideApolloClient, useQuery } from "@vue/apollo-composable";
 import { ChevronLeft, ChevronRight, Settings, X } from "lucide-vue-next";
-import { HSTabs } from "preline/preline";
+import { HSTabs } from "preline";
 import { getCurrentScope, nextTick, reactive, type Ref, ref, toRefs, watch } from "vue";
 
 const props = defineProps<{
