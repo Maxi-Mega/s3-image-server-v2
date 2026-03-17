@@ -84,8 +84,8 @@ jobs:
             --file ./builder.Dockerfile \
             --platform "${{ matrix.platform }}" \
             --build-arg "VERSION=${TAG}" \
-            --tag "${{ env.IMAGE_NAME }}:${TAG}-${{ matrix.arch }}" \
-            --tag "${{ env.IMAGE_NAME }}:latest-${{ matrix.arch }}" \
+            --tag "${{ env.IMAGE_NAME }}:${TAG}" \
+            --tag "${{ env.IMAGE_NAME }}:latest" \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --output "type=docker,dest=${TAR}" \
