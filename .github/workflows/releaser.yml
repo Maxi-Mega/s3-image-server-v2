@@ -29,6 +29,7 @@ jobs:
     outputs:
       has_tag: ${{ steps.resolve-tag.outputs.has_tag }}
       tag: ${{ steps.resolve-tag.outputs.tag }}
+      image_targets: ${{ steps.set-image-targets.outputs.image_targets }}
 
     steps:
       - name: Checkout
@@ -53,6 +54,10 @@ jobs:
           echo "has_tag=true" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Set image targets
+        id: set-image-targets
+        run: echo 'image_targets=${{ env.IMAGE_TARGETS }}' >> "$GITHUB_OUTPUT"
+
   build-image:
     name: Build image (${{ matrix.arch }})
     needs: prepare-release
@@ -61,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(env.IMAGE_TARGETS) }}
+        include: ${{ fromJSON(needs.prepare-release.outputs.image_targets) }}
 
     steps:
       - name: Checkout
