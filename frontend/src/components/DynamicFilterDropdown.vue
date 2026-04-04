@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useFilterStore } from "@/stores/filters.ts";
-import { ChevronDown } from "lucide-vue-next";
+import { ChevronDown } from "@lucide/vue";
 import { computed, onMounted } from "vue";
 
 const props = defineProps<{

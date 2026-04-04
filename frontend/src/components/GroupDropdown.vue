@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { ImageGroup } from "@/models/static_info";
 import { useFilterStore } from "@/stores/filters";
-import { ChevronDown } from "lucide-vue-next";
+import { ChevronDown } from "@lucide/vue";
 import { onMounted } from "vue";
 
 defineProps<{
