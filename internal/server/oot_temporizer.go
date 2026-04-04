@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/logger"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 )
 
@@ -50,6 +51,8 @@ func (op *objectTemporizer) goTemporize(ctx context.Context) {
 			select {
 			case event, ok := <-op.temporizationChan:
 				if !ok {
+					logger.Debug("Object temporizer channel closed")
+
 					return
 				}
 
@@ -58,6 +61,8 @@ func (op *objectTemporizer) goTemporize(ctx context.Context) {
 				op.objectsLock.Unlock()
 			case baseDir, ok := <-op.baseDirChan:
 				if !ok {
+					logger.Debug("Base dir channel closed")
+
 					return
 				}
 

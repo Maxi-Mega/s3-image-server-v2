@@ -16,27 +16,27 @@ import (
 )
 
 // FileSelectors is the resolver for the fileSelectors field.
-func (r *dynamicDataResolver) FileSelectors(_ context.Context, obj *model.DynamicData) (map[string]any, error) {
+func (r *dynamicDataResolver) FileSelectors(ctx context.Context, obj *model.DynamicData) (map[string]any, error) {
 	return toMapStringAny(obj.FileSelectors), nil
 }
 
 // Expressions is the resolver for the expressions field.
-func (r *dynamicDataResolver) Expressions(_ context.Context, obj *model.DynamicData) (map[string]any, error) {
+func (r *dynamicDataResolver) Expressions(ctx context.Context, obj *model.DynamicData) (map[string]any, error) {
 	return toMapStringAny(obj.Expressions), nil
 }
 
 // CachedFileLinks is the resolver for the cachedFileLinks field.
-func (r *imageResolver) CachedFileLinks(_ context.Context, obj *types.Image) (map[string]any, error) {
+func (r *imageResolver) CachedFileLinks(ctx context.Context, obj *types.Image) (map[string]any, error) {
 	return toMapStringAny(obj.CachedFileLinks), nil
 }
 
 // SignedURLs is the resolver for the signedURLs field.
-func (r *imageResolver) SignedURLs(_ context.Context, obj *types.Image) (map[string]any, error) {
+func (r *imageResolver) SignedURLs(ctx context.Context, obj *types.Image) (map[string]any, error) {
 	return toMapStringAny(obj.SignedURLs), nil
 }
 
 // DynamicFilters is the resolver for the dynamicFilters field.
-func (r *imageSummaryResolver) DynamicFilters(_ context.Context, obj *types.ImageSummary) (map[string]any, error) {
+func (r *imageSummaryResolver) DynamicFilters(ctx context.Context, obj *types.ImageSummary) (map[string]any, error) {
 	return toMapStringAny(obj.DynamicFilters), nil
 }
 
@@ -75,7 +75,7 @@ func (r *queryResolver) GetImage(ctx context.Context, bucket string, name string
 }
 
 // GetDynamicData is the resolver for the getDynamicData field.
-func (r *queryResolver) GetDynamicData(_ context.Context, group string, typeArg string) (*model.DynamicData, error) {
+func (r *queryResolver) GetDynamicData(ctx context.Context, group string, typeArg string) (*model.DynamicData, error) {
 	for _, grp := range r.Config.Products.ImageGroups {
 		if grp.GroupName == group {
 			for _, typ := range grp.Types {

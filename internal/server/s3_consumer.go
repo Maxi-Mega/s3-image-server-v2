@@ -54,6 +54,8 @@ func (consumer *eventConsumer) goConsumeEvents(ctx context.Context) {
 			select {
 			case event, ok := <-consumer.s3Chan:
 				if !ok {
+					logger.Debug("S3 event consummer channel closed")
+
 					return
 				}
 

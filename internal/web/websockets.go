@@ -67,7 +67,13 @@ func (hub *wsHub) goRun(ctx context.Context, eventChan <-chan types.OutEvent) {
 					delete(hub.clients, client)
 					close(client.send)
 				}
-			case evt := <-eventChan:
+			case evt, ok := <-eventChan:
+				if !ok {
+					logger.Debug("[ws] Event channel closed")
+
+					return
+				}
+
 				logger.Trace("[ws] Sending WS event: ", evt.String())
 
 				eventMsg, err := evt.JSON()

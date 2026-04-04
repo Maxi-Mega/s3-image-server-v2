@@ -146,9 +146,15 @@ func (s3 s3Client) SubscribeToBucket(ctx context.Context, bucket string, s3Chan 
 	go func() {
 		logger.Debugf("Starting to listen for notifications from bucket %q", bucket)
 
-		for {
+		for ctx.Err() == nil {
 			select {
-			case notif := <-notifs:
+			case notif, ok := <-notifs:
+				if !ok {
+					logger.Debugf("S3 notifications channel from bucket %q closed", bucket)
+
+					return
+				}
+
 				s3.handleEvent(bucket, notif, s3Chan)
 			case <-ctx.Done():
 				return
