@@ -210,7 +210,7 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 					lastUpdate: event.ObjectLastModified,
 				}
 			}
-		case config.FileSelectorKindSignedURL:
+		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL:
 			if fullProduct, exists := img.signedURLs[event.ObjectKey]; exists {
 				// Checking if we have the latest version of the object, and if the signed URL is still valid.
 				if !fullProduct.lastUpdate.Before(event.ObjectLastModified) && fullProduct.value.isValid() {
@@ -218,42 +218,22 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 				}
 			}
 
-			signURL, errURL := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey)
-			if errURL != nil {
-				err = errURL
-
-				break
+			signedURLGenReq := signedURLGenerationRequest{
+				bucket:              event.Bucket,
+				s3Key:               event.ObjectKey,
+				objLastModified:     event.ObjectLastModified,
+				img:                 *img,
+				exprManager:         bc.exprManager,
+				fullProductProtocol: bc.cfg.Products.FullProductProtocol,
+				fullProductRootURL:  bc.cfg.Products.FullProductRootURL,
 			}
 
-			img.signedURLs[event.ObjectKey] = valueWithLastUpdate[signedURL]{
-				value: signedURL{
-					value:          signURL.String(),
-					generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual generation timestamp
-				},
-				lastUpdate: event.ObjectLastModified,
-			}
-		case config.FileSelectorKindFullProductSignedURL:
-			if fullProduct, exists := img.signedURLs[event.ObjectKey]; exists {
-				// Checking if we have the latest version of the object, and if the signed URL is still valid.
-				if !fullProduct.lastUpdate.Before(event.ObjectLastModified) && fullProduct.value.isValid() {
-					return nil, errObjectAlreadyCached
-				}
+			if selector.Kind == config.FileSelectorKindFullProductSignedURL {
+				signedURLGenReq.injectParams = true
+				signedURLGenReq.paramsExpr = selector.KindParams[0]
 			}
 
-			signURL, errURL := bc.s3Client.GenerateSignedURL(ctx, event.Bucket, event.ObjectKey)
-			if errURL != nil {
-				err = errURL
-
-				break
-			}
-
-			img.signedURLs[event.ObjectKey] = valueWithLastUpdate[signedURL]{
-				value: signedURL{
-					value:          bc.injectFullProductURLParamsFromExpr(ctx, signURL, *img, selector.KindParams[0]),
-					generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual generation timestamp
-				},
-				lastUpdate: event.ObjectLastModified,
-			}
+			img.signedURLs[event.ObjectKey], err = makeSignedURL(ctx, bc.s3Client, signedURLGenReq)
 		}
 
 		eventObj = img.dynamicInputFiles[event.InputFile]
@@ -355,33 +335,33 @@ func (bc *bucketCache) dropImage(imgBaseDir string) {
 	}
 }
 
-func (bc *bucketCache) injectFullProductURLParamsFromExpr(ctx context.Context, signedURL *url.URL, img image, paramsExpr string) string {
-	withoutSchemeAndHost := strings.TrimPrefix(signedURL.String(), signedURL.Scheme+"://"+signedURL.Host)
-	newURL := bc.cfg.Products.FullProductProtocol + url.QueryEscape(bc.cfg.Products.FullProductRootURL+withoutSchemeAndHost)
+// findSignedURLsToRenew returns S3 signed URLs that will expire before the given deadline.
+func (bc *bucketCache) findSignedURLsToRenew(deadline time.Time, signedURLLifetime time.Duration) map[string]map[string]signedURLRegenerationRequest {
+	bc.l.RLock()
+	defer bc.l.RUnlock()
 
-	su, err := url.Parse(newURL)
-	if err != nil {
-		logger.Warnf("Failed to parse full product signed URL %q: %v", signedURL, err)
+	// map[image][s3Key] -> signedURLRegenerationRequest
+	urlsToRenew := make(map[string]map[string]signedURLRegenerationRequest)
 
-		return newURL
+	for imgName, img := range bc.images {
+		for s3Key, signedURL := range img.signedURLs {
+			if signedURL.value.generationDate.Add(signedURLLifetime).Before(deadline) {
+				if _, ok := urlsToRenew[imgName]; !ok {
+					urlsToRenew[imgName] = make(map[string]signedURLRegenerationRequest, 1)
+				}
+
+				logger.Tracef("Found signed URL to renew for %s/%q (will expire at %s)", bc.bucket, s3Key, signedURL.value.generationDate.Add(signedURLLifetime))
+
+				urlsToRenew[imgName][s3Key] = signedURLRegenerationRequest{
+					paramsExpr:         signedURL.value.paramsExpr,
+					objectLastModified: signedURL.lastUpdate,
+					img:                img,
+				}
+			}
+		}
 	}
 
-	params, err := bc.exprManager.signedURLParams(ctx, img, paramsExpr)
-	if err != nil {
-		logger.Warnf("Failed to get parameters from expression %q for full product signed URL %q: %v", paramsExpr, signedURL, err)
-
-		return newURL
-	}
-
-	q := su.Query()
-
-	for name, value := range params {
-		q.Add(name, fmt.Sprint(value))
-	}
-
-	su.RawQuery = q.Encode()
-
-	return su.String()
+	return urlsToRenew
 }
 
 func (bc *bucketCache) updateMetrics(ctx context.Context, gatherer *observability.Metrics) {
@@ -457,4 +437,68 @@ func (bc *bucketCache) updateMetrics(ctx context.Context, gatherer *observabilit
 
 	gatherer.CacheFilesPerBucket.WithLabelValues(bc.bucket).Set(float64(cacheFilesCount))
 	gatherer.CacheSizePerBucket.WithLabelValues(bc.bucket).Set(float64(cacheFilesSizeBytes))
+}
+
+type signedURLGenerationRequest struct {
+	bucket, s3Key       string
+	objLastModified     time.Time
+	img                 image
+	injectParams        bool
+	paramsExpr          string
+	exprManager         *expressionManager
+	fullProductProtocol string
+	fullProductRootURL  string
+}
+
+func makeSignedURL(ctx context.Context, s3Client s3.Client, genReq signedURLGenerationRequest) (valueWithLastUpdate[signedURL], error) {
+	signURL, err := s3Client.GenerateSignedURL(ctx, genReq.bucket, genReq.s3Key)
+	if err != nil {
+		return valueWithLastUpdate[signedURL]{}, err //nolint: wrapcheck
+	}
+
+	var signURLStr string
+
+	if genReq.injectParams {
+		signURLStr = injectFullProductURLParamsFromExpr(ctx, genReq.exprManager, signURL, genReq.img, genReq.paramsExpr, genReq.fullProductProtocol, genReq.fullProductRootURL)
+	} else {
+		signURLStr = signURL.String()
+	}
+
+	return valueWithLastUpdate[signedURL]{
+		value: signedURL{
+			value:          signURLStr,
+			paramsExpr:     genReq.paramsExpr,
+			generationDate: time.Now().Truncate(time.Second), // truncating to get closer to the actual generation timestamp
+		},
+		lastUpdate: genReq.objLastModified,
+	}, nil
+}
+
+func injectFullProductURLParamsFromExpr(ctx context.Context, exprMan *expressionManager, signedURL *url.URL, img image, paramsExpr string, fullProductProtocol, fullProductRootURL string) string {
+	withoutSchemeAndHost := strings.TrimPrefix(signedURL.String(), signedURL.Scheme+"://"+signedURL.Host)
+	newURL := fullProductProtocol + url.QueryEscape(fullProductRootURL+withoutSchemeAndHost)
+
+	su, err := url.Parse(newURL)
+	if err != nil {
+		logger.Warnf("Failed to parse full product signed URL %q: %v", signedURL, err)
+
+		return newURL
+	}
+
+	params, err := exprMan.signedURLParams(ctx, img, paramsExpr)
+	if err != nil {
+		logger.Warnf("Failed to get parameters from expression %q for full product signed URL %q: %v", paramsExpr, signedURL, err)
+
+		return newURL
+	}
+
+	q := su.Query()
+
+	for name, value := range params {
+		q.Add(name, fmt.Sprint(value))
+	}
+
+	su.RawQuery = q.Encode()
+
+	return su.String()
 }

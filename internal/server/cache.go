@@ -110,6 +110,7 @@ func (v valueWithLastUpdate[T]) String() string {
 
 type signedURL struct {
 	value          string
+	paramsExpr     string
 	generationDate time.Time
 }
 

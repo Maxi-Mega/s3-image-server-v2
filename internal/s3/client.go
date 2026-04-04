@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	healthCheckTimeout    = 5 * time.Second
-	maxPollBucketTimeout  = 2 * time.Minute
-	downloadObjectTimeout = 30 * time.Second
-	SignedURLLifetime     = 7 * 24 * time.Hour
+	healthCheckTimeout          = 5 * time.Second
+	maxPollBucketTimeout        = 2 * time.Minute
+	downloadObjectTimeout       = 30 * time.Second
+	SignedURLLifetime           = 7 * 24 * time.Hour
+	SignedURLRegenerationPeriod = 1 * time.Hour
 )
 
 var (

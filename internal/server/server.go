@@ -94,7 +94,13 @@ func (srv *Server) Start(ctx context.Context) (types.Cache, chan types.OutEvent,
 		err = srv.subscribeToS3(ctx)
 	}
 
-	return srv.cache, srv.outChan, err
+	if err != nil {
+		return nil, nil, err
+	}
+
+	go srv.runSignedURLRegenerationLoop(ctx)
+
+	return srv.cache, srv.outChan, nil
 }
 
 func (srv *Server) startPollingS3(ctx context.Context) error {
@@ -173,4 +179,136 @@ func (srv *Server) subscribeToS3(ctx context.Context) error {
 	}()
 
 	return nil
+}
+
+type signedURLRegenerationRequest struct {
+	paramsExpr         string
+	objectLastModified time.Time
+	img                image
+}
+
+func (srv *Server) runSignedURLRegenerationLoop(ctx context.Context) {
+	ticker := time.NewTicker(s3.SignedURLRegenerationPeriod)
+	defer ticker.Stop()
+
+	for ctx.Err() == nil {
+		select {
+		case now := <-ticker.C:
+			deadline := now.Add(24 * time.Hour)
+			// map[bucket][image][s3Key] -> signedURLRegenerationRequest
+			urlsToRenew := make(map[string]map[string]map[string]signedURLRegenerationRequest)
+
+			for bucketName, cache := range srv.cache.buckets {
+				urlsToRenew[bucketName] = cache.findSignedURLsToRenew(deadline, s3.SignedURLLifetime)
+			}
+
+			newURLs, err := srv.regenerateSignedURLs(ctx, urlsToRenew)
+			if err != nil {
+				if len(newURLs) == 0 {
+					logger.Errorf("Failed to regenerate signed URLs: %v", err)
+
+					continue
+				}
+
+				logger.Errorf("Failed to regenerate some signed URLs: %v", err)
+			}
+
+			totalURLsCount := srv.applyRegeneratedSignedURLs(newURLs)
+
+			// Increment only after the apply phase so the metric reflects URLs actually updated in cache.
+			srv.gatherer.S3SignedURLRegenCounter.Add(float64(totalURLsCount))
+
+			logger.Infof("Regenerated %d signed URLs in %s", totalURLsCount, time.Since(now))
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (srv *Server) applyRegeneratedSignedURLs(newURLs map[string]map[string]map[string]valueWithLastUpdate[signedURL]) int {
+	var totalURLsCount int
+
+	for bucketName, images := range newURLs {
+		bucket, ok := srv.cache.buckets[bucketName]
+		if !ok {
+			continue
+		}
+
+		bucket.l.Lock()
+
+		for imgName, signedURLs := range images {
+			img, ok := bucket.images[imgName]
+			if !ok {
+				continue
+			}
+
+			for s3Key, renewedSignedURL := range signedURLs {
+				currentSignedURL, ok := img.signedURLs[s3Key]
+				if !ok {
+					continue
+				}
+
+				if !currentSignedURL.lastUpdate.Equal(renewedSignedURL.lastUpdate) {
+					continue
+				}
+
+				if currentSignedURL.value.generationDate.After(renewedSignedURL.value.generationDate) {
+					continue
+				}
+
+				img.signedURLs[s3Key] = renewedSignedURL
+				totalURLsCount++
+			}
+
+			bucket.images[imgName] = img
+		}
+
+		bucket.l.Unlock()
+	}
+
+	return totalURLsCount
+}
+
+func (srv *Server) regenerateSignedURLs(ctx context.Context, urlsToRenew map[string]map[string]map[string]signedURLRegenerationRequest) (map[string]map[string]map[string]valueWithLastUpdate[signedURL], error) {
+	// map[bucket][image][s3Key] -> url
+	newURLs := make(map[string]map[string]map[string]valueWithLastUpdate[signedURL])
+
+	var errs []error
+
+	for bucket, images := range urlsToRenew {
+		for imgName, s3Keys := range images {
+			for s3Key, regenReq := range s3Keys {
+				signedURLGenReq := signedURLGenerationRequest{
+					bucket:              bucket,
+					s3Key:               s3Key,
+					objLastModified:     regenReq.objectLastModified,
+					img:                 regenReq.img,
+					injectParams:        regenReq.paramsExpr != "",
+					paramsExpr:          regenReq.paramsExpr,
+					exprManager:         srv.cache.exprManager,
+					fullProductProtocol: srv.cfg.Products.FullProductProtocol,
+					fullProductRootURL:  srv.cfg.Products.FullProductRootURL,
+				}
+
+				signURL, err := makeSignedURL(ctx, srv.s3Client, signedURLGenReq)
+				if err != nil {
+					errs = append(errs, fmt.Errorf("creating signed URL for file %q in bucket %q: %w", s3Key, bucket, err))
+
+					continue
+				}
+
+				if _, ok := newURLs[bucket]; !ok {
+					newURLs[bucket] = make(map[string]map[string]valueWithLastUpdate[signedURL])
+				}
+
+				if _, ok := newURLs[bucket][imgName]; !ok {
+					newURLs[bucket][imgName] = make(map[string]valueWithLastUpdate[signedURL])
+				}
+
+				newURLs[bucket][imgName][s3Key] = signURL
+			}
+		}
+	}
+
+	return newURLs, errors.Join(errs...)
 }

@@ -10,13 +10,14 @@ import (
 const instanceLabelName = "s3_image_server"
 
 type Metrics struct {
-	RequestCounter       prometheus.Counter
-	RequestDuration      *prometheus.HistogramVec
-	S3EventsCounter      *prometheus.CounterVec
-	S3ListDuration       *prometheus.HistogramVec
-	CacheImagesPerBucket *prometheus.GaugeVec
-	CacheFilesPerBucket  *prometheus.GaugeVec
-	CacheSizePerBucket   *prometheus.GaugeVec
+	RequestCounter          prometheus.Counter
+	RequestDuration         *prometheus.HistogramVec
+	S3EventsCounter         *prometheus.CounterVec
+	S3ListDuration          *prometheus.HistogramVec
+	CacheImagesPerBucket    *prometheus.GaugeVec
+	CacheFilesPerBucket     *prometheus.GaugeVec
+	CacheSizePerBucket      *prometheus.GaugeVec
+	S3SignedURLRegenCounter prometheus.Counter
 }
 
 func New(cfg config.Monitoring) *Metrics {
@@ -62,5 +63,10 @@ func New(cfg config.Monitoring) *Metrics {
 			Help:        "The total size of cached files per bucket in bytes",
 			ConstLabels: constLabels,
 		}, []string{"bucket"}),
+		S3SignedURLRegenCounter: promauto.NewCounter(prometheus.CounterOpts{
+			Name:        "s3_signed_url_regen_total",
+			Help:        "The total number of S3 signed URL regenerations",
+			ConstLabels: constLabels,
+		}),
 	}
 }
