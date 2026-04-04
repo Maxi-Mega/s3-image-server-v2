@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-LINTER_VERSION=v2.11.3-alpine
+LINTER_VERSION=v2.11.4-alpine
 
 VOLUME_NAME="s3-image-server-pkg-cache"
 if docker volume ls | grep -q $VOLUME_NAME; then
