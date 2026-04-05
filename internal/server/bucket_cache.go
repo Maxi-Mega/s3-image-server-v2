@@ -116,7 +116,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.linksFromCache = make(map[string]valueWithLastUpdate[string])
 		img.signedURLs = make(map[string]valueWithLastUpdate[signedURL])
 
-		bc.setDropTimer(event.baseDir, event.Time)
+		bc.setDropTimer(imgName, event.baseDir, event.Time)
 	}
 
 	fullFilePath := filepath.Join(bc.dirPath, img.name, subDir, event.baseDirRelativePath())
@@ -251,13 +251,7 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 
 	switch event.ObjectType {
 	case types.ObjectPreview:
-		if timer, found := bc.dropTimers[img.name]; found {
-			if !timer.Stop() {
-				return nil // The drop method has already been called.
-			}
-		}
-
-		bc.dropImage(img.baseDir)
+		bc.dropImage(img.name, img.baseDir)
 
 		deleteFile = false // the whole dir has just been deleted
 		updateImages = false
@@ -283,7 +277,7 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL:
 			delete(img.signedURLs, event.ObjectKey)
 
-			deleteFile = false
+			deleteFile = false // no file to delete
 		}
 	}
 
@@ -311,7 +305,7 @@ func (bc *bucketCache) getCacheKey(imgName, subDir, filename string) string {
 	return filepath.Clean(filepath.Join(bc.bucket, imgName, subDir, filename))
 }
 
-func (bc *bucketCache) setDropTimer(baseDir string, cacheAddTime time.Time) {
+func (bc *bucketCache) setDropTimer(imgName, baseDir string, cacheAddTime time.Time) {
 	if timer, exists := bc.dropTimers[baseDir]; exists {
 		timer.Stop()
 	}
@@ -321,12 +315,18 @@ func (bc *bucketCache) setDropTimer(baseDir string, cacheAddTime time.Time) {
 		bc.l.Lock()
 		defer bc.l.Unlock()
 
-		bc.dropImage(baseDir)
+		bc.dropImage(imgName, baseDir)
 	})
 }
 
-func (bc *bucketCache) dropImage(imgBaseDir string) {
-	imgDirPath := filepath.Join(bc.dirPath, imgBaseDir)
+func (bc *bucketCache) dropImage(imgName, imgBaseDir string) {
+	if timer, found := bc.dropTimers[imgName]; found {
+		timer.Stop()
+	}
+
+	logger.Debugf("Dropping image %s/%q from cache (%s)", bc.bucket, imgBaseDir, imgName)
+
+	imgDirPath := filepath.Join(bc.dirPath, imgName)
 	if err := os.RemoveAll(imgDirPath); err != nil && !os.IsNotExist(err) {
 		logger.Errorf("Failed to delete %q: %v", imgDirPath, err)
 	} else {

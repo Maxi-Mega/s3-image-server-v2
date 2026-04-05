@@ -74,7 +74,7 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 		if event.ObjectLastModified.Add(consumer.productsCfg.MaxObjectsAge).Before(time.Now()) ||
 			time.Until(event.Time.Add(consumer.cacheRetentionPeriod)) < time.Second {
 			if event.ObjectType == types.ObjectPreview {
-				logger.Debugf("Ignoring image %q because it is %s old", event.ObjectKey, utils.FormatDuration(time.Since(event.ObjectLastModified)))
+				logger.Debugf("Ignoring image %s/%q because it is %s old", event.Bucket, event.ObjectKey, utils.FormatDuration(time.Since(event.ObjectLastModified)))
 			}
 
 			return
@@ -99,7 +99,7 @@ func (consumer *eventConsumer) processEvent(ctx context.Context, event s3.Event)
 	if event.ObjectType == types.ObjectPreview {
 		basePath, err := consumer.cache.exprManager.productBasePath(ctx, imgGroup.GroupName, imgType.Name, event)
 		if err != nil {
-			logger.Errorf("Failed to get product base path image %q of type %q/%q: %v", event.ObjectKey, imgGroup.GroupName, imgType.Name, err)
+			logger.Errorf("Failed to get product base path image %s/%q of type %q/%q: %v", event.Bucket, event.ObjectKey, imgGroup.GroupName, imgType.Name, err)
 
 			return
 		}
