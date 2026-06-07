@@ -30,6 +30,8 @@ var (
 
 const exprCacheTTL = 10 * time.Minute
 
+const mapstructureJSONTagName = "json"
+
 type exprCacheKey struct {
 	bucket   string
 	s3key    string
@@ -119,8 +121,9 @@ func (exprMan *expressionManager) productBasePath(ctx context.Context, imgGroup,
 		Ctx: ctx,
 		Files: map[string]types.DynamicInputFile{
 			types.ObjectPreview: {
-				S3Path: s3event.ObjectKey,
-				Date:   s3event.ObjectLastModified,
+				S3Bucket: s3event.Bucket,
+				S3Path:   s3event.ObjectKey,
+				Date:     s3event.ObjectLastModified,
 			},
 		},
 		Exprs: exprMan.exprs[imgGroup][imgType],
@@ -188,7 +191,7 @@ func (exprMan *expressionManager) imageGeonames(ctx context.Context, img image, 
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Result:  &geonames.Objects,
-		TagName: "json",
+		TagName: mapstructureJSONTagName,
 	})
 	if err != nil {
 		return nil, err //nolint: wrapcheck
@@ -238,7 +241,7 @@ func (exprMan *expressionManager) imageLocalization(ctx context.Context, img ima
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Result:  &localization,
-		TagName: "json",
+		TagName: mapstructureJSONTagName,
 	})
 	if err != nil {
 		return nil, err //nolint: wrapcheck
@@ -292,7 +295,7 @@ func (exprMan *expressionManager) productInfo(ctx context.Context, img image, pr
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Result:  &productInformation,
-		TagName: "json",
+		TagName: mapstructureJSONTagName,
 	})
 	if err != nil {
 		return nil, err //nolint: wrapcheck
@@ -395,6 +398,38 @@ func (exprMan *expressionManager) signedURLParams(ctx context.Context, img image
 	return outputMap, nil
 }
 
+func (exprMan *expressionManager) externalViewerURL(ctx context.Context, img image, viewerExprName string) (string, error) {
+	viewerURLExpr, found := exprMan.exprs[img.imgGroup][img.imgType][viewerExprName]
+	if !found {
+		return "", fmt.Errorf("%w %q", errMissingExpression, viewerExprName)
+	}
+
+	env := types.ExprEnv{
+		Ctx:   ctx,
+		Files: exprMan.valueMap2FilesMap(img),
+		Exprs: exprMan.exprs[img.imgGroup][img.imgType],
+	}
+	selectorsSum := dynamicFilesChecksum(env.Files)
+
+	if value, ok := exprMan.getCache(img.bucket, img.s3Key, viewerExprName, selectorsSum); ok {
+		return value.(string), nil //nolint: forcetypeassert
+	}
+
+	output, err := expr.Run(viewerURLExpr, env)
+	if err != nil {
+		return "", fmt.Errorf("expr: %w", err)
+	}
+
+	outputURL, ok := output.(string)
+	if !ok {
+		return "", fmt.Errorf("%w: want string, got %T", errUnexpectedOutputType, output)
+	}
+
+	exprMan.updateCache(img.bucket, img.s3Key, viewerExprName, selectorsSum, outputURL)
+
+	return outputURL, nil
+}
+
 func (exprMan *expressionManager) promLabels(ctx context.Context, img image) (map[string]any, error) {
 	labelsExpr, found := exprMan.exprs[img.imgGroup][img.imgType][types.ExprProductLabels]
 	if !found {
@@ -441,6 +476,7 @@ func (exprMan *expressionManager) valueMap2FilesMap(img image) map[string]types.
 	result := make(map[string]types.DynamicInputFile, len(img.dynamicInputFiles)+1)
 
 	result[types.ObjectPreview] = types.DynamicInputFile{
+		S3Bucket: img.bucket,
 		S3Path:   img.s3Key,
 		CacheKey: filepath.Join(exprMan.cacheDir, img.previewCacheKey),
 		Date:     img.lastModified,
@@ -448,7 +484,10 @@ func (exprMan *expressionManager) valueMap2FilesMap(img image) map[string]types.
 
 	for key, value := range img.dynamicInputFiles {
 		v := value.value
-		v.CacheKey = filepath.Join(exprMan.cacheDir, v.CacheKey)
+		if v.CacheKey != "" {
+			v.CacheKey = filepath.Join(exprMan.cacheDir, v.CacheKey)
+		}
+
 		result[key] = v
 	}
 
@@ -473,6 +512,8 @@ func dynamicFilesChecksum(selectors map[string]types.DynamicInputFile) string {
 		t := v.Date.Round(0).UTC()
 
 		h.Write([]byte(k))
+		h.Write([]byte{0})
+		h.Write([]byte(v.S3Bucket))
 		h.Write([]byte{0})
 		h.Write([]byte(v.S3Path))
 		h.Write([]byte{0})

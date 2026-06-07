@@ -9,6 +9,8 @@ ui:
     pmtilesStyleURL: "localhost:3000/protomap-styles.json"
 
 products:
+  externalViewers:
+    viewer1: "localhost:8080"
   dynamicData:
     fileSelectors:
       preview:
@@ -53,8 +55,12 @@ products:
                 regex: "product.tif$"
                 kind: fullProductSignedURL(urlParams)
                 link: true
+              ext:
+                regex: "ext.typ$"
+                kind: externalViewerURL(viewer1, extUri)
             expressions:
               urlParams: '{"p": "val", "n": 5}'
+              extUri: '_s3Uri("ext")'
 
 log:
   colorLogs: false

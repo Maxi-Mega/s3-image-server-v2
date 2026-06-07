@@ -182,12 +182,12 @@ func TestDynamicFilesChecksum(t *testing.T) {
 	t1 := t0.UTC()
 
 	a := map[string]types.DynamicInputFile{
-		"preview": {S3Path: "a/preview.jpg", Date: t0},
-		"meta":    {S3Path: "a/meta.json", Date: t1},
+		"preview": {S3Bucket: "bkt", S3Path: "a/preview.jpg", Date: t0},
+		"meta":    {S3Bucket: "bkt", S3Path: "a/meta.json", Date: t1},
 	}
 	b := map[string]types.DynamicInputFile{
-		"meta":    {S3Path: "a/meta.json", Date: t1},
-		"preview": {S3Path: "a/preview.jpg", Date: t1},
+		"meta":    {S3Bucket: "bkt", S3Path: "a/meta.json", Date: t1},
+		"preview": {S3Bucket: "bkt", S3Path: "a/preview.jpg", Date: t1},
 	}
 
 	sumA := dynamicFilesChecksum(a)
@@ -197,7 +197,7 @@ func TestDynamicFilesChecksum(t *testing.T) {
 		t.Fatalf("expected stable checksum regardless of map order/time zone: %q vs %q", sumA, sumB)
 	}
 
-	b["meta"] = types.DynamicInputFile{S3Path: "a/meta-v2.json", Date: t1}
+	b["meta"] = types.DynamicInputFile{S3Bucket: "bkt", S3Path: "a/meta-v2.json", Date: t1}
 
 	sumC := dynamicFilesChecksum(b)
 	if sumC == sumA {
@@ -227,6 +227,7 @@ func TestValueMap2FilesMap(t *testing.T) {
 		dynamicInputFiles: map[string]valueWithLastUpdate[types.DynamicInputFile]{
 			"meta": {
 				value: types.DynamicInputFile{
+					S3Bucket: "bucket",
 					S3Path:   "root/meta.json",
 					CacheKey: "bucket/root/meta.json",
 				},

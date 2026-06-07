@@ -62,6 +62,7 @@ const GET_IMAGE = gql`
       }
       cachedFileLinks
       signedURLs
+      externalViewerURLs
       targetFiles
     }
   }

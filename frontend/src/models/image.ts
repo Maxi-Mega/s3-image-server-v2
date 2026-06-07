@@ -58,6 +58,7 @@ export class Image {
   cachedFileLinks: Record<string, string>;
   targetFiles: Array<string>;
   signedURLs: Record<string, string>;
+  externalViewerURLs: Record<string, string>;
 
   _lastModified: string;
   _links: Array<[string, string]>; // [filename, URL]
@@ -69,7 +70,8 @@ export class Image {
     localization: Localization | null,
     additionalFiles: Record<string, string>,
     targetFiles: Array<string>,
-    fileLinks: Record<string, string>,
+    signedURLs: Record<string, string>,
+    externalViewerURLs: Record<string, string>,
     lastModified: string,
     links: Array<[string, string]>
   ) {
@@ -77,7 +79,8 @@ export class Image {
     this.localization = localization;
     this.cachedFileLinks = additionalFiles;
     this.targetFiles = targetFiles;
-    this.signedURLs = fileLinks;
+    this.signedURLs = signedURLs;
+    this.externalViewerURLs = externalViewerURLs;
     this._lastModified = lastModified;
     this._links = links;
   }

@@ -1,7 +1,9 @@
 package config
 
 import (
+	"math"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +20,7 @@ func ignoreType[T any]() cmp.Option {
 	})
 }
 
-func TestLoad(t *testing.T) {
+func TestLoad(t *testing.T) { //nolint: maintidx
 	t.Parallel()
 
 	cases := []struct {
@@ -46,6 +48,9 @@ func TestLoad(t *testing.T) {
 					},
 				},
 				Products: Products{
+					ExternalViewers: map[string]string{
+						"viewer1": "localhost:8080",
+					},
 					DynamicData: DynamicData{
 						FileSelectors: map[string]FileSelector{
 							"preview": {
@@ -137,16 +142,24 @@ func TestLoad(t *testing.T) {
 												KindParams: []string{"urlParams"},
 												Link:       true,
 											},
+											"ext": {
+												Regex:      "ext.typ$",
+												Kind:       "externalViewerURL",
+												KindParams: []string{"viewer1", "extUri"},
+												Link:       true,
+											},
 										},
 										Expressions: map[string]string{
 											"key":       "'value'",
 											"image":     "'DIR/DIR2/IMAGE.tif'",
 											"urlParams": `{"p": "val", "n": 5}`,
+											"extUri":    `_s3Uri("ext")`,
 										},
 										ExpressionsPrograms: map[string]*vm.Program{
 											"key":       nil,
 											"image":     nil,
 											"urlParams": nil,
+											"extUri":    nil,
 										},
 									},
 								},
@@ -280,6 +293,261 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestValidate(t *testing.T) {
+	t.Parallel()
+
+	validConfig := func() Config {
+		cfg := defaultConfig()
+		cfg.S3.Mode = S3ModePolling
+		cfg.S3.PollingPeriod = time.Second
+		cfg.Products.ImageGroups = []ImageGroup{
+			{
+				GroupName: "grp",
+				Types: []ImageType{
+					{
+						Name: "typ",
+						DynamicData: DynamicData{
+							FileSelectors: requiredObjectFileSelectors(),
+						},
+					},
+				},
+			},
+		}
+
+		return cfg
+	}
+
+	cases := []struct {
+		name             string
+		mutate           func(*Config)
+		expectedWarnings []string
+		expectedErrors   []string
+	}{
+		{
+			name: "event mode warns when polling period is set",
+			mutate: func(cfg *Config) {
+				cfg.S3.Mode = S3ModeEvent
+				cfg.S3.PollingPeriod = time.Second
+			},
+			expectedWarnings: []string{"polling period is ignored when in event mode"},
+		},
+		{
+			name: "polling mode rejects sub-second polling period",
+			mutate: func(cfg *Config) {
+				cfg.S3.PollingPeriod = time.Second - time.Nanosecond
+			},
+			expectedErrors: []string{`polling period must be at least one second, not "999.999999ms"`},
+		},
+		{
+			name: "unknown S3 mode",
+			mutate: func(cfg *Config) {
+				cfg.S3.Mode = "invalid"
+			},
+			expectedErrors: []string{`unknown S3 mode "invalid" (allowed values are 'polling' / 'event')`},
+		},
+		{
+			name: "invalid dynamic filters",
+			mutate: func(cfg *Config) {
+				cfg.Products.DynamicFilters = []DynamicFilter{
+					{Name: "", Expression: ""},
+					{Name: "filter", Expression: "1"},
+					{Name: "filter", Expression: "2"},
+				}
+			},
+			expectedErrors: []string{
+				"empty name for dynamic filter",
+				"empty expression for dynamic filter",
+				`duplicate dynamic filter name "filter"`,
+			},
+		},
+		{
+			name: "unknown products selector kind",
+			mutate: func(cfg *Config) {
+				cfg.Products.DynamicData.FileSelectors = map[string]FileSelector{
+					"bad": {
+						Regex: ".*",
+						Kind:  "unknown",
+					},
+				}
+			},
+			expectedErrors: []string{`invalid products file selectors: selector "bad": unknown kind "unknown"`},
+		},
+		{
+			name: "no image groups",
+			mutate: func(cfg *Config) {
+				cfg.Products.ImageGroups = nil
+			},
+			expectedErrors: []string{"no image groups specified"},
+		},
+		{
+			name: "duplicate image group names",
+			mutate: func(cfg *Config) {
+				cfg.Products.ImageGroups = append(cfg.Products.ImageGroups, cfg.Products.ImageGroups[0])
+			},
+			expectedErrors: []string{`image group name "grp" is duplicate`},
+		},
+		{
+			name: "unknown group selector kind",
+			mutate: func(cfg *Config) {
+				cfg.Products.ImageGroups[0].DynamicData.FileSelectors = map[string]FileSelector{
+					"bad": {
+						Regex: ".*",
+						Kind:  "unknown",
+					},
+				}
+			},
+			expectedErrors: []string{`invalid file selectors in group "grp": selector "bad": unknown kind "unknown"`},
+		},
+		{
+			name: "duplicate image type names",
+			mutate: func(cfg *Config) {
+				cfg.Products.ImageGroups[0].Types = append(cfg.Products.ImageGroups[0].Types, cfg.Products.ImageGroups[0].Types[0])
+			},
+			expectedErrors: []string{`image type name "typ" of group "grp" is duplicate`},
+		},
+		{
+			name: "unknown type selector kind",
+			mutate: func(cfg *Config) {
+				cfg.Products.ImageGroups[0].Types[0].DynamicData.FileSelectors["bad"] = FileSelector{
+					Regex: ".*",
+					Kind:  "unknown",
+				}
+			},
+			expectedErrors: []string{`invalid file selectors in type "typ"/"grp": selector "bad": unknown kind "unknown"`},
+		},
+		{
+			name: "too high UI values",
+			mutate: func(cfg *Config) {
+				cfg.UI.ScaleInitialPercentage = uint(math.MaxInt) + 1
+				cfg.UI.MaxImagesDisplayCount = uint(math.MaxInt) + 1
+			},
+			expectedErrors: []string{
+				"ui.scaleInitialPercentage has a too high value",
+				"ui.maxImagesDisplayCount as a too high value",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := validConfig()
+			tc.mutate(&cfg)
+
+			warnings, err := cfg.validate()
+			if diff := cmp.Diff(tc.expectedWarnings, warnings, cmpopts.EquateEmpty()); diff != "" {
+				t.Fatalf("Unexpected warnings (-want +got):\n%s", diff)
+			}
+
+			if len(tc.expectedErrors) == 0 {
+				if err != nil {
+					t.Fatalf("Expected no error, got %q.", err.Error())
+				}
+
+				return
+			}
+
+			if err == nil {
+				t.Fatal("Expected an error, got none.")
+			}
+
+			for _, expected := range tc.expectedErrors {
+				if !strings.Contains(err.Error(), expected) {
+					t.Fatalf("Expected error to contain %q, got %q.", expected, err.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestProcessInvalidTargetRelativeRegexp(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfig()
+	cfg.Products.TargetRelativeRegexp = "["
+
+	err := cfg.process()
+	if err == nil {
+		t.Fatal("Expected an error, got none.")
+	}
+
+	if !strings.Contains(err.Error(), "can't parse products.targetRelativeRegexp") {
+		t.Fatalf("Unexpected error: %q.", err.Error())
+	}
+}
+
+func TestMergeDynamicData(t *testing.T) {
+	t.Parallel()
+
+	parent := DynamicData{
+		FileSelectors: map[string]FileSelector{
+			"parentOnly": {
+				Regex: "parent",
+				Kind:  FileSelectorKindCached,
+			},
+			"overridden": {
+				Regex: "parent-overridden",
+				Kind:  FileSelectorKindCached,
+			},
+		},
+		Expressions: map[string]string{
+			"parentOnly": "1",
+			"overridden": "2",
+		},
+	}
+	child := DynamicData{
+		FileSelectors: map[string]FileSelector{
+			"childOnly": {
+				Regex: "child",
+				Kind:  FileSelectorKindSignedURL,
+			},
+			"overridden": {
+				Regex: "child-overridden",
+				Kind:  FileSelectorKindSignedURL,
+			},
+		},
+		Expressions: map[string]string{
+			"childOnly":  "3",
+			"overridden": "4",
+		},
+	}
+
+	result := mergeDynamicData(child, parent)
+	expected := DynamicData{
+		FileSelectors: map[string]FileSelector{
+			"parentOnly": {
+				Regex: "parent",
+				Kind:  FileSelectorKindCached,
+			},
+			"childOnly": {
+				Regex: "child",
+				Kind:  FileSelectorKindSignedURL,
+			},
+			"overridden": {
+				Regex: "child-overridden",
+				Kind:  FileSelectorKindSignedURL,
+			},
+		},
+		Expressions: map[string]string{
+			"parentOnly": "1",
+			"childOnly":  "3",
+			"overridden": "4",
+		},
+	}
+
+	if diff := cmp.Diff(expected, result); diff != "" {
+		t.Fatalf("Unexpected merged dynamic data (-want +got):\n%s", diff)
+	}
+
+	result.FileSelectors["parentOnly"] = FileSelector{Regex: "mutated"}
+	result.Expressions["parentOnly"] = "mutated"
+
+	if parent.FileSelectors["parentOnly"].Regex != "parent" || parent.Expressions["parentOnly"] != "1" {
+		t.Fatal("mergeDynamicData returned maps sharing storage with the parent.")
+	}
+}
+
 func TestParseFileSelectors(t *testing.T) {
 	t.Parallel()
 
@@ -325,6 +593,46 @@ func TestParseFileSelectors(t *testing.T) {
 			},
 			expectedError: `"FullProductSignedURL invalid": invalid fullProductSignedURL expression "fullProductSignedURL()"`,
 		},
+		{
+			name: "Invalid regex",
+			selector: FileSelector{
+				Regex: "[",
+				Kind:  "cached",
+			},
+			expectedError: "\"Invalid regex\": error parsing regexp: missing closing ]: `[`",
+		},
+		{
+			name: "ExternalViewerURL valid",
+			selector: FileSelector{
+				Regex: "regex",
+				Kind:  "externalViewerURL(viewerName, exprName)",
+				Link:  true,
+			},
+			expectedResult: FileSelector{
+				Regex:      "regex",
+				Kind:       FileSelectorKindExternalViewerURL,
+				KindParams: []string{"viewerName", "exprName"},
+				Link:       true,
+			},
+		},
+		{
+			name: "ExternalViewerURL invalid missing viewer",
+			selector: FileSelector{
+				Regex: "regex",
+				Kind:  "externalViewerURL(, exprName)",
+				Link:  true,
+			},
+			expectedError: `"ExternalViewerURL invalid missing viewer": invalid externalViewerURL expression "externalViewerURL(, exprName)"`,
+		},
+		{
+			name: "ExternalViewerURL invalid missing expression",
+			selector: FileSelector{
+				Regex: "regex",
+				Kind:  "externalViewerURL(viewerName, )",
+				Link:  true,
+			},
+			expectedError: `"ExternalViewerURL invalid missing expression": invalid externalViewerURL expression "externalViewerURL(viewerName, )"`,
+		},
 	}
 
 	for _, tc := range cases {
@@ -338,7 +646,7 @@ func TestParseFileSelectors(t *testing.T) {
 				if tc.expectedError == "" {
 					t.Fatalf("Expected no error, but got %q.", err.Error())
 				} else if err.Error() != tc.expectedError {
-					t.Fatalf("Unexpected error: want %q, got %q.", tc.expectedError, err.Error())
+					t.Fatalf("Unexpected error message: want %q, got %q.", tc.expectedError, err.Error())
 				}
 
 				return
@@ -350,5 +658,202 @@ func TestParseFileSelectors(t *testing.T) {
 				t.Fatalf("Unexpected result (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestParseDynamicDataExternalViewerURL(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name             string
+		externalViewers  map[string]string
+		expressions      map[string]string
+		expectedSelector FileSelector
+		expectedError    string
+	}{
+		{
+			name: "valid external viewer selector",
+			externalViewers: map[string]string{
+				"viewerName": "https://viewer.example.test/?url=",
+			},
+			expressions: map[string]string{
+				"viewerURL": `'s3://bucket/path/file.tif'`,
+			},
+			expectedSelector: FileSelector{
+				Regex:      `product\.tif$`,
+				Kind:       FileSelectorKindExternalViewerURL,
+				KindParams: []string{"viewerName", "viewerURL"},
+				Link:       true,
+			},
+		},
+		{
+			name:            "missing external viewer",
+			externalViewers: map[string]string{},
+			expressions: map[string]string{
+				"viewerURL": `'s3://bucket/path/file.tif'`,
+			},
+			expectedError: `invalid products.imageGroups["grp"].types["typ"].dynamicData.fileSelectors["product"]: externalViewerURL references the external viewer "viewerName" which is not defined`,
+		},
+		{
+			name: "missing expression",
+			externalViewers: map[string]string{
+				"viewerName": "https://viewer.example.test/?url=",
+			},
+			expressions:   map[string]string{},
+			expectedError: `invalid products.imageGroups["grp"].types["typ"].dynamicData.fileSelectors["product"]: externalViewerURL references the expression "viewerURL" which is not defined`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dynData := DynamicData{
+				FileSelectors: map[string]FileSelector{
+					"product": {
+						Regex: `product\.tif$`,
+						Kind:  "externalViewerURL(viewerName, viewerURL)",
+					},
+				},
+				Expressions: tc.expressions,
+			}
+
+			err := ParseDynamicData("grp", "typ", &dynData, tc.externalViewers)
+			if err != nil {
+				if tc.expectedError == "" {
+					t.Fatalf("Expected no error, but got %q.", err.Error())
+				} else if err.Error() != tc.expectedError {
+					t.Fatalf("Unexpected error message: want %q, got %q.", tc.expectedError, err.Error())
+				}
+
+				return
+			} else if tc.expectedError != "" {
+				t.Fatal("Expected an error, but got none.")
+			}
+
+			if diff := cmp.Diff(tc.expectedSelector, dynData.FileSelectors["product"], cmpopts.IgnoreTypes(&regexp.Regexp{})); diff != "" {
+				t.Fatalf("Unexpected selector (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestParseDynamicDataFullProductSignedURL(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name             string
+		expressions      map[string]string
+		expectedSelector FileSelector
+		expectedError    string
+	}{
+		{
+			name: "valid full product selector",
+			expressions: map[string]string{
+				"urlParams": `{"foo": "bar"}`,
+			},
+			expectedSelector: FileSelector{
+				Regex:      `product\.tif$`,
+				Kind:       FileSelectorKindFullProductSignedURL,
+				KindParams: []string{"urlParams"},
+				Link:       true,
+			},
+		},
+		{
+			name:          "missing expression",
+			expressions:   map[string]string{},
+			expectedError: `invalid products.imageGroups["grp"].types["typ"].dynamicData.fileSelectors["product"]: fullProductSignedURL references the expression "urlParams" which is not defined`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			dynData := DynamicData{
+				FileSelectors: map[string]FileSelector{
+					"product": {
+						Regex: `product\.tif$`,
+						Kind:  "fullProductSignedURL(urlParams)",
+					},
+				},
+				Expressions: tc.expressions,
+			}
+
+			err := ParseDynamicData("grp", "typ", &dynData, nil)
+			if err != nil {
+				if tc.expectedError == "" {
+					t.Fatalf("Expected no error, but got %q.", err.Error())
+				} else if err.Error() != tc.expectedError {
+					t.Fatalf("Unexpected error message: want %q, got %q.", tc.expectedError, err.Error())
+				}
+
+				return
+			} else if tc.expectedError != "" {
+				t.Fatal("Expected an error, but got none.")
+			}
+
+			if diff := cmp.Diff(tc.expectedSelector, dynData.FileSelectors["product"], cmpopts.IgnoreTypes(&regexp.Regexp{})); diff != "" {
+				t.Fatalf("Unexpected selector (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestParseExpressionsErrors(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		expression    string
+		expectedError string
+	}{
+		{
+			name:          "compile error",
+			expression:    "1 +",
+			expectedError: `expression "expr": unexpected token`,
+		},
+		{
+			name:          "replace regex second argument must be string",
+			expression:    `_replaceRegex("value", Files.preview.S3Path, "replacement")`,
+			expectedError: `expression "expr": _replaceRegex: second argument must be a string`,
+		},
+		{
+			name:          "replace regex invalid regex",
+			expression:    `_replaceRegex("value", "[", "replacement")`,
+			expectedError: `expression "expr": _replaceRegex: error parsing regexp: missing closing ]`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := parseExpressions(map[string]string{"expr": tc.expression})
+			if err == nil {
+				t.Fatal("Expected an error, got none.")
+			}
+
+			if !strings.Contains(err.Error(), tc.expectedError) {
+				t.Fatalf("Expected error to contain %q, got %q.", tc.expectedError, err.Error())
+			}
+		})
+	}
+}
+
+func requiredObjectFileSelectors() map[string]FileSelector {
+	return map[string]FileSelector{
+		"preview": {
+			Regex: "preview",
+			Kind:  FileSelectorKindCached,
+		},
+		"geonames": {
+			Regex: "geonames",
+			Kind:  FileSelectorKindCached,
+		},
+		"localization": {
+			Regex: "localization",
+			Kind:  FileSelectorKindCached,
+		},
 	}
 }

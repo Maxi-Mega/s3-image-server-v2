@@ -25,9 +25,24 @@ The `kind` field can be:
   
   # Resulting URL shown in the UI
   https://external-viewer?key=value&url=https%3A//s3-server%3A9000/bucket/product.tif
-  ``` 
+  ```
+- _externalViewerURL_: a link to open the file in an external viewer will be generated. The first parameter is the name
+  of the viewer, the second one is the name of the expression that will be called to generate the second half of the URL. The result of the expression will be escaped before being added to the viewer URL.
+  Usage example:
+  ```
+  # Values from config
+  externalViewers:
+    videoExplorer: "https://external-viewer?videoS3Uri=" # products
+  kind="externalViewerURL(videoExplorer, videoUri)"      # products.dynamicData.fileSelectors
+  videoUri='_s3Uri("video")'                             # products.dynamicData.expressions
+  
+  # Resulting URL shown in the UI
+  https://external-viewer?videoS3Uri=s3%3A//bucket/video.mp4
+  ```
 
-If the `link` field is set to true, the UI's image modal files list will display an HTTP link to the cached file.
+If the `link` field is set to true, the UI's image modal files list will display an HTTP link to the cached file
+(automatically set to true for `FileSelectorKindSignedURL`, `FileSelectorKindFullProductSignedURL`, and
+`FileSelectorKindExternalViewerURL`).
 These file selectors can be referenced in `expressions` (see below).
 
 ### `products.dynamicData.expressions`

@@ -49,11 +49,12 @@ type ProductInformation {
 }
 
 type Image {
-    imageSummary:     ImageSummary!
-    localization:     Localization
-    cachedFileLinks:  Map!
-    signedURLs:       Map!
-    targetFiles:      [String!]!
+    imageSummary:       ImageSummary!
+    localization:       Localization
+    cachedFileLinks:    Map!
+    signedURLs:         Map!
+    externalViewerURLs: Map!
+    targetFiles:        [String!]!
 }
 
 type DynamicData {

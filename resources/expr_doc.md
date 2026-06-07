@@ -61,6 +61,12 @@ _Returns the S3 path of the file matched by the given file selector._
 
 `_s3Key(fileSelector string) (string, error)`
 
+#### _s3Uri
+
+_Returns the S3 URI (s3://bucket/key) of the file matched by the given file selector._
+
+`_s3Uri(fileSelector string) (string, error)`
+
 #### _title
 
 _Returns the titled version of the given string (first letter uppercase, rest lowercase, spaces replaced by underscores)._

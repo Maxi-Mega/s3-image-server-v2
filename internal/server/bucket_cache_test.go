@@ -179,7 +179,8 @@ func TestMakeSignedURL(t *testing.T) {
 		dynamicInputFiles: map[string]valueWithLastUpdate[types.DynamicInputFile]{
 			"preview": {
 				value: types.DynamicInputFile{
-					S3Path: "preview",
+					S3Bucket: bucket,
+					S3Path:   "preview",
 				},
 			},
 		},

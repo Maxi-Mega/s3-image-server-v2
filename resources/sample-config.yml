@@ -24,6 +24,8 @@ products:
   targetRelativeRegexp: "[^/]*/preview.jpg$"
   fullProductProtocol: "protocol://"
   fullProductRootURL: "http://a.b.c.d:5000"
+  externalViewers:
+    s3Viewer: "https://s3-viewer?uri="
   maxObjectsAge: 24h
   dynamicData:
     fileSelectors:
@@ -70,7 +72,7 @@ products:
               product:
                 regex: "prod.tif$"
                 kind: signedURL
-                # for signedURL and fullProductSignedURL, link is always true
+                # for signedURL, fullProductSignedURL and externalViewerURL, link is always true
     - groupName: "Group 2"
       bucket: "group-2"
       dynamicData:
@@ -99,8 +101,12 @@ products:
                 regex: "metadata.json$"
                 kind: cached
                 link: false
+              external:
+                regex: "some.obj$"
+                kind: externalViewerURL(s3Viewer, s3URI)
             expressions:
               productTitle: '_loadJSON("metadata").title'
+              s3URI: '_s3Uri("external")'
 
 cache:
   cacheDir: "/tmp" # The actual cache directory will be created in /tmp

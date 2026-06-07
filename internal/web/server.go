@@ -67,8 +67,8 @@ func NewServer(cfg config.Config, cache types.Cache, frontendFS embed.FS, gather
 		ApplicationTitle:       cfg.UI.ApplicationTitle,
 		FaviconBase64:          cfg.UI.FaviconPngBase64,
 		LogoBase64:             cfg.UI.LogoPngBase64,
-		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage), //nolint: gosec
-		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),  //nolint: gosec
+		ScaleInitialPercentage: int(cfg.UI.ScaleInitialPercentage),
+		MaxImagesDisplayCount:  int(cfg.UI.MaxImagesDisplayCount),
 		PMTilesURL:             cfg.UI.Map.PMTilesURL,
 		PMTilesStyleURL:        cfg.UI.Map.PMTilesStyleURL,
 		DynamicFilters:         utils.Map(cfg.Products.DynamicFilters, func(f config.DynamicFilter) string { return f.Name }),

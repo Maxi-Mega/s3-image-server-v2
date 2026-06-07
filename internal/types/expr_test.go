@@ -1,11 +1,15 @@
 package types //nolint: revive,nolintlint
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -74,6 +78,15 @@ func TestExprExist(t *testing.T) {
 func TestExprJQ(t *testing.T) {
 	t.Parallel()
 
+	result, err := ExprJQ(t.Context(), "", ".")
+	if err != nil {
+		t.Fatal("Unexpected error:", err)
+	}
+
+	if result != nil {
+		t.Fatalf("Expected nil result for empty file path, got %#v.", result)
+	}
+
 	cases := []struct {
 		name        string
 		jsonInput   string
@@ -116,6 +129,24 @@ func TestExprJQ(t *testing.T) {
 			jsonInput: `["a", "b", "c"]`,
 			jqExpr:    ". | to_entries | map({(.value): (.key + 1)}) | add",
 			expected:  map[string]any{"a": 1, "b": 2, "c": 3},
+		},
+		{
+			name:      "no result",
+			jsonInput: `{"foo": "bar"}`,
+			jqExpr:    `empty`,
+			expected:  nil,
+		},
+		{
+			name:      "halt without value",
+			jsonInput: `{"foo": "bar"}`,
+			jqExpr:    `halt`,
+			expected:  nil,
+		},
+		{
+			name:        "runtime error",
+			jsonInput:   `{"foo": "bar"}`,
+			jqExpr:      `error("boom")`,
+			expectedErr: "error: boom",
 		},
 	}
 
@@ -193,6 +224,11 @@ func TestExprLoadJSON(t *testing.T) {
 			jsonContent: `null`,
 			expected:    nil,
 		},
+		{
+			name:        "missing file",
+			filename:    "missing.json",
+			expectedErr: "no such file or directory",
+		},
 	}
 
 	for _, tc := range cases {
@@ -204,16 +240,18 @@ func TestExprLoadJSON(t *testing.T) {
 			if tc.filename != "" {
 				inputFilePath = filepath.Join(t.TempDir(), tc.filename)
 
-				err := os.WriteFile(inputFilePath, []byte(tc.jsonContent), 0600)
-				if err != nil {
-					t.Fatal("Can't create JSON file:", err)
+				if tc.name != "missing file" {
+					err := os.WriteFile(inputFilePath, []byte(tc.jsonContent), 0600)
+					if err != nil {
+						t.Fatal("Can't create JSON file:", err)
+					}
 				}
 			}
 
 			result, err := ExprLoadJSON(inputFilePath)
 			if err != nil {
-				if err.Error() != tc.expectedErr {
-					t.Fatalf("Unexpected error: want %q, got %q", tc.expectedErr, err)
+				if !strings.Contains(err.Error(), tc.expectedErr) {
+					t.Fatalf("Unexpected error: want it to contain %q, got %q", tc.expectedErr, err)
 				}
 
 				return
@@ -378,6 +416,15 @@ func TestExprTitle(t *testing.T) {
 func TestExprXPath(t *testing.T) {
 	t.Parallel()
 
+	result, err := ExprXPath("", "//node")
+	if err != nil {
+		t.Fatal("Unexpected error:", err)
+	}
+
+	if result != nil {
+		t.Fatalf("Expected nil result for empty file path, got %#v.", result)
+	}
+
 	cases := []struct {
 		name        string
 		xmlInput    string
@@ -415,6 +462,12 @@ func TestExprXPath(t *testing.T) {
 			xpathExpr: "list//item",
 			expected:  "a",
 		},
+		{
+			name:        "valid xpath with no match",
+			xmlInput:    `<foo>bar</foo>`,
+			xpathExpr:   "missing",
+			expectedErr: "runtime error: invalid memory address or nil pointer dereference",
+		},
 	}
 
 	for _, tc := range cases {
@@ -444,4 +497,118 @@ func TestExprXPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExprCall(t *testing.T) {
+	t.Parallel()
+
+	successPrgm := compileTypesExpr(t, `7`)
+	failurePrgm := compileTypesExpr(t, `_s3Key("missing")`)
+
+	cases := []struct {
+		name          string
+		exprName      string
+		env           ExprEnv
+		expected      any
+		expectedError string
+	}{
+		{
+			name:     "success",
+			exprName: "success",
+			env: ExprEnv{
+				Ctx: t.Context(),
+				Exprs: map[string]*vm.Program{
+					"success": successPrgm,
+				},
+			},
+			expected: 7,
+		},
+		{
+			name:     "missing expression",
+			exprName: "missing",
+			env: ExprEnv{
+				Ctx:   t.Context(),
+				Exprs: map[string]*vm.Program{},
+			},
+			expectedError: `_call: expr "missing" not found`,
+		},
+		{
+			name:     "called expression runtime failure",
+			exprName: "failure",
+			env: ExprEnv{
+				Ctx: t.Context(),
+				Exprs: map[string]*vm.Program{
+					"failure": failurePrgm,
+				},
+			},
+			expectedError: `_call: expr "failure": _s3Key: unknown file selector "missing"`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := ExprCall(tc.exprName, tc.env)
+			if err != nil {
+				if tc.expectedError == "" {
+					t.Fatal("Unexpected error:", err)
+				}
+
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Fatalf("Expected error to contain %q, got %q.", tc.expectedError, err.Error())
+				}
+
+				return
+			} else if tc.expectedError != "" {
+				t.Fatalf("Expected error %q, got none.", tc.expectedError)
+			}
+
+			if diff := cmp.Diff(tc.expected, result); diff != "" {
+				t.Fatalf("Unexpected result (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestTestingCounterFunctionError(t *testing.T) {
+	t.Parallel()
+
+	cfg := make([]expr.Option, 0, 2+len(ExprTestingFunctions))
+	cfg = append(cfg, expr.Env(ExprEnv{}), expr.WithContext("Ctx"))
+	cfg = append(cfg, ExprTestingFunctions...)
+
+	prgm, err := expr.Compile(`__testCounter__()`, cfg...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = expr.Run(prgm, ExprEnv{Ctx: context.Background()})
+	if err == nil {
+		t.Fatal("Expected an error, got none.")
+	}
+
+	if !strings.Contains(err.Error(), "__testCounter__: context value not found") {
+		t.Fatalf("Unexpected error: %q.", err.Error())
+	}
+}
+
+func compileTypesExpr(t *testing.T, rawExpr string) *vm.Program {
+	t.Helper()
+
+	options := append(
+		[]expr.Option{
+			expr.Env(ExprEnv{}),
+			expr.WithContext("Ctx"),
+			expr.Patch(ExprEnvInjector{}),
+		},
+		ExprFunctions...,
+	)
+
+	prgm, err := expr.Compile(rawExpr, options...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return prgm
 }

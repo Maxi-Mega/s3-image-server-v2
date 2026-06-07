@@ -35,6 +35,7 @@ const (
 const evalTimeout = 5 * time.Second
 
 type DynamicInputFile struct {
+	S3Bucket string
 	S3Path   string
 	CacheKey string
 	Date     time.Time
@@ -207,7 +208,7 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			t0 := time.Now()
 
 			defer func() {
-				logger.Tracef("[expr] _s3Key(...) took %s", time.Since(t0))
+				logger.Tracef("[expr] _s3Key(%q) took %s", params[0], time.Since(t0))
 			}()
 
 			file, err := fileFromSelector(params[0], params[1])
@@ -216,6 +217,26 @@ var ExprFunctions = []expr.Option{ //nolint: gochecknoglobals
 			}
 
 			return file.S3Path, nil
+		},
+		new(func(fileSelector string) (string, error)),
+		new(func(fileSelector string, env ExprEnv) (string, error)),
+	),
+	// Returns the S3 URI (s3://bucket/key) of the file matched by the given file selector.
+	expr.Function(
+		"_s3Uri",
+		func(params ...any) (any, error) {
+			t0 := time.Now()
+
+			defer func() {
+				logger.Tracef("[expr] _s3Uri(%q) took %s", params[0], time.Since(t0))
+			}()
+
+			file, err := fileFromSelector(params[0], params[1])
+			if err != nil {
+				return "", wrapErr("_s3Uri", err)
+			}
+
+			return fmt.Sprintf("s3://%s/%s", file.S3Bucket, file.S3Path), nil
 		},
 		new(func(fileSelector string) (string, error)),
 		new(func(fileSelector string, env ExprEnv) (string, error)),
@@ -288,6 +309,7 @@ var funcsWithEnv = map[string]bool{ //nolint: gochecknoglobals
 	"_jq":       true,
 	"_loadJSON": true,
 	"_s3Key":    true,
+	"_s3Uri":    true,
 	"_xpath":    true,
 }
 
@@ -466,6 +488,10 @@ func ExprTitle(value string) string {
 }
 
 func ExprXPath(filePath string, xpathExpression string) (res any, err error) {
+	if filePath == "" {
+		return nil, nil //nolint: nilnil
+	}
+
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err //nolint: wrapcheck // wrapped by caller

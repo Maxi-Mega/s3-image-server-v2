@@ -64,6 +64,11 @@ function makeLinks(img: Image): Array<[string, string]> {
     links.push([base(key), img.signedURLs[key]]);
   }
 
+  for (const key in img.externalViewerURLs) {
+    // The URL of full product files already has its own host
+    links.push([base(key), img.externalViewerURLs[key]]);
+  }
+
   for (const key in img.cachedFileLinks) {
     links.push([base(key), resolveBackendURL("/api/cache/" + img.cachedFileLinks[key])]);
   }

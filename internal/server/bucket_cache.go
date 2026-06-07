@@ -88,7 +88,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		switch selector.Kind {
 		case config.FileSelectorKindCached:
 			subDir = dynamicInputFilesDirName
-		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL:
+		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL, config.FileSelectorKindExternalViewerURL:
 			download = false
 		}
 	}
@@ -115,6 +115,7 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		img.dynamicInputFiles = make(map[string]valueWithLastUpdate[types.DynamicInputFile])
 		img.linksFromCache = make(map[string]valueWithLastUpdate[string])
 		img.signedURLs = make(map[string]valueWithLastUpdate[signedURL])
+		img.externalViewerURLs = make(map[string]valueWithLastUpdate[string])
 
 		bc.setDropTimer(imgName, event.baseDir, event.Time)
 	}
@@ -197,6 +198,7 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 		case config.FileSelectorKindCached:
 			img.dynamicInputFiles[event.InputFile] = valueWithLastUpdate[types.DynamicInputFile]{
 				value: types.DynamicInputFile{
+					S3Bucket: event.Bucket,
 					S3Path:   event.ObjectKey,
 					CacheKey: cacheKey(dynamicInputFilesDirName),
 					Date:     event.ObjectLastModified,
@@ -234,6 +236,37 @@ func (bc *bucketCache) applyObjectTypeSpecificHooks(ctx context.Context, event s
 			}
 
 			img.signedURLs[event.ObjectKey], err = makeSignedURL(ctx, bc.s3Client, signedURLGenReq)
+		case config.FileSelectorKindExternalViewerURL:
+			if fullProduct, exists := img.externalViewerURLs[event.ObjectKey]; exists {
+				// Checking if we have the latest version of the object.
+				if !fullProduct.lastUpdate.Before(event.ObjectLastModified) {
+					return nil, errObjectAlreadyCached
+				}
+			}
+
+			img.dynamicInputFiles[event.InputFile] = valueWithLastUpdate[types.DynamicInputFile]{
+				value: types.DynamicInputFile{
+					S3Bucket: event.Bucket,
+					S3Path:   event.ObjectKey,
+					Date:     event.ObjectLastModified,
+				},
+				lastUpdate: event.ObjectLastModified,
+			}
+
+			s3URI, exprErr := bc.exprManager.externalViewerURL(ctx, *img, selector.KindParams[1])
+			if exprErr != nil {
+				err = exprErr
+			} else {
+				viewerURL, found := bc.cfg.Products.ExternalViewers[selector.KindParams[0]]
+				if !found {
+					err = fmt.Errorf("external viewer %q not found in config", selector.KindParams[0])
+				} else {
+					img.externalViewerURLs[event.ObjectKey] = valueWithLastUpdate[string]{
+						value:      viewerURL + url.QueryEscape(s3URI),
+						lastUpdate: event.ObjectLastModified,
+					}
+				}
+			}
 		}
 
 		eventObj = img.dynamicInputFiles[event.InputFile]
@@ -276,6 +309,10 @@ func (bc *bucketCache) handleRemoveEvent(_ context.Context, event s3Event, img i
 			subDir = dynamicInputFilesDirName
 		case config.FileSelectorKindSignedURL, config.FileSelectorKindFullProductSignedURL:
 			delete(img.signedURLs, event.ObjectKey)
+
+			deleteFile = false // no file to delete
+		case config.FileSelectorKindExternalViewerURL:
+			delete(img.externalViewerURLs, event.ObjectKey)
 
 			deleteFile = false // no file to delete
 		}

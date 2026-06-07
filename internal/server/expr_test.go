@@ -18,10 +18,10 @@ const (
 	imgType  = "typ"
 )
 
-func setupExprManTest(t *testing.T, dynData *config.DynamicData, files map[string]string) *expressionManager {
+func setupExprManTest(t *testing.T, dynData *config.DynamicData, externalViewers map[string]string, files map[string]string) *expressionManager {
 	t.Helper()
 
-	err := config.ParseDynamicData(imgGroup, imgType, dynData)
+	err := config.ParseDynamicData(imgGroup, imgType, dynData, externalViewers)
 	if err != nil {
 		t.Fatal("Invalid dynamic data:", err)
 	}
@@ -84,10 +84,11 @@ func TestExprProductBasePath(t *testing.T) {
 			types.ExprProductBasePath: "__testCounter__(); Files.preview.S3Path[:lastIndexOf(Files.preview.S3Path, '/')]",
 		},
 	}
+	externalViewers := map[string]string{}
 	files := map[string]string{
 		"prod/1/2/3/preview.jpg": "some jpg data",
 	}
-	exprMan := setupExprManTest(t, &dynamicData, files)
+	exprMan := setupExprManTest(t, &dynamicData, externalViewers, files)
 
 	for i := range 2 {
 		exprCallCounter := new(atomic.Int64)
@@ -113,5 +114,104 @@ func TestExprProductBasePath(t *testing.T) {
 				t.Fatalf("[call %d-%d] Expected expression call counter to be %d, got %d", j+1, i+1, 1, exprCallCounter.Load())
 			}
 		}
+	}
+}
+
+func TestExprExternalViewerURL(t *testing.T) {
+	t.Parallel()
+
+	const (
+		inputFile = "product"
+		exprName  = "viewerURL"
+	)
+
+	objectLastModified := time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC)
+	dynamicData := config.DynamicData{
+		FileSelectors: map[string]config.FileSelector{
+			inputFile: {
+				Regex: `product\.tif$`,
+				Kind:  "externalViewerURL(viewer, viewerURL)",
+			},
+		},
+		Expressions: map[string]string{
+			exprName: "__testCounter__(); _s3Uri('product')",
+		},
+	}
+	externalViewers := map[string]string{
+		"viewer": "https://viewer.example.test/?url=",
+	}
+	exprMan := setupExprManTest(t, &dynamicData, externalViewers, nil)
+	img := image{
+		lastModified: objectLastModified,
+		bucket:       "preview-bucket",
+		s3Key:        "products/1/preview.jpg",
+		imgGroup:     imgGroup,
+		imgType:      imgType,
+		dynamicInputFiles: map[string]valueWithLastUpdate[types.DynamicInputFile]{
+			inputFile: {
+				value: types.DynamicInputFile{
+					S3Bucket: "product-bucket",
+					S3Path:   "products/1/product.tif",
+					Date:     objectLastModified,
+				},
+				lastUpdate: objectLastModified,
+			},
+		},
+		previewCacheKey: "products/1/preview.jpg",
+	}
+	exprCallCounter := new(atomic.Int64)
+	ctx := context.WithValue(t.Context(), types.ExprTestCounterKey{}, exprCallCounter)
+
+	for i := range 2 {
+		result, err := exprMan.externalViewerURL(ctx, img, exprName)
+		if err != nil {
+			t.Fatalf("[call %d] Failed to get external viewer URL input: %v", i+1, err)
+		}
+
+		if result != "s3://product-bucket/products/1/product.tif" {
+			t.Fatalf("[call %d] Expected %q, got %q", i+1, "s3://product-bucket/products/1/product.tif", result)
+		}
+
+		if exprCallCounter.Load() != 1 {
+			t.Fatalf("[call %d] Expected expression call counter to be %d, got %d", i+1, 1, exprCallCounter.Load())
+		}
+	}
+}
+
+func TestExprExternalViewerURLUnexpectedOutputType(t *testing.T) {
+	t.Parallel()
+
+	dynamicData := config.DynamicData{
+		FileSelectors: map[string]config.FileSelector{
+			"product": {
+				Regex: `product\.tif$`,
+				Kind:  "externalViewerURL(viewer, viewerURL)",
+			},
+		},
+		Expressions: map[string]string{
+			"viewerURL": "42",
+		},
+	}
+	externalViewers := map[string]string{
+		"viewer": "https://viewer.example.test/?url=",
+	}
+	exprMan := setupExprManTest(t, &dynamicData, externalViewers, nil)
+	img := image{
+		lastModified:      time.Date(2026, 6, 7, 12, 0, 0, 0, time.UTC),
+		bucket:            "preview-bucket",
+		s3Key:             "products/1/preview.jpg",
+		imgGroup:          imgGroup,
+		imgType:           imgType,
+		dynamicInputFiles: map[string]valueWithLastUpdate[types.DynamicInputFile]{},
+		previewCacheKey:   "products/1/preview.jpg",
+	}
+
+	_, err := exprMan.externalViewerURL(t.Context(), img, "viewerURL")
+	if err == nil {
+		t.Fatal("Expected an error, but got none.")
+	}
+
+	if err.Error() != "unexpected output type: want string, got int" {
+		t.Fatalf("Unexpected error: want %q, got %q", "unexpected output type: want string, got int", err.Error())
 	}
 }

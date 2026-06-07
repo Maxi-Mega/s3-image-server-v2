@@ -45,6 +45,8 @@ type Image struct {
 	CachedFileLinks map[string]string
 	// SignedURLs is a map[filename] -> cache key
 	SignedURLs map[string]string
+	// ExternalViewerURLs is a map[filename] -> URL
+	ExternalViewerURLs map[string]string
 	// TargetFiles is a slice of cache keys
 	TargetFiles []string
 }

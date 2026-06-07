@@ -47,8 +47,10 @@ type image struct {
 	// map[s3 key] -> cache key & last update
 	linksFromCache map[string]valueWithLastUpdate[string]
 	// map[s3 key] -> signed URL & last update
-	signedURLs      map[string]valueWithLastUpdate[signedURL]
-	previewCacheKey string
+	signedURLs map[string]valueWithLastUpdate[signedURL]
+	// map[s3 key] -> external view URL & last update
+	externalViewerURLs map[string]valueWithLastUpdate[string]
+	previewCacheKey    string
 }
 
 // summary returns the [ImageSummary] of this [image],
@@ -209,11 +211,12 @@ func (c *cache) GetImage(ctx context.Context, bucketName, name string) (types.Im
 	}
 
 	return types.Image{
-		ImageSummary:    img.summary(ctx, name, c.cacheDir, c.exprManager),
-		Localization:    localization,
-		CachedFileLinks: toFilenameValueMap(img.linksFromCache),
-		SignedURLs:      toFilenameValueMap(img.signedURLs),
-		TargetFiles:     targetFiles,
+		ImageSummary:       img.summary(ctx, name, c.cacheDir, c.exprManager),
+		Localization:       localization,
+		CachedFileLinks:    toFilenameValueMap(img.linksFromCache),
+		SignedURLs:         toFilenameValueMap(img.signedURLs),
+		ExternalViewerURLs: toFilenameValueMap(img.externalViewerURLs),
+		TargetFiles:        targetFiles,
 	}, nil
 }
 

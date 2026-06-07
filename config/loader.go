@@ -22,7 +22,10 @@ import (
 
 const defaultCacheDirName = "s3_image_server"
 
-var fullProductSignedURLRegexp = regexp.MustCompile(`fullProductSignedURL\((.*)\)`)
+var (
+	fullProductSignedURLRegexp = regexp.MustCompile(`fullProductSignedURL\((\w*)\)`)
+	externalViewerURLRegexp    = regexp.MustCompile(`externalViewerURL\((\w*),\s*(\w*)\)`)
+)
 
 var (
 	errInvalidConfig          = errors.New("the config is invalid")
@@ -160,8 +163,8 @@ func (cfg *Config) validate() ([]string, error) {
 
 func validateFileSelectors(fileSelectors map[string]FileSelector) error {
 	for name, selector := range fileSelectors {
-		if selector.Kind != FileSelectorKindCached && selector.Kind != FileSelectorKindSignedURL && !fullProductSignedURLRegexp.MatchString(selector.Kind) {
-			return fmt.Errorf("selector %q: unknown kind %q (accepted values are: %q, %q, %q)", name, selector.Kind, FileSelectorKindCached, FileSelectorKindSignedURL, FileSelectorKindFullProductSignedURL)
+		if selector.Kind != FileSelectorKindCached && selector.Kind != FileSelectorKindSignedURL && !fullProductSignedURLRegexp.MatchString(selector.Kind) && !externalViewerURLRegexp.MatchString(selector.Kind) {
+			return fmt.Errorf("selector %q: unknown kind %q (accepted values are: %q, %q, %q, %q)", name, selector.Kind, FileSelectorKindCached, FileSelectorKindSignedURL, FileSelectorKindFullProductSignedURL, FileSelectorKindExternalViewerURL)
 		}
 	}
 
@@ -195,7 +198,7 @@ func (cfg *Config) process() (err error) {
 		for t, imgType := range imgGroup.Types {
 			cfg.Products.ImageGroups[g].Types[t].DynamicData = mergeDynamicData(imgType.DynamicData, cfg.Products.ImageGroups[g].DynamicData)
 
-			err = ParseDynamicData(imgGroup.GroupName, imgType.Name, &cfg.Products.ImageGroups[g].Types[t].DynamicData)
+			err = ParseDynamicData(imgGroup.GroupName, imgType.Name, &cfg.Products.ImageGroups[g].Types[t].DynamicData, cfg.Products.ExternalViewers)
 			if err != nil {
 				return err
 			}
@@ -225,7 +228,7 @@ func mergeDynamicData(child, parent DynamicData) DynamicData {
 	return result
 }
 
-func ParseDynamicData(imgGroup, imgType string, dynData *DynamicData) error {
+func ParseDynamicData(imgGroup, imgType string, dynData *DynamicData, externalViewers map[string]string) error {
 	err := parseFileSelectors(dynData.FileSelectors)
 	if err != nil {
 		return fmt.Errorf("can't parse products.imageGroups[%q].types[%q].dynamicData.fileSelectors: %w", imgGroup, imgType, err)
@@ -247,6 +250,18 @@ func ParseDynamicData(imgGroup, imgType string, dynData *DynamicData) error {
 			}
 
 			selector.Link = true
+		case FileSelectorKindExternalViewerURL:
+			_, found := externalViewers[selector.KindParams[0]]
+			if !found {
+				return fmt.Errorf("invalid products.imageGroups[%q].types[%q].dynamicData.fileSelectors[%q]: externalViewerURL references the external viewer %q which is not defined", imgGroup, imgType, name, selector.KindParams[0])
+			}
+
+			_, found = dynData.Expressions[selector.KindParams[1]]
+			if !found {
+				return fmt.Errorf("invalid products.imageGroups[%q].types[%q].dynamicData.fileSelectors[%q]: externalViewerURL references the expression %q which is not defined", imgGroup, imgType, name, selector.KindParams[1])
+			}
+
+			selector.Link = true
 		}
 
 		dynData.FileSelectors[name] = selector
@@ -264,12 +279,20 @@ func parseFileSelectors(fileSelectors map[string]FileSelector) error {
 			return fmt.Errorf("%q: %w", name, err)
 		}
 
-		matches := fullProductSignedURLRegexp.FindStringSubmatch(selector.Kind)
-		if len(matches) == 2 && matches[1] != "" {
-			selector.Kind = FileSelectorKindFullProductSignedURL
-			selector.KindParams = strings.Split(strings.ReplaceAll(matches[1], " ", ""), ",")
-		} else if matches != nil {
-			return fmt.Errorf("%q: invalid fullProductSignedURL expression %q", name, selector.Kind)
+		if matches := fullProductSignedURLRegexp.FindStringSubmatch(selector.Kind); matches != nil { //nolint: nestif
+			if len(matches) == 2 && matches[1] != "" {
+				selector.Kind = FileSelectorKindFullProductSignedURL
+				selector.KindParams = []string{matches[1]}
+			} else {
+				return fmt.Errorf("%q: invalid fullProductSignedURL expression %q", name, selector.Kind)
+			}
+		} else if matches = externalViewerURLRegexp.FindStringSubmatch(selector.Kind); matches != nil {
+			if len(matches) == 3 && matches[1] != "" && matches[2] != "" {
+				selector.Kind = FileSelectorKindExternalViewerURL
+				selector.KindParams = []string{matches[1], matches[2]}
+			} else {
+				return fmt.Errorf("%q: invalid externalViewerURL expression %q", name, selector.Kind)
+			}
 		}
 
 		fileSelectors[name] = selector
