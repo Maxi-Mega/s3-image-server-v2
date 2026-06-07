@@ -13,6 +13,7 @@ linters:
     - funlen
     - gochecknoinits
     - gocognit
+    - gomodguard
     - ireturn
     - lll
     - mnd
@@ -30,6 +31,10 @@ linters:
           deny:
             - pkg: io/ioutil
               desc: ioutil is deprecated starting with Go 1.16
+    goconst:
+      ignore-tests: true
+      ignore-string-values:
+        - "^bucket$" # github.com/Maxi-Mega/s3-image-server-v2/internal/observability.New
     wsl_v5:
       allow-first-in-block: true
       allow-whole-block: false
