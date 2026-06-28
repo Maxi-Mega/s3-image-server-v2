@@ -252,7 +252,7 @@ func TestLoad(t *testing.T) { //nolint: maintidx
 		},
 		{
 			filePath:      "invalid_yaml.yml",
-			expectedError: "failed to parse config: yaml: construct errors:\n  line 1: cannot construct !!str `invalid...` into config.Config",
+			expectedError: "failed to parse config: yaml: construct errors: line 1: cannot construct !!str `invalid...` into config.Config",
 		},
 		{
 			filePath: "invalid_cfg.yml",
@@ -274,7 +274,7 @@ func TestLoad(t *testing.T) { //nolint: maintidx
 				if tc.expectedError == "" {
 					t.Fatalf("Expected no error, but got %q.", err.Error())
 				} else if err.Error() != tc.expectedError {
-					t.Fatalf("Unexpected error: want %q, got %q.", tc.expectedError, err.Error())
+					t.Fatalf("Unexpected error:\nwant: %q\ngot:  %q.", tc.expectedError, err.Error())
 				}
 			} else {
 				if tc.expectedError != "" {
