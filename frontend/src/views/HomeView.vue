@@ -92,7 +92,7 @@ window.onbeforeunload = () => close();
 
 <template>
   <header
-    class="fixed z-10 flex w-full flex-wrap border-b border-gray-300 bg-[var(--dark-blue)] py-3 text-sm sm:flex-nowrap sm:justify-start"
+    class="fixed z-10 flex w-full flex-wrap border-b border-gray-300 bg-(--dark-blue) py-3 text-sm sm:flex-nowrap sm:justify-start"
   >
     <nav aria-label="Global" class="mx-5 w-full sm:flex sm:items-center sm:justify-between">
       <div class="flex items-center justify-between gap-10">
@@ -112,7 +112,10 @@ window.onbeforeunload = () => close();
           <GroupDropdown v-for="group in groupsAndTypes" :key="group.name" :group="group" />
         </div>
       </div>
-      <div v-if="staticInfo.staticInfo.dynamicFilters" class="flex flex-row items-center gap-5">
+      <div
+        v-if="staticInfo.staticInfo.dynamicFilters"
+        class="flex flex-row items-center gap-5 px-5"
+      >
         <DynamicFilterDropdown
           v-for="filter in staticInfo.staticInfo.dynamicFilters"
           :key="filter"

@@ -87,12 +87,19 @@ onMounted(() => {
     return;
   }
 
-  const vectorLayer = new VectorTile({
-    declutter: true,
-    source: new PMTilesVectorSource({
-      url: staticInfo.value.pmtilesURL,
-    }),
-  });
+  let vectorLayer;
+
+  try {
+    vectorLayer = new VectorTile({
+      declutter: true,
+      source: new PMTilesVectorSource({
+        url: staticInfo.value.pmtilesURL,
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to create map vector layer:", error);
+    return;
+  }
 
   // Load styles for layer
   fetch(staticInfo.value.pmtilesStyleURL)

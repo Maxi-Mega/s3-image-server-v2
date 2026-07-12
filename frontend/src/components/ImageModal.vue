@@ -200,7 +200,7 @@ function toggleDynamicData() {
       class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 m-3 mt-0 h-[calc(100%-3.5rem)] w-[calc(100%-3.5rem)] opacity-0 transition-all ease-out sm:mx-auto"
     >
       <div
-        class="pointer-events-auto relative flex h-full flex-col overflow-hidden rounded-xl border border-neutral-700 bg-gray-200 shadow-sm shadow-neutral-700/70"
+        class="pointer-events-auto relative grid h-full grid-cols-1 grid-rows-9 overflow-hidden rounded-xl border border-neutral-700 bg-gray-200 shadow-sm shadow-neutral-700/70"
       >
         <button
           class="absolute top-0.5 right-1 cursor-pointer text-transparent transition hover:text-gray-700"
@@ -209,7 +209,7 @@ function toggleDynamicData() {
         >
           <Settings :size="16" />
         </button>
-        <div class="flex items-stretch justify-between gap-x-4 px-4 py-3">
+        <div class="row-span-1 flex items-stretch justify-between gap-x-4 px-4 py-3">
           <div v-if="image" class="grid w-full grid-cols-4 gap-x-2 text-white">
             <div
               class="bg-blue col-span-3 grid grid-cols-12 gap-x-4 gap-y-1 rounded-md p-2 text-sm"
@@ -260,7 +260,7 @@ function toggleDynamicData() {
             </nav>
           </div>
         </div>
-        <div class="h-full overflow-y-auto p-4">
+        <div class="row-span-8 h-full overflow-y-auto p-4">
           <Error v-if="error" :message="error.message" :standalone="false" />
           <LoaderSpinner v-else-if="loading || !image" key="loading-true" :standalone="false">
             Loading image info...
@@ -288,12 +288,12 @@ function toggleDynamicData() {
               <DynamicDataDisplay v-else-if="dynamicData" :data="dynamicData" />
             </div>
             <div v-else :key="image.imageSummary.key" class="col-span-3 flex flex-col gap-4">
-              <div class="row-span-1 grid max-h-full grid-cols-5 gap-4">
+              <div class="row-span-1 grid h-28 grid-cols-5 gap-4">
                 <div
                   v-if="image._links.length > 0"
-                  class="bg-blue col-span-4 h-20 overflow-auto rounded-md text-sm text-white"
+                  class="bg-blue col-span-4 overflow-auto rounded-md text-sm text-white"
                 >
-                  <ul class="pl-1">
+                  <ul class="flex max-h-28 flex-col flex-wrap pl-1">
                     <li v-for="[name, link] in image._links" :key="link" class="py-0.5">
                       <a :href="link" target="_blank" class="hover:underline">
                         {{ name }}

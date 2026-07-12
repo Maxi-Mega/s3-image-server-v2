@@ -26,8 +26,7 @@ onMounted(() => HSLayoutSplitter.autoInit());
             v-for="[name, sel] in Object.entries(data.fileSelectors)"
             :key="name"
             class="dynamic-item"
-            >{{ name }} : {{ sel }}</pre
-          >
+            >{{ name }} : {{ sel }}</pre>
         </div>
       </div>
       <div class="overflow-hidden pl-1" data-hs-layout-splitter-item="50.0" style="flex: 50 1 0">
@@ -37,8 +36,7 @@ onMounted(() => HSLayoutSplitter.autoInit());
             v-for="[name, expr] in Object.entries(data.expressions)"
             :key="name"
             class="dynamic-item"
-            >{{ name }} : {{ expr.replace(/\\n/gi, "\n") }}</pre
-          >
+            >{{ name }} : {{ expr.replace(/\\n/gi, "\n") }}</pre>
         </div>
       </div>
     </div>

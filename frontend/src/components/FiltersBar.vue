@@ -23,7 +23,7 @@ function clearTextSearchInput() {
 
 <template>
   <div
-    class="mt-5 grow-[0.2] items-center gap-1 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:ps-5 sm:pb-0"
+    class="mt-5 grow-[0.3] items-center gap-1 overflow-x-auto pb-2 sm:mt-0 sm:justify-end sm:overflow-x-visible sm:pb-0"
     style="display: inherit"
   >
     <div class="min-w-12 grow space-y-3 px-1">
@@ -32,7 +32,7 @@ function clearTextSearchInput() {
           id="filters-text-search"
           ref="filters-text-search"
           type="search"
-          class="block w-full rounded-md border border-gray-100 bg-transparent px-2 py-1 text-base text-gray-200 placeholder-gray-300 placeholder-shown:border-neutral-200 focus:border-blue-500 focus:ring-neutral-600"
+          class="block w-full rounded-md border border-gray-100 bg-transparent py-1 pr-5 pl-2 text-base text-gray-200 placeholder-gray-300 placeholder-shown:border-neutral-200 focus:border-blue-500 focus:ring-neutral-600"
           placeholder="Search"
           @input="(e) => (filterStore.searchQuery = (e.target as HTMLInputElement).value)"
         />

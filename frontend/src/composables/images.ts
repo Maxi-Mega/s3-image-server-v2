@@ -73,10 +73,16 @@ function makeLinks(img: Image): Array<[string, string]> {
     links.push([base(key), resolveBackendURL("/api/cache/" + img.cachedFileLinks[key])]);
   }
 
-  if (img.imageSummary.geonames) links.push(fromCachedObj(img.imageSummary.geonames.cachedObject));
-  if (img.localization) links.push(fromCachedObj(img.localization.cachedObject));
+  if (img.imageSummary.geonames && img.imageSummary.geonames.cachedObject.cacheKey) {
+    links.push(fromCachedObj(img.imageSummary.geonames.cachedObject));
+  }
 
-  return links;
+  if (img.localization && img.localization.cachedObject.cacheKey) {
+    links.push(fromCachedObj(img.localization.cachedObject));
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  return links.sort(([b1, u1], [b2, u2]) => (b1 < b2 ? -1 : 1));
 }
 
 export function formatDate(d: Date): string {
