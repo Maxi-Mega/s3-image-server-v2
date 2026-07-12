@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//nolint:gochecknoglobals
 var (
 	benchmarkGetCacheValue any
 	benchmarkGetCacheOK    bool
