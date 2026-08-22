@@ -1,4 +1,4 @@
-FROM s3-image-server-builder:v2.4.2 AS builder
+FROM s3-image-server-builder:v2.4.3 AS builder
 
 ARG BASE_URL="/"
 
