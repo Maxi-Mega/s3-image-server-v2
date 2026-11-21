@@ -19,6 +19,7 @@ export class ImageSummary {
   dynamicFilters: Record<string, string>;
   cachedObject: CachedObject;
   size: ImageSize;
+  lastUpdateOverall: Date;
 
   _hasBeenUpdated: boolean;
   _lastModified: Date;
@@ -34,6 +35,7 @@ export class ImageSummary {
     dynamicFilters: Record<string, string>,
     cachedObject: CachedObject,
     size: ImageSize,
+    lastUpdateOverall: Date,
     hasBeenUpdated: boolean,
     _lastModified: Date
   ) {
@@ -47,6 +49,7 @@ export class ImageSummary {
     this.dynamicFilters = dynamicFilters;
     this.cachedObject = cachedObject;
     this.size = size;
+    this.lastUpdateOverall = lastUpdateOverall;
     this._hasBeenUpdated = hasBeenUpdated;
     this._lastModified = _lastModified;
   }

@@ -9,11 +9,108 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Maxi-Mega/s3-image-server-v2/config"
+	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
 )
+
+func TestImageSummaryTracksLatestFileModification(t *testing.T) {
+	t.Parallel()
+
+	const (
+		bucket  = "products"
+		baseDir = "product-a"
+	)
+
+	var failDownload bool
+
+	client := S3ClientMock{
+		DownloadObjectFn: func(context.Context, string, string, string) error {
+			if failDownload {
+				return errors.New("download failed")
+			}
+
+			return nil
+		},
+		GenerateSignedURLFn: func(context.Context, string, string) (*url.URL, error) {
+			return url.Parse("https://example.test/product.tif")
+		},
+	}
+	cfg := config.Config{}
+	cfg.Products.MaxObjectsAge = time.Hour
+	cfg.Cache.CacheDir = t.TempDir()
+	exprMan := newExpressionManager(cfg)
+	bc := newBucketCache(client, exprMan, bucket, cfg.Cache.CacheDir, cfg)
+
+	t.Cleanup(func() {
+		if timer := bc.dropTimers[baseDir]; timer != nil {
+			timer.Stop()
+		}
+	})
+
+	imgType := config.ImageType{
+		DynamicData: config.DynamicData{
+			FileSelectors: map[string]config.FileSelector{
+				"metadata": {Kind: config.FileSelectorKindCached},
+				"product":  {Kind: config.FileSelectorKindSignedURL},
+			},
+		},
+	}
+	modTime := time.Date(2026, 4, 4, 12, 0, 0, 0, time.UTC)
+	cases := []struct {
+		filename, inputFile string
+		objectType          types.ObjectType
+		modified, overall   time.Duration
+		downloadFails       bool
+	}{
+		{filename: "preview.png", objectType: types.ObjectPreview},
+		{filename: "target.png", objectType: types.ObjectTarget, modified: 2 * time.Minute, overall: 2 * time.Minute},
+		{filename: "metadata.json", inputFile: "metadata", objectType: types.ObjectDynamicInput, modified: time.Minute, overall: 2 * time.Minute},
+		{filename: "metadata.json", inputFile: "metadata", objectType: types.ObjectDynamicInput, modified: 3 * time.Minute, overall: 3 * time.Minute},
+		{filename: "product.tif", inputFile: "product", objectType: types.ObjectDynamicInput, modified: 4 * time.Minute, overall: 4 * time.Minute},
+		{filename: "target.png", objectType: types.ObjectTarget, modified: 5 * time.Minute, overall: 4 * time.Minute, downloadFails: true},
+		{filename: "preview.png", objectType: types.ObjectPreview, modified: 3 * time.Minute, overall: 4 * time.Minute},
+	}
+
+	for _, tc := range cases {
+		failDownload = tc.downloadFails
+		event := s3Event{
+			Event: s3.Event{
+				Time:               time.Now(),
+				Bucket:             bucket,
+				ObjectKey:          baseDir + "/" + tc.filename,
+				ObjectType:         tc.objectType,
+				ObjectLastModified: modTime.Add(tc.modified),
+				InputFile:          tc.inputFile,
+			},
+			baseDir: baseDir,
+			imgType: imgType,
+		}
+
+		out := bc.handleCreateEvent(t.Context(), event, bc.images[baseDir])
+		if (out == nil) != tc.downloadFails {
+			t.Fatalf("unexpected result for %s at %s: %v", tc.filename, event.ObjectLastModified, out)
+		}
+
+		want := modTime.Add(tc.overall)
+		img := bc.images[baseDir]
+
+		summary := img.summary(t.Context(), baseDir, cfg.Cache.CacheDir, exprMan)
+		if !summary.LastUpdateOverall.Equal(want) {
+			t.Fatalf("overall update after %s at %s: got %s, want %s", tc.filename, event.ObjectLastModified, summary.LastUpdateOverall, want)
+		}
+
+		if tc.objectType == types.ObjectPreview {
+			previewSummary, ok := out.Object.(types.ImageSummary)
+			if !ok || !previewSummary.LastUpdateOverall.Equal(want) || !previewSummary.CachedObject.LastModified.Equal(event.ObjectLastModified) {
+				t.Fatalf("unexpected preview event summary: %+v", out.Object)
+			}
+		}
+	}
+}
 
 func TestGetCacheKey(t *testing.T) {
 	t.Parallel()

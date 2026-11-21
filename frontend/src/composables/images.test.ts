@@ -8,6 +8,7 @@ import {
   formatDate,
   formatGeonames,
   limitDisplayedImages,
+  processSummaries,
   summaryKey,
 } from "@/composables/images";
 
@@ -23,17 +24,22 @@ function makeSummary(key: string, modified: string): ImageSummary {
     dynamicFilters: {},
     cachedObject: { cacheKey: `${key}.png`, lastModified: new Date(modified) },
     size: { width: 10, height: 10 },
+    lastUpdateOverall: new Date(modified),
     _hasBeenUpdated: false,
     _lastModified: new Date(modified),
   } as ImageSummary;
 }
 
 describe("images composable helpers", () => {
-  it("compareSummaries sorts by latest first", () => {
-    const oldS = makeSummary("old", "2025-01-01T00:00:00.000Z");
-    const newS = makeSummary("new", "2025-01-02T00:00:00.000Z");
-    const items = [oldS, newS].sort(compareSummaries);
-    expect(items.map((s) => s.key)).toEqual(["new", "old"]);
+  it("sorts loaded summaries by the newest overall update", () => {
+    const newerPreview = makeSummary("newer-preview", "2025-01-02T00:00:00.000Z");
+    const newerUpdate = makeSummary("newer-update", "2025-01-01T00:00:00.000Z");
+    newerUpdate.lastUpdateOverall = new Date("2025-01-03T00:00:00.000Z");
+    const payload = JSON.parse(JSON.stringify({ g1: { t1: [newerPreview, newerUpdate] } }));
+
+    const items = processSummaries(payload).sort(compareSummaries);
+
+    expect(items.map((s) => s.key)).toEqual(["newer-update", "newer-preview"]);
   });
 
   it("summaryKey combines bucket and key", () => {

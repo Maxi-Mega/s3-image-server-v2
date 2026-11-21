@@ -1,5 +1,10 @@
 import type { EventData } from "@/composables/events";
-import { compareSummaries, type GqlImage, processImage } from "@/composables/images";
+import {
+  compareSummaries,
+  type GqlImage,
+  processImage,
+  processSummary,
+} from "@/composables/images";
 import { type ImageQueryResult, useImageQuery } from "@/composables/queries.ts";
 import type { Image, ImageSummary } from "@/models/image";
 import { useFilterStore } from "@/stores/filters.ts";
@@ -33,6 +38,13 @@ export const useImageStore = defineStore("images", {
       );
     },
     updateImage(image: Image): Image {
+      const summary = image.imageSummary;
+      const summaryIdx = findSummaryIndex(summary.bucket, summary.key, this.allSummaries);
+      const current = this.allSummaries[summaryIdx];
+      if (current && current.lastUpdateOverall > summary.lastUpdateOverall) {
+        summary.lastUpdateOverall = current.lastUpdateOverall;
+      }
+
       let idx = this.allImages.findIndex(
         (img) =>
           img.imageSummary.bucket === image.imageSummary.bucket &&
@@ -45,13 +57,8 @@ export const useImageStore = defineStore("images", {
         this.allImages[idx] = image;
       }
 
-      const summaryIdx = findSummaryIndex(
-        image.imageSummary.bucket,
-        image.imageSummary.key,
-        this.allSummaries
-      );
       if (summaryIdx >= 0) {
-        this.allSummaries[summaryIdx] = image.imageSummary;
+        this.allSummaries[summaryIdx] = summary;
       }
 
       useFilterStore().addFilterOptions(image.imageSummary.dynamicFilters);
@@ -150,42 +157,35 @@ function handleCreateEvent(
   updated: ImageSummary | null;
   needsDebounceUpdate: boolean;
 } {
-  let added: ImageSummary | null = null,
-    updated: ImageSummary | null = null,
-    needsDebounceUpdate: boolean = false;
-
   const summaryIdx = findSummaryIndex(event.imageBucket, event.imageKey, summaries);
-  if (summaryIdx < 0) {
-    if (event.objectType !== "preview") {
-      return { added: null, updated: null, needsDebounceUpdate: false };
+  const current = summaries[summaryIdx];
+  if (event.objectType === "preview" && event.object) {
+    const summary = processSummary(event.object as ImageSummary);
+    if (current) {
+      if (current.lastUpdateOverall > summary.lastUpdateOverall) {
+        summary.lastUpdateOverall = current.lastUpdateOverall;
+      }
+      return { added: null, updated: summary, needsDebounceUpdate: false };
     }
-
-    added = {
-      // @ts-expect-error no worries
-      ...(event.object as ImageSummary),
-      _hasBeenUpdated: false,
-      _lastModified: event.objectTime,
-    };
-  } else {
-    updated = summaries[summaryIdx];
-    switch (event.objectType) {
-      case "preview":
-        // @ts-expect-error no worries
-        updated = event.object;
-        break;
-      case "dynamic_input":
-        if (document.querySelector(`img[full-key='${event.imageBucket}/${event.imageKey}'][src]`)) {
-          needsDebounceUpdate = true;
-        }
-        break;
-      default:
-        updated._hasBeenUpdated = true; // will be fetched on next modal open
-    }
-    // @ts-expect-error updated is not null
-    updated._lastModified = event.objectTime;
+    return { added: summary, updated: null, needsDebounceUpdate: false };
   }
 
-  return { added, updated, needsDebounceUpdate };
+  if (!current || event.objectType === "preview") {
+    return { added: null, updated: null, needsDebounceUpdate: false };
+  }
+
+  const updated = {
+    ...current,
+    _lastModified: event.objectTime,
+    _hasBeenUpdated: current._hasBeenUpdated || event.objectType === "target",
+    lastUpdateOverall:
+      event.objectTime > current.lastUpdateOverall ? event.objectTime : current.lastUpdateOverall,
+  };
+  const needsDebounceUpdate =
+    event.objectType === "dynamic_input" &&
+    document.querySelector(`img[full-key='${event.imageBucket}/${event.imageKey}'][src]`) !== null;
+
+  return { added: null, updated, needsDebounceUpdate };
 }
 
 function handleRemoveEvent(

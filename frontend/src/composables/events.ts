@@ -8,7 +8,7 @@ export interface EventData {
   imageBucket: string;
   imageKey: string;
   objectTime: Date;
-  object: never | undefined;
+  object?: unknown;
   error: string | undefined;
 }
 

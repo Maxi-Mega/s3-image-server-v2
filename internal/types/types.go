@@ -34,8 +34,9 @@ type ImageSummary struct {
 	ProductInfo    *ProductInformation `json:"productInfo"`
 	DynamicFilters map[string]string   `json:"dynamicFilters"`
 	// Contains the cache key to the image preview.
-	CachedObject CachedObject `json:"cachedObject"`
-	Size         ImageSize    `json:"size"`
+	CachedObject      CachedObject `json:"cachedObject"`
+	Size              ImageSize    `json:"size"`
+	LastUpdateOverall time.Time    `json:"lastUpdateOverall"`
 }
 
 type Image struct {

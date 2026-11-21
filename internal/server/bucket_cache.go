@@ -140,6 +140,10 @@ func (bc *bucketCache) handleCreateEvent(ctx context.Context, event s3Event, img
 		}
 	}
 
+	if event.ObjectLastModified.After(img.lastUpdateOverall) {
+		img.lastUpdateOverall = event.ObjectLastModified
+	}
+
 	eventObj, err := bc.applyObjectTypeSpecificHooks(ctx, event, &img)
 	if err != nil {
 		switch {

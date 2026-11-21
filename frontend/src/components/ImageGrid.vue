@@ -34,7 +34,12 @@ onMounted(() => {
 });
 
 watch(
-  [filterStore.checkedFilters, filterStore.checkedTypes, searchQuery, imageStore.allSummaries],
+  [
+    filterStore.checkedFilters,
+    filterStore.checkedTypes,
+    searchQuery,
+    () => [...imageStore.allSummaries],
+  ],
   ([filters, types, search, allSummaries]) => {
     filteredSummaries.value = limitDisplayedImages(
       applyFilters(allSummaries, filters, types, search),

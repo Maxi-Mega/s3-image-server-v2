@@ -9,7 +9,7 @@ export type GqlAllSummaries = Record<string, Record<string, ImageSummary[]>>;
 export type GqlImage = Record<"getImage", Image>;
 
 export function compareSummaries(a: ImageSummary, b: ImageSummary): number {
-  return b._lastModified.getTime() - a._lastModified.getTime();
+  return b.lastUpdateOverall.getTime() - a.lastUpdateOverall.getTime();
 }
 
 export function processSummaries(summaries: GqlAllSummaries): ImageSummary[] {
@@ -24,9 +24,15 @@ export function processSummaries(summaries: GqlAllSummaries): ImageSummary[] {
   return flattened.map(processSummary);
 }
 
-function processSummary(summary: ImageSummary): ImageSummary {
-  summary.cachedObject.lastModified = new Date(summary.cachedObject.lastModified);
-  return { ...summary, _hasBeenUpdated: false, _lastModified: summary.cachedObject.lastModified };
+export function processSummary(summary: ImageSummary): ImageSummary {
+  const lastModified = new Date(summary.cachedObject.lastModified);
+  return {
+    ...summary,
+    cachedObject: { ...summary.cachedObject, lastModified },
+    lastUpdateOverall: new Date(summary.lastUpdateOverall ?? lastModified),
+    _hasBeenUpdated: false,
+    _lastModified: lastModified,
+  };
 }
 
 export function summaryKey(summary: ImageSummary): string {

@@ -44,6 +44,7 @@ const GET_IMAGE = gql`
           summary
         }
         dynamicFilters
+        lastUpdateOverall
         cachedObject {
           lastModified
           cacheKey

@@ -70,16 +70,17 @@ type ComplexityRoot struct {
 	}
 
 	ImageSummary struct {
-		Bucket         func(childComplexity int) int
-		CachedObject   func(childComplexity int) int
-		DynamicFilters func(childComplexity int) int
-		Geonames       func(childComplexity int) int
-		Group          func(childComplexity int) int
-		Key            func(childComplexity int) int
-		Name           func(childComplexity int) int
-		ProductInfo    func(childComplexity int) int
-		Size           func(childComplexity int) int
-		Type           func(childComplexity int) int
+		Bucket            func(childComplexity int) int
+		CachedObject      func(childComplexity int) int
+		DynamicFilters    func(childComplexity int) int
+		Geonames          func(childComplexity int) int
+		Group             func(childComplexity int) int
+		Key               func(childComplexity int) int
+		LastUpdateOverall func(childComplexity int) int
+		Name              func(childComplexity int) int
+		ProductInfo       func(childComplexity int) int
+		Size              func(childComplexity int) int
+		Type              func(childComplexity int) int
 	}
 
 	Localization struct {
@@ -266,6 +267,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ImageSummary.Key(childComplexity), true
+	case "ImageSummary.lastUpdateOverall":
+		if e.ComplexityRoot.ImageSummary.LastUpdateOverall == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ImageSummary.LastUpdateOverall(childComplexity), true
 	case "ImageSummary.name":
 		if e.ComplexityRoot.ImageSummary.Name == nil {
 			break
@@ -451,16 +458,17 @@ type ImageSize {
 }
 
 type ImageSummary {
-    bucket:         String!
-    key:            String!
-    name:           String!
-    group:          String!
-    type:           String!
-    geonames:       Geonames
-    productInfo:    ProductInformation
-    dynamicFilters: Map!
-    cachedObject:   CachedObject!
-    size:           ImageSize!
+    bucket:            String!
+    key:               String!
+    name:              String!
+    group:             String!
+    type:              String!
+    geonames:          Geonames
+    productInfo:       ProductInformation
+    dynamicFilters:    Map!
+    cachedObject:      CachedObject!
+    size:              ImageSize!
+    lastUpdateOverall: Time!
 }
 
 type Geonames {
@@ -587,6 +595,8 @@ func (ec *executionContext) childFields_ImageSummary(ctx context.Context, field 
 		return ec.fieldContext_ImageSummary_cachedObject(ctx, field)
 	case "size":
 		return ec.fieldContext_ImageSummary_size(ctx, field)
+	case "lastUpdateOverall":
+		return ec.fieldContext_ImageSummary_lastUpdateOverall(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type ImageSummary", field.Name)
 }
@@ -1484,6 +1494,29 @@ func (ec *executionContext) fieldContext_ImageSummary_size(_ context.Context, fi
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _ImageSummary_lastUpdateOverall(ctx context.Context, field graphql.CollectedField, obj *types.ImageSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ImageSummary_lastUpdateOverall(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastUpdateOverall, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ImageSummary_lastUpdateOverall(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ImageSummary", field, false, false, errors.New("field of type Time does not have child fields"))
 }
 
 func (ec *executionContext) _Localization_corner(ctx context.Context, field graphql.CollectedField, obj *types.Localization) (ret graphql.Marshaler) {
@@ -3400,6 +3433,11 @@ func (ec *executionContext) _ImageSummary(ctx context.Context, sel ast.Selection
 			}
 		case "size":
 			out.Values[i] = ec._ImageSummary_size(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "lastUpdateOverall":
+			out.Values[i] = ec._ImageSummary_lastUpdateOverall(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}

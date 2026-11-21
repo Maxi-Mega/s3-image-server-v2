@@ -19,16 +19,17 @@ type ImageSize {
 }
 
 type ImageSummary {
-    bucket:         String!
-    key:            String!
-    name:           String!
-    group:          String!
-    type:           String!
-    geonames:       Geonames
-    productInfo:    ProductInformation
-    dynamicFilters: Map!
-    cachedObject:   CachedObject!
-    size:           ImageSize!
+    bucket:            String!
+    key:               String!
+    name:              String!
+    group:             String!
+    type:              String!
+    geonames:          Geonames
+    productInfo:       ProductInformation
+    dynamicFilters:    Map!
+    cachedObject:      CachedObject!
+    size:              ImageSize!
+    lastUpdateOverall: Time!
 }
 
 type Geonames {

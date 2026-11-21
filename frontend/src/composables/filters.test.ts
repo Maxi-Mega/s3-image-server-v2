@@ -21,6 +21,7 @@ function makeSummary(params: {
     dynamicFilters: params.dyn,
     cachedObject: { cacheKey: `${params.key}.png`, lastModified: new Date(params.date) },
     size: { width: 1, height: 1 },
+    lastUpdateOverall: new Date(params.date),
     _hasBeenUpdated: false,
     _lastModified: new Date(params.date),
   } as ImageSummary;

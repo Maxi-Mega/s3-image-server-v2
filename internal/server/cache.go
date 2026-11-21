@@ -37,6 +37,7 @@ type cache struct {
 
 type image struct {
 	lastModified      time.Time
+	lastUpdateOverall time.Time
 	bucket, s3Key     string
 	name, baseDir     string
 	imgGroup, imgType string
@@ -97,7 +98,8 @@ func (img image) summary(ctx context.Context, name, cacheDir string, exprMan *ex
 			LastModified: img.lastModified,
 			CacheKey:     img.previewCacheKey,
 		},
-		Size: imgSize,
+		Size:              imgSize,
+		LastUpdateOverall: img.lastUpdateOverall,
 	}
 }
 
