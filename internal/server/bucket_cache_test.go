@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Maxi-Mega/s3-image-server-v2/config"
-	"github.com/Maxi-Mega/s3-image-server-v2/internal/s3"
 	"github.com/Maxi-Mega/s3-image-server-v2/internal/types"
 
 	"github.com/expr-lang/expr"
@@ -78,16 +77,14 @@ func TestImageSummaryTracksLatestFileModification(t *testing.T) {
 	for _, tc := range cases {
 		failDownload = tc.downloadFails
 		event := s3Event{
-			Event: s3.Event{
-				Time:               time.Now(),
-				Bucket:             bucket,
-				ObjectKey:          baseDir + "/" + tc.filename,
-				ObjectType:         tc.objectType,
-				ObjectLastModified: modTime.Add(tc.modified),
-				InputFile:          tc.inputFile,
-			},
-			baseDir: baseDir,
-			imgType: imgType,
+			Time:               time.Now(),
+			Bucket:             bucket,
+			ObjectKey:          baseDir + "/" + tc.filename,
+			ObjectType:         tc.objectType,
+			ObjectLastModified: modTime.Add(tc.modified),
+			InputFile:          tc.inputFile,
+			baseDir:            baseDir,
+			imgType:            imgType,
 		}
 
 		out := bc.handleCreateEvent(t.Context(), event, bc.images[baseDir])

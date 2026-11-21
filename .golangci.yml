@@ -1,7 +1,7 @@
 version: "2"
 
 run:
-  go: "1.26"
+  go: "1.27"
   tests: true
 
 linters:
@@ -10,6 +10,7 @@ linters:
     - cyclop
     - err113
     - exhaustruct
+    - exhaustruct_v5
     - funlen
     - gochecknoinits
     - gocognit
@@ -47,6 +48,7 @@ linters:
       - legacy
       - std-error-handling
     paths:
+      - ^frontend/node_modules/
       - third_party$
       - builtin$
       - examples$
@@ -66,6 +68,7 @@ formatters:
   exclusions:
     generated: lax
     paths:
+      - ^frontend/node_modules/
       - third_party$
       - builtin$
       - examples$

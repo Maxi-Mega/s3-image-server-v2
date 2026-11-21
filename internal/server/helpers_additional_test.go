@@ -14,10 +14,8 @@ func TestBaseDirRelativePath(t *testing.T) {
 	t.Parallel()
 
 	evt := s3Event{
-		Event: s3.Event{
-			ObjectKey: "a/b/c/file.json",
-		},
-		baseDir: "a/b",
+		ObjectKey: "a/b/c/file.json",
+		baseDir:   "a/b",
 	}
 
 	got := evt.baseDirRelativePath()
@@ -127,10 +125,8 @@ func TestObjectTemporizerComputeEvent(t *testing.T) {
 	}
 
 	evt := s3Event{
-		Event: s3.Event{
-			ObjectType: types.ObjectNotYetAssigned,
-			ObjectKey:  "prod/base/targets/a.bin",
-		},
+		ObjectType: types.ObjectNotYetAssigned,
+		ObjectKey:  "prod/base/targets/a.bin",
 	}
 
 	got, ok := op.computeEvent(evt, "prod/base")

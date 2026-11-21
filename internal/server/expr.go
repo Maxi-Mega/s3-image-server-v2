@@ -184,9 +184,7 @@ func (exprMan *expressionManager) imageGeonames(ctx context.Context, img image, 
 	}
 
 	geonames := types.Geonames{
-		CachedObject: types.CachedObject{
-			LastModified: img.lastModified,
-		},
+		LastModified: img.lastModified,
 	}
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -234,9 +232,7 @@ func (exprMan *expressionManager) imageLocalization(ctx context.Context, img ima
 	}
 
 	localization := types.Localization{
-		CachedObject: types.CachedObject{
-			LastModified: img.lastModified,
-		},
+		LastModified: img.lastModified,
 	}
 
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
